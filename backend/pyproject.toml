@@ -61,15 +61,15 @@ typeCheckingMode = "off"
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+  "live: tests that call the live Gemini API (excluded from the default run)",
+]
 
 [tool.coverage.run]
-# Composition roots exercised by running the app (e2e/integration), not by unit
-# tests: main.py (DI wiring, MCP mount) and agent_runner.py (the ADK Runner and
-# session orchestration, covered by the integration and live agent tests).
-omit = [
-  "src/main.py",
-  "src/agent/agent/agent_runner.py",
-]
+# main.py is the ASGI composition root (DI wiring, MCP mount), exercised by
+# running the app (e2e/integration), not by unit tests. agent_runner's session
+# boundary (_ensure_session, LRU) is unit-tested in tests/unit/test_agent_runner.py.
+omit = ["src/main.py"]
 
 [tool.ruff]
 target-version = "py311"
