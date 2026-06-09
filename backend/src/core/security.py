@@ -38,12 +38,16 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
     salt = bytes.fromhex(salt_hex)
     expected_digest = bytes.fromhex(digest_hex)
-    actual_digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
+    actual_digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, 200_000
+    )
     return hmac.compare_digest(actual_digest, expected_digest)
 
 
 def create_access_token(subject: str) -> str:
-    expires_at = datetime.now(UTC) + timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expires_at = datetime.now(UTC) + timedelta(
+        minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
     payload = {
         "sub": subject,
         "exp": expires_at,

@@ -41,7 +41,9 @@ class Config(BaseSettings):
     # CORS
     CORS_ORIGINS_STR: str | None = ""
     BACKEND_CORS_ORIGINS: list[str] | None = (
-        [origin.strip() for origin in CORS_ORIGINS_STR.split(",")] if CORS_ORIGINS_STR else ["*"]
+        [origin.strip() for origin in CORS_ORIGINS_STR.split(",")]
+        if CORS_ORIGINS_STR
+        else ["*"]
     )
 
     # MongoDB Atlas. MONGODB_URI is the SRV connection string
