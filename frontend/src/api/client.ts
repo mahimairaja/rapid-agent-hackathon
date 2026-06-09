@@ -180,6 +180,12 @@ export async function fetchProfessionalAppointments(): Promise<ProfessionalAppoi
   }
 }
 
+export function getVoiceWsUrl(): string {
+  // Reuse the REST base URL, swapping the scheme to ws/wss.
+  const base = BASE_URL.replace(/^http/i, 'ws')
+  return `${base}/voice/ws`
+}
+
 export function getClientTimeZone(): string | null {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || null
