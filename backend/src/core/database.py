@@ -27,7 +27,9 @@ def get_client() -> AsyncMongoClient:
 async def init_db() -> None:
     """Initialize Beanie against the configured database and document models."""
     client = get_client()
-    await init_beanie(database=client[config.MONGODB_DB], document_models=DOCUMENT_MODELS)
+    await init_beanie(
+        database=client[config.MONGODB_DB], document_models=DOCUMENT_MODELS
+    )
     logger.info("Beanie initialized on database '%s'", config.MONGODB_DB)
 
 

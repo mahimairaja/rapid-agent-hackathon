@@ -1,12 +1,12 @@
-from src.models.appointment import Appointment
-from src.models.base import TimestampedDocument
-from src.models.care_plan import CarePlanChunk
-from src.models.guideline import GuidelineChunk
-from src.models.medication import Medication
-from src.models.patient import Patient
-from src.models.user import User
+from src.models.appointment_model import Appointment
+from src.models.base_model import TimestampedDocument
+from src.models.care_plan_model import CarePlanChunk
+from src.models.guideline_model import GuidelineChunk
+from src.models.medication_model import Medication
+from src.models.patient_model import Patient
+from src.models.user_model import User
 
-# Registered with Beanie at startup (src/db/mongo.py).
+# Registered with Beanie at startup (src/core/database.py).
 DOCUMENT_MODELS = [
     User,
     Patient,

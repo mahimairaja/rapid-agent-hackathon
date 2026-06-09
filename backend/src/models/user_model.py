@@ -3,7 +3,7 @@ from typing import Annotated
 from beanie import Indexed
 from pydantic import EmailStr
 
-from src.models.base import TimestampedDocument
+from src.models.base_model import TimestampedDocument
 
 
 class User(TimestampedDocument):

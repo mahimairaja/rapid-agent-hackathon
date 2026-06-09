@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from src.core.database import close_db, init_db
 from src.core.logging_conf import configure_logging
-from src.db.mongo import close_db, init_db
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ from typing import Annotated
 
 from beanie import Indexed
 
-from src.models.base import TimestampedDocument
+from src.models.base_model import TimestampedDocument
 
 
 class Patient(TimestampedDocument):

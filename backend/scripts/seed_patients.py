@@ -18,7 +18,7 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-from src.db.mongo import close_db, init_db  # noqa: E402
+from src.core.database import close_db, init_db  # noqa: E402
 from src.models import Appointment, Medication, Patient  # noqa: E402
 
 DATA_DIR = BACKEND_DIR / "data" / "synthea"

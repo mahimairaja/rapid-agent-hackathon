@@ -23,7 +23,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 from pymongo.operations import SearchIndexModel  # noqa: E402
 
 from src.core.config import config  # noqa: E402
-from src.db.mongo import close_db, get_client  # noqa: E402
+from src.core.database import close_db, get_client  # noqa: E402
 
 # (collection, index_name, fields)
 VECTOR_INDEXES = [

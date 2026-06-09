@@ -1,4 +1,4 @@
-from src.services.chunking import chunk_text
+from src.services.chunking_service import chunk_text
 
 
 def test_empty_text_returns_no_chunks():

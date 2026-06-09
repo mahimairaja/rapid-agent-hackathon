@@ -5,8 +5,8 @@ from beanie import PydanticObjectId
 from src.core.exceptions import DuplicatedError, NotFoundError, UnauthorizedError
 from src.core.security import create_access_token, hash_password, verify_password
 from src.core.validators import validate_password
-from src.models.base import utcnow
-from src.models.user import User
+from src.models.base_model import utcnow
+from src.models.user_model import User
 from src.schemas.users_schemas import UserCreate, UserLogin, UserUpdate
 
 

@@ -17,10 +17,10 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-from src.db.mongo import close_db, init_db  # noqa: E402
+from src.core.database import close_db, init_db  # noqa: E402
 from src.models import CarePlanChunk  # noqa: E402
-from src.services.chunking import chunk_text  # noqa: E402
-from src.services.embeddings import embed_texts  # noqa: E402
+from src.services.chunking_service import chunk_text  # noqa: E402
+from src.services.embeddings_service import embed_texts  # noqa: E402
 from src.util.frontmatter import parse_front_matter  # noqa: E402
 
 DATA_DIR = BACKEND_DIR / "data" / "patients"

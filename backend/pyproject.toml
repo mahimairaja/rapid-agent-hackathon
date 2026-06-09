@@ -21,9 +21,6 @@ dependencies = [
   "voyageai>=0.3.0",
 ]
 
-[project.scripts]
-backend = "backend:main"
-
 [dependency-groups]
 dev = [
   "httpx>=0.27.0",
@@ -35,9 +32,9 @@ dev = [
   "ruff>=0.15.16",
 ]
 
-[build-system]
-requires = ["uv_build>=0.8.15,<0.9.0"]
-build-backend = "uv_build"
+[tool.uv]
+# Run from source (PYTHONPATH); the project itself is not a build artifact.
+package = false
 
 [tool.mypy]
 python_version = "3.11"
@@ -51,9 +48,8 @@ module = [
   "src.core.logging_conf",
   "src.core.exception_handlers",
   "src.core.config",
+  "src.core.database",
   "src.models.*",
-  "src.db.*",
-  "scripts.*",
 ]
 ignore_errors = true
 

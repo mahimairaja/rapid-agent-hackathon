@@ -3,7 +3,7 @@ from typing import Annotated
 from beanie import Indexed
 from pydantic import Field
 
-from src.models.base import TimestampedDocument
+from src.models.base_model import TimestampedDocument
 
 
 class CarePlanChunk(TimestampedDocument):

@@ -1,4 +1,4 @@
-import src.services.embeddings as embeddings
+import src.services.embeddings_service as embeddings
 
 
 class _FakeResult:

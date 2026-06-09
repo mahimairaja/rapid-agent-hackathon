@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter
 
-from src.db.mongo import ping
+from src.core.database import ping
 
 router = APIRouter(tags=["health"])
 START_TIME = time.time()

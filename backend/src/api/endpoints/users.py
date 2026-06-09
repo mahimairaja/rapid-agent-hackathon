@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, status
 from src.core.container import Container
 from src.core.exceptions import PermissionDeniedError
 from src.core.security import get_current_user
-from src.models.user import User
+from src.models.user_model import User
 from src.schemas.users_schemas import (
     Token,
     UserCreate,
