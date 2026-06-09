@@ -1,5 +1,5 @@
-Id,BIRTHDATE,FIRST,LAST,GENDER,CITY,STATE,PHONE,PATIENT_CODE,DISCHARGE_REASON,ASSIGNED_CLINICIAN
-8f1c0a2e-1d3b-4a6c-9e21-aa0011223301,1948-03-12,Margaret,Chen,F,Boston,MA,555-0101,HW-1001,Acute exacerbation of chronic congestive heart failure,Dr. Helen Park (Cardiology)
-8f1c0a2e-1d3b-4a6c-9e21-aa0011223302,1972-11-05,James,Okafor,M,Cambridge,MA,555-0102,HW-1002,Elective right total knee replacement,Dr. Marcus Reed (Orthopedics)
-8f1c0a2e-1d3b-4a6c-9e21-aa0011223303,1990-07-22,Aisha,Patel,F,Somerville,MA,555-0103,HW-1003,Newly diagnosed type 2 diabetes,Dr. Priya Nair (Endocrinology)
-8f1c0a2e-1d3b-4a6c-9e21-aa0011223304,1955-01-30,Robert,Sullivan,M,Quincy,MA,555-0104,HW-1004,Exacerbation of chronic obstructive pulmonary disease (COPD),Dr. Samuel Ortiz (Pulmonology)
+Id,BIRTHDATE,FIRST,LAST,GENDER,CITY,STATE,PHONE,EMAIL,PATIENT_CODE,DISCHARGE_REASON,ASSIGNED_CLINICIAN,FOLLOW_UP_REQUIRED,FOLLOW_UP_WINDOW_START,FOLLOW_UP_WINDOW_END,FOLLOW_UP_KIND
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223301,1948-03-12,Margaret,Chen,F,Boston,MA,555-0101,margaret.chen@example.com,HW-1001,Acute exacerbation of chronic congestive heart failure,Dr. Helen Park (Cardiology),true,2026-06-14T00:00:00Z,2026-06-18T23:59:59Z,Cardiology follow-up
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223302,1972-11-05,James,Okafor,M,Cambridge,MA,555-0102,james.okafor@example.com,HW-1002,Elective right total knee replacement,Dr. Marcus Reed (Orthopedics),true,2026-06-20T00:00:00Z,2026-06-25T23:59:59Z,Orthopedic follow-up
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223303,1990-07-22,Aisha,Patel,F,Somerville,MA,555-0103,aisha.patel@example.com,HW-1003,Newly diagnosed type 2 diabetes,Dr. Priya Nair (Endocrinology),true,2026-07-01T00:00:00Z,2026-07-08T23:59:59Z,Endocrinology follow-up
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223304,1955-01-30,Robert,Sullivan,M,Quincy,MA,555-0104,robert.sullivan@example.com,HW-1004,Exacerbation of chronic obstructive pulmonary disease (COPD),Dr. Samuel Ortiz (Pulmonology),true,2026-06-18T00:00:00Z,2026-06-24T23:59:59Z,Pulmonology follow-up
