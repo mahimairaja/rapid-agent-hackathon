@@ -1,8 +1,9 @@
 import time
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Request
-from sqlalchemy import text
+from fastapi import APIRouter
+
+from src.db.mongo import ping
 
 router = APIRouter(tags=["health"])
 START_TIME = time.time()
@@ -19,16 +20,14 @@ async def health() -> dict[str, str | int]:
 
 
 @router.get("/health/detailed")
-async def health_detailed(request: Request) -> dict[str, object]:
+async def health_detailed() -> dict[str, object]:
     checks: dict[str, str] = {}
 
     try:
-        database = request.app.state.container.database()
-        async with database.session() as session:
-            await session.execute(text("SELECT 1"))
-        checks["postgres"] = "healthy"
+        await ping()
+        checks["mongodb"] = "healthy"
     except Exception as exc:
-        checks["postgres"] = f"unhealthy: {exc}"
+        checks["mongodb"] = f"unhealthy: {exc}"
 
     all_healthy = all(value == "healthy" for value in checks.values())
     return {

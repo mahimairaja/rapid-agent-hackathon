@@ -4,7 +4,6 @@ from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
-from sqlalchemy.exc import SQLAlchemyError
 
 from src.core.config import config
 from src.core.exceptions import (
@@ -76,21 +75,6 @@ def global_exception_handler(request: Request, exc: Exception):
         message="An unexpected error occurred",
         error=str(exc) if config.DEBUG else "Internal server error",
         error_type=exc.__class__.__name__ if config.DEBUG else "InternalServerError",
-        details={
-            "path": request.url.path,
-            "method": request.method,
-        },
-    )
-
-
-def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    # Never leak SQL / schema details to clients in production.
-    logger.error(f"Database error occurred: {exc}", exc_info=True)
-    return create_error_response(
-        status_code=500,
-        message="A database error occurred",
-        error=str(exc) if config.DEBUG else "Internal server error",
-        error_type="DatabaseError",
         details={
             "path": request.url.path,
             "method": request.method,

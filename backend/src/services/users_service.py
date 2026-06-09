@@ -1,39 +1,33 @@
-from typing import cast
+import re
 
-from src.core.exceptions import DuplicatedError, UnauthorizedError
+from beanie import PydanticObjectId
+
+from src.core.exceptions import DuplicatedError, NotFoundError, UnauthorizedError
 from src.core.security import create_access_token, hash_password, verify_password
 from src.core.validators import validate_password
-from src.models.users_model import User
-from src.repository.users_repository import UsersRepository
-from src.schemas.users_schemas import (
-    UserCreate,
-    UserCreateInternal,
-    UserLogin,
-    UserUpdate,
-    UserUpdateInternal,
-)
-from src.services.base_service import BaseService
+from src.models.base import utcnow
+from src.models.user import User
+from src.schemas.users_schemas import UserCreate, UserLogin, UserUpdate
 
 
-class UsersService(BaseService):
-    def __init__(self, repository: UsersRepository) -> None:
-        super().__init__(repository)
-        self._repository: UsersRepository = repository
+class UsersService:
+    """User auth + CRUD over the Beanie ``User`` document."""
 
     async def register(self, payload: UserCreate) -> User:
         validate_password(payload.password)
-        if await self._repository.get_by_email(payload.email):
+        if await User.find_one(User.email == payload.email):
             raise DuplicatedError(detail="A user with this email already exists")
 
-        internal = UserCreateInternal(
+        user = User(
             email=payload.email,
             hashed_password=hash_password(payload.password),
             full_name=payload.full_name,
         )
-        return cast(User, await self.add(internal))
+        await user.insert()
+        return user
 
     async def authenticate(self, credentials: UserLogin) -> str:
-        user = await self._repository.get_by_email(credentials.email)
+        user = await User.find_one(User.email == credentials.email)
         if user is None or not verify_password(
             credentials.password, user.hashed_password
         ):
@@ -42,10 +36,39 @@ class UsersService(BaseService):
             raise UnauthorizedError(detail="User account is inactive")
         return create_access_token(subject=str(user.id))
 
-    async def modify(self, user_id: int, payload: UserUpdate) -> User:
+    async def get_by_id(self, user_id: str) -> User:
+        user = (
+            await User.get(PydanticObjectId(user_id))
+            if PydanticObjectId.is_valid(user_id)
+            else None
+        )
+        if user is None:
+            raise NotFoundError(detail=f"User {user_id} not found")
+        return user
+
+    async def list_users(
+        self, page: int, page_size: int, search: str | None
+    ) -> list[User]:
+        if search:
+            rx = {"$regex": re.escape(search), "$options": "i"}
+            query = User.find({"$or": [{"email": rx}, {"full_name": rx}]})
+        else:
+            query = User.find()
+        return await query.skip((page - 1) * page_size).limit(page_size).to_list()
+
+    async def modify(self, user_id: str, payload: UserUpdate) -> User:
+        user = await self.get_by_id(user_id)
         data = payload.model_dump(exclude_none=True)
         if "password" in data:
             validate_password(data["password"])
-            data["hashed_password"] = hash_password(data.pop("password"))
-        internal = UserUpdateInternal(**data)
-        return cast(User, await self.patch(user_id, internal))
+            user.hashed_password = hash_password(data.pop("password"))
+        for key, value in data.items():
+            setattr(user, key, value)
+        user.updated_at = utcnow()
+        await user.save()
+        return user
+
+    async def remove_by_id(self, user_id: str) -> dict[str, str]:
+        user = await self.get_by_id(user_id)
+        await user.delete()
+        return {"message": f"User {user_id} deleted successfully."}

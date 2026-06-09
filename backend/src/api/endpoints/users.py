@@ -1,4 +1,4 @@
-from typing import Annotated, cast
+from typing import Annotated
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
@@ -6,8 +6,7 @@ from fastapi import APIRouter, Depends, Query, status
 from src.core.container import Container
 from src.core.exceptions import PermissionDeniedError
 from src.core.security import get_current_user
-from src.models.users_model import User
-from src.schemas.base_schema import FindBase
+from src.models.user import User
 from src.schemas.users_schemas import (
     Token,
     UserCreate,
@@ -17,24 +16,26 @@ from src.schemas.users_schemas import (
 )
 from src.services.users_service import UsersService
 
+# Tags set per-endpoint: public credential/identity routes under "auth",
+# user-record operations under "users". (Path prefix stays /users for all.)
 router = APIRouter(prefix="/users")
 
 
 @inject
 async def get_current_user_record(
-    user_id: Annotated[int, Depends(get_current_user)],
+    user_id: Annotated[str, Depends(get_current_user)],
     service: UsersService = Depends(Provide[Container.users_service]),
 ) -> User:
     """Load the authenticated user's record (raises 404 if the account is gone)."""
-    return cast(User, await service.get_by_id(user_id))
+    return await service.get_by_id(user_id)
 
 
 # The full authenticated user record; gives endpoints access to id + is_superuser.
 CurrentUser = Annotated[User, Depends(get_current_user_record)]
 
 
-def _require_self_or_admin(actor: User, target_user_id: int) -> None:
-    if actor.id != target_user_id and not actor.is_superuser:
+def _require_self_or_admin(actor: User, target_user_id: str) -> None:
+    if str(actor.id) != target_user_id and not actor.is_superuser:
         raise PermissionDeniedError(detail="Not permitted to access this user")
 
 
@@ -93,11 +94,7 @@ async def list_users(
 ):
     # Listing/enumerating all accounts is an admin-only operation.
     _require_admin(current_user)
-    result = await service.get_list(
-        FindBase(page=page, page_size=page_size, search=search),
-        searchable_fields=["full_name", "email"],
-    )
-    return result["founds"]
+    return await service.list_users(page=page, page_size=page_size, search=search)
 
 
 @router.get(
@@ -108,12 +105,12 @@ async def list_users(
 )
 @inject
 async def get_user(
-    user_id: int,
+    user_id: str,
     current_user: CurrentUser,
     service: UsersService = Depends(Provide[Container.users_service]),
 ):
     _require_self_or_admin(current_user, user_id)
-    if user_id == current_user.id:
+    if user_id == str(current_user.id):
         return current_user
     return await service.get_by_id(user_id)
 
@@ -121,7 +118,7 @@ async def get_user(
 @router.patch("/{user_id}", response_model=UserRead, tags=["users"])
 @inject
 async def update_user(
-    user_id: int,
+    user_id: str,
     payload: UserUpdate,
     current_user: CurrentUser,
     service: UsersService = Depends(Provide[Container.users_service]),
@@ -133,7 +130,7 @@ async def update_user(
 @router.delete("/{user_id}", tags=["users"])
 @inject
 async def delete_user(
-    user_id: int,
+    user_id: str,
     current_user: CurrentUser,
     service: UsersService = Depends(Provide[Container.users_service]),
 ):

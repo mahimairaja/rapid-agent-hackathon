@@ -80,22 +80,16 @@ def decode_access_token(token: str) -> dict[str, Any]:
 
 async def get_current_user(
     token: Annotated[Any, Depends(oauth2_scheme)],
-) -> int:
+) -> str:
+    """Return the authenticated user's id (Mongo ObjectId hex string)."""
     payload = decode_access_token(token.credentials)
     sub = payload.get("sub")
 
-    if sub is None:
+    if not sub:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token subject is missing",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    try:
-        return int(sub)
-    except (TypeError, ValueError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token subject is invalid",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+    return str(sub)
