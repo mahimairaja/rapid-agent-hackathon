@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   RAPID AGENT — Design System v2
+   Rapid Recovery — Design System v2
    Premium Healthcare AI · Hackathon Edition
 ───────────────────────────────────────────────────────────────────────────── */
 
@@ -1251,7 +1251,7 @@ ol {
 /* ── Stat Cards ────────────────────────────────────────────────────────────── */
 .stat-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -1723,6 +1723,10 @@ ol {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
+}
+
+.dashboard-grid > * {
+  min-width: 0;
 }
 
 .dashboard-grid .col-full {

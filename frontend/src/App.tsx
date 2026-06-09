@@ -18,6 +18,7 @@ import { SymptomCheckInForm } from './components/SymptomCheckIn'
 import { CareTeamPanel } from './components/CareTeamPanel'
 import { LoadingState } from './components/LoadingState'
 import { PatientCodeGate } from './components/PatientCodeGate'
+import { ProfessionalApp } from './components/ProfessionalApp'
 
 import {
   getStoredToken,
@@ -28,6 +29,9 @@ import {
   getStoredPatientCode,
   loadDashboardData,
   setStoredPatientCode,
+  getStoredRole,
+  setStoredRole,
+  clearStoredRole,
 } from './api/client'
 
 // ── Page metadata ──────────────────────────────────────────────────────────────
@@ -58,6 +62,7 @@ function daysUntil(iso: string) {
 function App() {
   const [token, setToken] = useState<string | null>(getStoredToken)
   const [patientCode, setPatientCode] = useState<string | null>(getStoredPatientCode)
+  const [role, setRole] = useState<'patient' | 'professional' | null>(getStoredRole)
   const [isDemoMode, setIsDemoMode] = useState(false)
 
   const [patient, setPatient] = useState<Patient | null>(null)
@@ -143,9 +148,15 @@ function App() {
     }
   }, [patientCode, refreshKey, token])
 
-  const handleLogin = (newToken: string, demo: boolean) => {
+  const handleLogin = (
+    newToken: string,
+    demo: boolean,
+    userRole: 'patient' | 'professional' = 'patient',
+  ) => {
     setToken(newToken)
     setIsDemoMode(demo)
+    setRole(userRole)
+    setStoredRole(userRole)
   }
 
   const handleDemoAccess = () => {
@@ -154,6 +165,8 @@ function App() {
     setIsDemoMode(true)
     clearStoredPatientCode()
     setPatientCode(null)
+    setRole('patient')
+    setStoredRole('patient')
   }
 
   const handlePatientCodeSubmit = (newPatientCode: string) => {
@@ -177,9 +190,11 @@ function App() {
   const handleLogout = () => {
     clearStoredToken()
     clearStoredPatientCode()
+    clearStoredRole()
     loadedCodeRef.current = null
     setToken(null)
     setPatientCode(null)
+    setRole(null)
     setPatient(null)
     setMedications([])
     setAppointments([])
@@ -214,8 +229,12 @@ function App() {
   const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : 0
 
   // Not logged in
-  if (!token) {
+  if (!token || !role) {
     return <LoginScreen onLogin={handleLogin} />
+  }
+
+  if (role === 'professional') {
+    return <ProfessionalApp onLogout={handleLogout} />
   }
 
   if (token !== 'demo' && (!patientCode || dashboardError)) {

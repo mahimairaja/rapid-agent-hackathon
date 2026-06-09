@@ -119,6 +119,10 @@ export interface Appointment {
   booked_at?: string
 }
 
+export interface ProfessionalAppointment extends Appointment {
+  patient_name: string
+}
+
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
 export interface AgentChatRequest {
@@ -191,7 +195,38 @@ export type AppView =
   | 'symptom-check'
   | 'care-team'
 
+export type ProfessionalAppView =
+  | 'patient-queue'
+  | 'patient-profile'
+  | 'escalation-center'
+  | 'appointments'
+
+export interface PatientQueueItem {
+  id: string
+  patient_id: string
+  first_name: string
+  last_name: string
+  risk_level: RiskLevel
+  status?: 'active' | 'inactive'
+  last_check_in?: string
+  next_appointment?: string
+  assigned_staff?: string
+  escalation?: string
+  escalation_level?: 'critical' | 'high' | 'medium'
+}
+
 export interface DemoMode {
   active: boolean
   reason?: string
+}
+
+export interface ProfessionalEscalation {
+  id: string
+  patient_id: string
+  patient_name: string
+  kind: string
+  level: 'critical' | 'high' | 'medium' | 'low'
+  message: string
+  status: 'open' | 'resolved'
+  created_at: string
 }
