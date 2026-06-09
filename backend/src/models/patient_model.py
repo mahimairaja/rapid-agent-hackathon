@@ -26,13 +26,16 @@ class Patient(TimestampedDocument):
     class Settings:
         name = "patients"
         # patient_code is an optional unique identifier (the unambiguous match
-        # path). A sparse unique index keeps set values unique while letting
-        # patients without a code coexist (multiple missing values are allowed).
+        # path). A partial unique index keeps set values unique while allowing any
+        # number of patients with no code: a plain sparse index would not, because
+        # Beanie persists a missing code as an explicit null and a sparse index
+        # still treats null as an indexed value (so a second code-less patient
+        # would collide). partialFilterExpression indexes only string codes.
         indexes = [
             IndexModel(
                 [("patient_code", ASCENDING)],
                 unique=True,
-                sparse=True,
+                partialFilterExpression={"patient_code": {"$type": "string"}},
                 name="patient_code_unique",
             ),
         ]
