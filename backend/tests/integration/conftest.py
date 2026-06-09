@@ -1,0 +1,86 @@
+"""Integration test harness: a real MongoDB, seeded with demo patients.
+
+Requires ``MONGODB_URI`` in the environment (tests skip cleanly without it). Uses
+a dedicated test database (``MONGODB_TEST_DB``, default ``homeward_test``), never
+the app's ``homeward`` database, and wipes the collections before and after each
+test. Care plans are inserted directly with empty embeddings, so no Voyage key is
+needed.
+"""
+
+import os
+from datetime import UTC, date, datetime
+
+import pytest
+import pytest_asyncio
+from beanie import init_beanie
+from pymongo import AsyncMongoClient
+
+from src.core.config import config  # noqa: F401  (ensures .env is loaded)
+from src.models import DOCUMENT_MODELS, Appointment, CarePlanChunk, Patient
+
+_COLLECTIONS = (
+    "patients",
+    "medications",
+    "appointments",
+    "care_plans",
+    "guidelines",
+    "users",
+)
+
+
+@pytest_asyncio.fixture
+async def db():
+    uri = os.environ.get("MONGODB_URI")
+    if not uri:
+        pytest.skip("MONGODB_URI not set; skipping DB-backed integration tests")
+    test_db = os.environ.get("MONGODB_TEST_DB", "homeward_test")
+    client = AsyncMongoClient(uri)
+    database = client[test_db]
+    await init_beanie(database=database, document_models=DOCUMENT_MODELS)
+    for name in _COLLECTIONS:
+        await database[name].delete_many({})
+    try:
+        yield database
+    finally:
+        for name in _COLLECTIONS:
+            await database[name].delete_many({})
+        await client.close()
+
+
+@pytest_asyncio.fixture
+async def seed_demo(db):
+    """Two distinct patients, plus a care-plan chunk and a future appointment."""
+    margaret = Patient(
+        patient_id="pid-margaret",
+        first_name="Margaret",
+        last_name="Chen",
+        birth_date=date(1948, 3, 12),
+        patient_code="HW-1001",
+        discharge_reason="Acute exacerbation of chronic congestive heart failure",
+        assigned_clinician="Dr. Helen Park (Cardiology)",
+    )
+    james = Patient(
+        patient_id="pid-james",
+        first_name="James",
+        last_name="Okafor",
+        birth_date=date(1972, 11, 5),
+        patient_code="HW-1002",
+        discharge_reason="Elective right total knee replacement",
+        assigned_clinician="Dr. Marcus Reed (Orthopedics)",
+    )
+    await Patient.insert_many([margaret, james])
+
+    await CarePlanChunk(
+        patient_id="pid-margaret",
+        source_file="margaret.md",
+        chunk_index=0,
+        text="Discharge summary: congestive heart failure care plan.",
+    ).insert()
+    await Appointment(
+        patient_id="pid-margaret",
+        kind="cardiology follow-up",
+        start=datetime(2099, 1, 1, 9, 0, tzinfo=UTC),
+        provider="Dr. Helen Park",
+    ).insert()
+
+    return {"margaret": margaret, "james": james}

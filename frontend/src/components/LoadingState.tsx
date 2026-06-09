@@ -4,7 +4,7 @@ export function LoadingState({ message = 'Loading…' }: { message?: string }) {
       <div className="spinner" />
       <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{message}</span>
     </div>
-  );
+  )
 }
 
 export function EmptyState({
@@ -12,9 +12,9 @@ export function EmptyState({
   title = 'Nothing here yet',
   subtitle,
 }: {
-  icon?: string;
-  title?: string;
-  subtitle?: string;
+  icon?: string
+  title?: string
+  subtitle?: string
 }) {
   return (
     <div className="empty-state">
@@ -22,5 +22,5 @@ export function EmptyState({
       <p className="empty-state-title">{title}</p>
       {subtitle && <p className="empty-state-sub">{subtitle}</p>}
     </div>
-  );
+  )
 }

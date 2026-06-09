@@ -1,34 +1,34 @@
-import { useState } from 'react';
-import { login, setStoredToken } from '../api/client';
+import { useState } from 'react'
+import { login, setStoredToken } from '../api/client'
 
 interface LoginScreenProps {
-  onLogin: (token: string, isDemoMode: boolean) => void;
+  onLogin: (token: string, isDemoMode: boolean) => void
 }
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setLoading(true)
     try {
-      const token = await login(email, password);
-      setStoredToken(token.access_token);
-      onLogin(token.access_token, false);
+      const token = await login(email, password)
+      setStoredToken(token.access_token)
+      onLogin(token.access_token, false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDemoAccess = () => {
-    onLogin('demo', true);
-  };
+    onLogin('demo', true)
+  }
 
   return (
     <div className="login-screen">
@@ -36,11 +36,20 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       <div className="login-hero">
         <div className="login-hero-grid" aria-hidden />
         <div className="login-hero-content">
-
           {/* Logo */}
           <div className="login-hero-logo">
             <div className="login-hero-logo-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
             </div>
@@ -48,18 +57,19 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           </div>
 
           {/* Eyebrow */}
-          <div className="login-hero-eyebrow">
-            AI Healthcare Recovery Platform
-          </div>
+          <div className="login-hero-eyebrow">AI Healthcare Recovery Platform</div>
 
           {/* Title */}
           <h1 className="login-hero-title">
-            Recovery, guided<br />
+            Recovery, guided
+            <br />
             <span className="gradient-text">by intelligence.</span>
           </h1>
 
           <p className="login-hero-sub">
-            Post-discharge shouldn't be a guessing game. Rapid Agent gives every patient a personalized AI recovery guide — 24/7 monitoring, intelligent triage, and real-time care coordination.
+            Post-discharge shouldn't be a guessing game. Rapid Agent gives every patient a
+            personalized AI recovery guide — 24/7 monitoring, intelligent triage, and real-time care
+            coordination.
           </p>
 
           {/* Feature list */}
@@ -72,7 +82,9 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               { icon: '📋', text: 'Personalized 12-week recovery milestones' },
             ].map(({ icon, text }) => (
               <div key={text} className="login-feature">
-                <div className="login-feature-icon" aria-hidden="true">{icon}</div>
+                <div className="login-feature-icon" aria-hidden="true">
+                  {icon}
+                </div>
                 <span>{text}</span>
               </div>
             ))}
@@ -91,7 +103,6 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               </div>
             ))}
           </div>
-
         </div>
       </div>
 
@@ -99,15 +110,43 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       <div className="login-panel">
         <div className="login-panel-bg" aria-hidden />
         <div className="login-form-wrapper">
-
           {/* Mobile-only logo */}
           <div className="login-mobile-logo">
-            <div style={{ width: 38, height: 38, background: 'linear-gradient(135deg, var(--blue-500), var(--teal-400))', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                background: 'linear-gradient(135deg, var(--blue-500), var(--teal-400))',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
             </div>
-            <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.4px' }}>Rapid Agent</span>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.4px',
+              }}
+            >
+              Rapid Agent
+            </span>
           </div>
 
           <h2 className="login-form-title">Welcome back</h2>
@@ -115,14 +154,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
           <form onSubmit={handleLogin} noValidate>
             <div className="form-group">
-              <label className="form-label" htmlFor="login-email">Email address</label>
+              <label className="form-label" htmlFor="login-email">
+                Email address
+              </label>
               <input
                 id="login-email"
                 className="form-input"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
                 aria-required="true"
@@ -130,14 +171,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="login-password">Password</label>
+              <label className="form-label" htmlFor="login-password">
+                Password
+              </label>
               <input
                 id="login-password"
                 className="form-input"
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
                 aria-required="true"
@@ -145,7 +188,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             </div>
 
             {error && (
-              <div className="form-error" role="alert" aria-live="assertive" style={{ marginBottom: 8 }}>
+              <div
+                className="form-error"
+                role="alert"
+                aria-live="assertive"
+                style={{ marginBottom: 8 }}
+              >
                 ⚠️ {error}
               </div>
             )}
@@ -183,8 +231,17 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             🎭 &nbsp;View Live Demo
           </button>
 
-          <p style={{ fontSize: 11.5, color: 'var(--text-muted)', textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
-            Demo mode uses <strong>John Matthews</strong>, 64 — Total Hip Replacement patient.<br />
+          <p
+            style={{
+              fontSize: 11.5,
+              color: 'var(--text-muted)',
+              textAlign: 'center',
+              marginTop: 10,
+              lineHeight: 1.5,
+            }}
+          >
+            Demo mode uses <strong>John Matthews</strong>, 64 — Total Hip Replacement patient.
+            <br />
             No backend required.
           </p>
 
@@ -197,5 +254,5 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

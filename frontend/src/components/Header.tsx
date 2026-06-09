@@ -1,13 +1,20 @@
 interface HeaderProps {
-  title: string;
-  subtitle?: string;
-  isDemoMode: boolean;
-  onMenuClick: () => void;
-  onLogout: () => void;
-  userInitials: string;
+  title: string
+  subtitle?: string
+  isDemoMode: boolean
+  onMenuClick: () => void
+  onLogout: () => void
+  userInitials: string
 }
 
-export function Header({ title, subtitle, isDemoMode, onMenuClick, onLogout, userInitials }: HeaderProps) {
+export function Header({
+  title,
+  subtitle,
+  isDemoMode,
+  onMenuClick,
+  onLogout,
+  userInitials,
+}: HeaderProps) {
   return (
     <header className="header" role="banner">
       <div className="header-left">
@@ -20,7 +27,16 @@ export function Header({ title, subtitle, isDemoMode, onMenuClick, onLogout, use
           aria-haspopup="true"
           id="mobile-menu-btn"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="12" x2="21" y2="12" />
             <line x1="3" y1="18" x2="21" y2="18" />
@@ -35,7 +51,11 @@ export function Header({ title, subtitle, isDemoMode, onMenuClick, onLogout, use
 
       <div className="header-actions">
         {isDemoMode && (
-          <div className="demo-badge" title="Using synthetic demo data — no backend required" role="status">
+          <div
+            className="demo-badge"
+            title="Using synthetic demo data — no backend required"
+            role="status"
+          >
             <span className="demo-badge-dot" aria-hidden="true" />
             Demo Mode
           </div>
@@ -53,5 +73,5 @@ export function Header({ title, subtitle, isDemoMode, onMenuClick, onLogout, use
         </button>
       </div>
     </header>
-  );
+  )
 }
