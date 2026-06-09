@@ -63,6 +63,13 @@ class Config(BaseSettings):
     GOOGLE_GENAI_USE_VERTEXAI: bool = False
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
+    # Voice (F6). GEMINI_LIVE_MODEL must be a Gemini Live native-audio model; the
+    # voice agent reuses the same tools/prompts as the text agent but with this
+    # model. Confirm the exact id against availability at deploy time.
+    GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"
+    VOICE_INPUT_SAMPLE_RATE: int = 16000
+    VOICE_OUTPUT_SAMPLE_RATE: int = 24000
+
     # Clinic-local timezone for medication dose times (F3 get_next_dose computes
     # the next dose against this wall clock). IANA name.
     CLINIC_TIMEZONE: str = "America/New_York"
