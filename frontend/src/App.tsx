@@ -13,6 +13,7 @@ import { RecoveryPlan } from './components/RecoveryPlan'
 import { MedicationSchedule } from './components/MedicationSchedule'
 import { AppointmentTimeline } from './components/AppointmentTimeline'
 import { AssistantChat } from './components/AssistantChat'
+import { VoiceConsole } from './components/VoiceConsole'
 import { SymptomCheckInForm } from './components/SymptomCheckIn'
 import { CareTeamPanel } from './components/CareTeamPanel'
 import { LoadingState } from './components/LoadingState'
@@ -36,6 +37,7 @@ const PAGE_META: Record<AppView, { title: string; subtitle: string }> = {
   medications: { title: 'Medication Schedule', subtitle: 'Daily medications and instructions' },
   appointments: { title: 'Appointment Timeline', subtitle: 'Upcoming follow-up appointments' },
   assistant: { title: 'AI Recovery Assistant', subtitle: 'Ask anything about your recovery' },
+  voice: { title: 'Voice Conversation', subtitle: 'Talk to Homeward and interrupt any time' },
   'symptom-check': {
     title: 'Symptom Check-In',
     subtitle: 'Monitor and triage how you are feeling',
@@ -382,6 +384,19 @@ function App() {
                   userInitials={userInitials}
                 />
               </div>
+            </div>
+          )}
+
+          {activeView === 'voice' && (
+            <div>
+              <div className="view-header">
+                <div className="view-header-title">🎙️ Voice Conversation</div>
+                <div className="view-header-sub">
+                  Speak with Homeward hands-free — it listens, answers aloud, and you can interrupt
+                  any time
+                </div>
+              </div>
+              <VoiceConsole />
             </div>
           )}
 
