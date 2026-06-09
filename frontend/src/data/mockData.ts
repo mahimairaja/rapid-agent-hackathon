@@ -1,9 +1,4 @@
-import type {
-  Patient,
-  Medication,
-  Appointment,
-  CareTeamMember,
-} from '../types';
+import type { Patient, Medication, Appointment, CareTeamMember } from '../types'
 
 // ── Care Team ─────────────────────────────────────────────────────────────────
 
@@ -29,7 +24,7 @@ export const MOCK_CARE_TEAM: CareTeamMember[] = [
     phone: '(555) 204-1108',
     email: 'm.patel@rapidhealth.ca',
   },
-];
+]
 
 // ── Patient ───────────────────────────────────────────────────────────────────
 
@@ -53,7 +48,7 @@ export const MOCK_PATIENT: Patient = {
   care_team: MOCK_CARE_TEAM,
   allergies: ['Penicillin', 'Sulfa drugs'],
   conditions: ['Type 2 Diabetes', 'Hypertension'],
-};
+}
 
 // ── Medications ───────────────────────────────────────────────────────────────
 
@@ -106,7 +101,7 @@ export const MOCK_MEDICATIONS: Medication[] = [
     taken_today: false,
     reason: 'Gastroprotection while on Celecoxib',
   },
-];
+]
 
 // ── Appointments ──────────────────────────────────────────────────────────────
 
@@ -162,17 +157,17 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     reason: 'Progressive mobility training',
     status: 'scheduled',
   },
-];
+]
 
 // ── Recovery Plan ─────────────────────────────────────────────────────────────
 
 export interface RecoveryMilestone {
-  id: string;
-  week: string;
-  title: string;
-  goals: string[];
-  restrictions: string[];
-  completed: boolean;
+  id: string
+  week: string
+  title: string
+  goals: string[]
+  restrictions: string[]
+  completed: boolean
 }
 
 export const MOCK_RECOVERY_MILESTONES: RecoveryMilestone[] = [
@@ -203,10 +198,7 @@ export const MOCK_RECOVERY_MILESTONES: RecoveryMilestone[] = [
       'Longer walks on flat surfaces',
       'Stair practice with physiotherapist',
     ],
-    restrictions: [
-      'Still no bending hip past 90°',
-      'Avoid low chairs or sofas',
-    ],
+    restrictions: ['Still no bending hip past 90°', 'Avoid low chairs or sofas'],
     completed: false,
   },
   {
@@ -218,13 +210,10 @@ export const MOCK_RECOVERY_MILESTONES: RecoveryMilestone[] = [
       'Gentle stretching exercises',
       'Return to light activities',
     ],
-    restrictions: [
-      'No impact sports',
-      'No swimming pools (wound must be fully healed)',
-    ],
+    restrictions: ['No impact sports', 'No swimming pools (wound must be fully healed)'],
     completed: false,
   },
-];
+]
 
 // ── Urgent Warning Signs ──────────────────────────────────────────────────────
 
@@ -235,7 +224,7 @@ export const URGENT_WARNING_SIGNS = [
   { icon: '🦵', label: 'Severe calf pain or swelling' },
   { icon: '🩹', label: 'Wound redness, discharge, or opening' },
   { icon: '⚡', label: 'Sudden severe pain increase' },
-];
+]
 
 // ── Simulated AI Responses ────────────────────────────────────────────────────
 
@@ -304,24 +293,44 @@ I can help you with:
 **Try asking me:** "Can I climb stairs today?" or "What medications do I take today?"
 
 *Remember: I provide recovery guidance based on your care plan, but I am not a substitute for professional medical advice.*`,
-};
+}
 
 export function getAIResponse(message: string): string {
-  const lower = message.toLowerCase();
+  const lower = message.toLowerCase()
   if (lower.includes('stair') || lower.includes('climb') || lower.includes('step')) {
-    return AI_RESPONSES.stairs;
+    return AI_RESPONSES.stairs
   }
-  if (lower.includes('pain') && (lower.includes('8') || lower.includes('9') || lower.includes('10') || lower.includes('severe'))) {
-    return AI_RESPONSES.pain;
+  if (
+    lower.includes('pain') &&
+    (lower.includes('8') || lower.includes('9') || lower.includes('10') || lower.includes('severe'))
+  ) {
+    return AI_RESPONSES.pain
   }
-  if (lower.includes('appointment') || lower.includes('next') || lower.includes('schedule') || lower.includes('when')) {
-    return AI_RESPONSES.appointment;
+  if (
+    lower.includes('appointment') ||
+    lower.includes('next') ||
+    lower.includes('schedule') ||
+    lower.includes('when')
+  ) {
+    return AI_RESPONSES.appointment
   }
-  if (lower.includes('medication') || lower.includes('medicine') || lower.includes('drug') || lower.includes('pill') || lower.includes('take today')) {
-    return AI_RESPONSES.medications;
+  if (
+    lower.includes('medication') ||
+    lower.includes('medicine') ||
+    lower.includes('drug') ||
+    lower.includes('pill') ||
+    lower.includes('take today')
+  ) {
+    return AI_RESPONSES.medications
   }
-  if (lower.includes('urgent') || lower.includes('emergency') || lower.includes('warning') || lower.includes('danger') || lower.includes('symptom')) {
-    return AI_RESPONSES.urgent;
+  if (
+    lower.includes('urgent') ||
+    lower.includes('emergency') ||
+    lower.includes('warning') ||
+    lower.includes('danger') ||
+    lower.includes('symptom')
+  ) {
+    return AI_RESPONSES.urgent
   }
-  return AI_RESPONSES.default;
+  return AI_RESPONSES.default
 }
