@@ -12,8 +12,14 @@ import os
 from google.adk.agents import Agent
 from google.adk.models.base_llm import BaseLlm
 
+from src.agent.prompts.medication_prompt import MEDICATION_INSTRUCTION
 from src.agent.prompts.recognition_prompt import RECOGNITION_INSTRUCTION
 from src.agent.tools.guards import verification_gate
+from src.agent.tools.medication_tools import (
+    flag_pharmacist,
+    get_medications,
+    get_next_dose,
+)
 from src.agent.tools.patient_tools import find_patient, get_my_plan
 from src.core.config import config
 
@@ -45,8 +51,14 @@ def build_recognition_agent(model: BaseLlm | str | None = None) -> Agent:
     return Agent(
         name="recognition_agent",
         model=model or config.GEMINI_MODEL,
-        instruction=RECOGNITION_INSTRUCTION,
-        tools=[find_patient, get_my_plan],
+        instruction="\n\n".join([RECOGNITION_INSTRUCTION, MEDICATION_INSTRUCTION]),
+        tools=[
+            find_patient,
+            get_my_plan,
+            get_medications,
+            get_next_dose,
+            flag_pharmacist,
+        ],
         before_tool_callback=verification_gate,
     )
 
