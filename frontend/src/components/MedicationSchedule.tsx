@@ -24,8 +24,9 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
     )
   }
 
-  const taken = medications.filter((m) => m.taken_today)
-  const pending = medications.filter((m) => !m.taken_today)
+  const hasAdherence = medications.some((m) => typeof m.taken_today === 'boolean')
+  const taken = hasAdherence ? medications.filter((m) => m.taken_today) : []
+  const pending = hasAdherence ? medications.filter((m) => m.taken_today === false) : medications
 
   return (
     <div>
@@ -40,15 +41,19 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
         }}
       >
         <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-          Today's Progress
+          {hasAdherence ? "Today's Progress" : 'Active Medications'}
         </span>
         <span
           className="text-sm font-semibold"
           style={{
-            color: taken.length === medications.length ? 'var(--green-500)' : 'var(--amber-500)',
+            color: hasAdherence
+              ? taken.length === medications.length
+                ? 'var(--green-500)'
+                : 'var(--amber-500)'
+              : 'var(--blue-500)',
           }}
         >
-          {taken.length} / {medications.length} taken
+          {hasAdherence ? `${taken.length} / ${medications.length} taken` : medications.length}
         </span>
       </div>
 
@@ -65,7 +70,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
               marginBottom: 8,
             }}
           >
-            ⏰ Due Today
+            {hasAdherence ? '⏰ Due Today' : 'On Plan'}
           </div>
           <div className="medication-list">
             {pending.map((med) => (
@@ -113,6 +118,9 @@ function MedItem({ med }: { med: Medication }) {
         <div className="med-detail">
           {med.dosage && <span>{med.dosage}</span>}
           {freqLabel && <span> · {freqLabel}</span>}
+          {med.schedule_times && med.schedule_times.length > 0 && (
+            <span> · {med.schedule_times.join(', ')}</span>
+          )}
         </div>
         {med.purpose && <span className="med-purpose-tag">{med.purpose}</span>}
         {med.instructions && (
@@ -122,8 +130,23 @@ function MedItem({ med }: { med: Medication }) {
             {med.instructions}
           </div>
         )}
+        {med.cautions && med.cautions.length > 0 && (
+          <div className="med-cautions">
+            {med.cautions.slice(0, 2).map((caution) => (
+              <span key={caution}>{caution}</span>
+            ))}
+          </div>
+        )}
       </div>
-      <div className={`med-badge ${status}`}>{med.taken_today ? 'Taken' : 'Due'}</div>
+      <div className={`med-badge ${status}`}>
+        {typeof med.taken_today === 'boolean'
+          ? med.taken_today
+            ? 'Taken'
+            : 'Due'
+          : med.schedule_times && med.schedule_times.length > 0
+            ? 'Scheduled'
+            : 'PRN'}
+      </div>
     </div>
   )
 }

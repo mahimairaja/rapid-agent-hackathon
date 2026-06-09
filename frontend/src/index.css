@@ -865,6 +865,27 @@ ol {
   animation: glow-pulse 2s infinite;
 }
 
+.patient-code-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: var(--radius-full);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--blue-600);
+  letter-spacing: 0.5px;
+  transition:
+    background var(--t-base),
+    border-color var(--t-base);
+}
+
+.patient-code-badge:hover {
+  background: white;
+  border-color: var(--blue-200);
+}
+
 .header-avatar {
   width: 34px;
   height: 34px;
@@ -1926,6 +1947,24 @@ ol {
   color: var(--amber-600);
 }
 
+.med-cautions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.med-cautions span {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 7px;
+  background: var(--slate-50);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-sm);
+}
+
 .med-purpose-tag {
   font-size: 10.5px;
   padding: 2px 8px;
@@ -2094,6 +2133,38 @@ ol {
   background: var(--slate-100);
   color: var(--slate-600);
   border: 1px solid var(--slate-200);
+}
+
+.appointment-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 24px 0;
+}
+
+.appointment-actions.compact {
+  padding-top: 12px;
+}
+
+.appointment-actions button {
+  min-height: 30px;
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  background: var(--slate-50);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-size: 11.5px;
+  font-weight: 700;
+  transition:
+    background var(--t-base),
+    color var(--t-base),
+    border-color var(--t-base);
+}
+
+.appointment-actions button:hover {
+  background: var(--blue-50);
+  color: var(--blue-600);
+  border-color: var(--blue-200);
 }
 
 .timeline-instruction {
@@ -2934,6 +3005,87 @@ input[type='range']::-webkit-slider-thumb:hover {
   justify-content: center;
   box-shadow: 0 8px 24px rgb(59 130 246 / 0.35);
   animation: float 2s ease-in-out infinite;
+}
+
+.patient-code-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(59 130 246 / 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 80%, rgb(20 184 166 / 0.08) 0%, transparent 45%), var(--bg-app);
+  padding: 24px;
+}
+
+.patient-code-panel {
+  width: min(100%, 420px);
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 32px;
+}
+
+.patient-code-logo {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, var(--blue-500), var(--teal-400));
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 22px rgb(59 130 246 / 0.28);
+  margin-bottom: 24px;
+}
+
+.patient-code-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--blue-500);
+  margin-bottom: 8px;
+}
+
+.patient-code-title {
+  font-size: 25px;
+  font-weight: 850;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.patient-code-sub {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+}
+
+.patient-code-error {
+  background: var(--red-50);
+  color: var(--red-600);
+  border: 1px solid rgb(239 68 68 / 0.18);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.patient-code-logout {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-top: 14px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+}
+
+.patient-code-logout:hover:not(:disabled) {
+  background: var(--slate-50);
+  color: var(--text-secondary);
 }
 
 /* ── Login Screen ──────────────────────────────────────────────────────────── */
@@ -4036,6 +4188,14 @@ input[type='range']::-webkit-slider-thumb:hover {
   background: var(--green-500);
   border-radius: 50%;
   animation: pulse-dot 2s infinite;
+}
+
+.chat-agent-status.fallback {
+  color: var(--amber-300);
+}
+
+.chat-agent-status.fallback::before {
+  background: var(--amber-400);
 }
 
 .chat-powered-by {

@@ -4,6 +4,7 @@ interface DashboardHeroProps {
   patient: Patient
   medications: Medication[]
   appointments: Appointment[]
+  hasMedicationAdherence: boolean
   onNavigate: (view: 'assistant' | 'symptom-check' | 'medications' | 'appointments') => void
 }
 
@@ -41,6 +42,7 @@ export function DashboardHero({
   patient,
   medications,
   appointments,
+  hasMedicationAdherence,
   onNavigate,
 }: DashboardHeroProps) {
   const stage = patient.recovery_stage ?? 'week-1'
@@ -119,14 +121,20 @@ export function DashboardHero({
           <button
             className="dh-qs-item"
             onClick={() => onNavigate('medications')}
-            aria-label={`Medications: ${completedToday} of ${medicationsTotal} taken`}
+            aria-label={
+              hasMedicationAdherence
+                ? `Medications: ${completedToday} of ${medicationsTotal} taken`
+                : `Active medications: ${medicationsTotal}`
+            }
             type="button"
           >
             <span className="dh-qs-icon med">💊</span>
             <span className="dh-qs-val">
-              {completedToday}/{medicationsTotal}
+              {hasMedicationAdherence ? `${completedToday}/${medicationsTotal}` : medicationsTotal}
             </span>
-            <span className="dh-qs-lbl">Meds taken</span>
+            <span className="dh-qs-lbl">
+              {hasMedicationAdherence ? 'Meds taken' : 'Active meds'}
+            </span>
           </button>
           <div className="dh-qs-divider" />
           <button
