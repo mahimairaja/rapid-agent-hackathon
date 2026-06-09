@@ -178,6 +178,10 @@ export async function fetchProfessionalAppointments(): Promise<ProfessionalAppoi
     )
     return new Promise((resolve) => setTimeout(() => resolve(MOCK_PROFESSIONAL_APPOINTMENTS), 800))
   }
+export function getVoiceWsUrl(): string {
+  // Reuse the REST base URL, swapping the scheme to ws/wss.
+  const base = BASE_URL.replace(/^http/i, 'ws')
+  return `${base}/voice/ws`
 }
 
 export function getClientTimeZone(): string | null {

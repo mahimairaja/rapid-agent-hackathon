@@ -32,6 +32,7 @@ _COLLECTIONS = (
     "guidelines",
     "users",
     "escalations",
+    "checkins",
 )
 
 
