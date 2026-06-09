@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './index.css'
 import './App.css'
 
@@ -68,6 +68,11 @@ function App() {
   const [activeView, setActiveView] = useState<AppView>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [assistantDraft, setAssistantDraft] = useState<string | null>(null)
+  // The patient code whose data is already on screen. Used to tell an initial
+  // load (show the full-screen loader) from a background refresh (e.g. after a
+  // chat turn), which must not toggle screen-level loading or it would unmount
+  // and remount the AssistantChat, wiping the live conversation and session id.
+  const loadedCodeRef = useRef<string | null>(null)
 
   // Load data when we have a token
   useEffect(() => {
@@ -98,7 +103,10 @@ function App() {
         return
       }
 
-      setLoading(true)
+      // First load for this code blocks the screen; a same-code refresh (chat
+      // turn) fetches in the background so the dashboard and chat stay mounted.
+      const isInitialLoad = loadedCodeRef.current !== patientCode
+      if (isInitialLoad) setLoading(true)
       setDashboardError('')
       try {
         const data = await fetchPatientDashboard(
@@ -106,20 +114,23 @@ function App() {
           token,
         )
         if (!cancelled) {
+          loadedCodeRef.current = patientCode
           setPatient(data.patient)
           setMedications(data.medications)
           setAppointments(data.appointments)
           setIsDemoMode(data.demo)
         }
       } catch (err) {
-        if (!cancelled) {
+        // Only fall back to the code gate when the very first load fails. A
+        // failed background refresh keeps the current dashboard in place.
+        if (!cancelled && isInitialLoad) {
           setPatient(null)
           setMedications([])
           setAppointments([])
           setDashboardError(err instanceof Error ? err.message : 'Could not load this patient.')
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isInitialLoad) {
           setLoading(false)
         }
       }
@@ -152,6 +163,7 @@ function App() {
 
   const handleChangePatient = () => {
     clearStoredPatientCode()
+    loadedCodeRef.current = null
     setPatientCode(null)
     setPatient(null)
     setMedications([])
@@ -163,6 +175,7 @@ function App() {
   const handleLogout = () => {
     clearStoredToken()
     clearStoredPatientCode()
+    loadedCodeRef.current = null
     setToken(null)
     setPatientCode(null)
     setPatient(null)

@@ -26,7 +26,11 @@ _UNVERIFIED = {
     "status": "unverified",
     "message": "No patient has been identified in this conversation yet.",
 }
-_BOOKED_STATUSES = {"scheduled", "upcoming", "accepted"}
+# Statuses that mean the patient currently holds this follow-up slot, so it must
+# not be double-booked. "pending" (awaiting host confirmation) still holds the
+# slot and must count here, or a retry would create a duplicate booking;
+# "cancelled"/"rejected" release the slot and are intentionally excluded.
+_BOOKED_STATUSES = {"scheduled", "upcoming", "accepted", "pending"}
 _DEFAULT_SLOT_LIMIT = 3
 _DEFAULT_TIME_ZONE = "America/New_York"
 
@@ -50,6 +54,17 @@ def _parse_iso(value: str) -> datetime | None:
 
 def _normalize(value: str | None) -> str:
     return " ".join((value or "").split()).lower()
+
+
+# Cal.com's confirmed statuses map to our canonical "scheduled"; any other
+# status (e.g. "pending" awaiting host confirmation, "cancelled", "rejected") is
+# surfaced as-is so an unconfirmed hold is not mistaken for a booked follow-up.
+_CONFIRMED_CAL_STATUSES = {"", "accepted", "scheduled", "upcoming"}
+
+
+def _local_status(cal_status: str | None) -> str:
+    normalized = (cal_status or "").strip().lower()
+    return "scheduled" if normalized in _CONFIRMED_CAL_STATUSES else normalized
 
 
 def _timezone_key(time_zone: str | None = None) -> str:
@@ -225,7 +240,7 @@ async def _mirror_booking(
             provider=patient.assigned_clinician,
             location=booking.location,
             reason="Follow-up visit",
-            status="scheduled",
+            status=_local_status(booking.status),
             cal_booking_uid=booking.uid,
             follow_up_window_start=_utc(patient.follow_up_window_start)
             if patient.follow_up_window_start
@@ -242,7 +257,7 @@ async def _mirror_booking(
     existing.start = _utc(booking.start)
     existing.end = _utc(booking.end) if booking.end else None
     existing.location = booking.location or existing.location
-    existing.status = "scheduled"
+    existing.status = _local_status(booking.status)
     existing.cal_booking_uid = booking.uid
     existing.follow_up_window_start = (
         _utc(patient.follow_up_window_start) if patient.follow_up_window_start else None
@@ -329,6 +344,16 @@ async def book_follow_up_slot(
         selected = _find_requested_slot(requested, slots)
         if selected is None:
             return {"status": "unavailable"}
+
+        # Re-check right before the write to narrow the TOCTOU window: a
+        # concurrent turn on another session could have booked this patient's
+        # follow-up between the first check above and here.
+        current = await _current_follow_up(patient)
+        if current is not None:
+            return {
+                "status": "already_booked",
+                "booking": _booking_payload(current, zone),
+            }
 
         try:
             booking = await get_calcom_client().create_booking(

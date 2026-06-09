@@ -17,6 +17,11 @@ from typing import Any, cast
 from src.core.config import config
 from src.models import Patient
 
+# Cal.com sits behind Cloudflare, which blocks the stdlib default
+# ("Python-urllib/x.y") User-Agent with a 1010 "Access denied" 403. Send an
+# explicit application User-Agent so requests are allowed through.
+_USER_AGENT = "Homeward/1.0 (Rapid Agent F4 scheduler)"
+
 
 class CalComError(RuntimeError):
     """Base class for Cal.com integration failures."""
@@ -200,6 +205,7 @@ class CalComClient:
             "Authorization": f"Bearer {api_key.get_secret_value()}",
             "cal-api-version": api_version,
             "Accept": "application/json",
+            "User-Agent": _USER_AGENT,
         }
         if body is not None:
             headers["Content-Type"] = "application/json"
