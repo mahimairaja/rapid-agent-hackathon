@@ -5,10 +5,17 @@ cover the CI-verifiable seams: ADK-event normalization, client framing, the two
 bridge pump loops with fakes, and session-close lifecycle.
 """
 
+import asyncio
 import json
 from types import SimpleNamespace
 
-from src.api.endpoints.voice import pump_client_to_session, pump_session_to_client
+import pytest
+
+from src.api.endpoints.voice import (
+    pump_client_to_session,
+    pump_session_to_client,
+    run_voice_bridge,
+)
 from src.voice.session import VoiceSession, encode_for_client, normalize_event
 
 
@@ -174,3 +181,76 @@ async def test_voice_session_close_is_idempotent(monkeypatch):
     await session.close()
     await session.close()
     assert calls == [1]
+
+
+# -- run_voice_bridge teardown --------------------------------------------------
+
+
+class _OneAudioThenDisconnectWS:
+    def __init__(self):
+        self._messages = [
+            {"type": "websocket.receive", "bytes": b"a"},
+            {"type": "websocket.disconnect"},
+        ]
+
+    async def receive(self):
+        if self._messages:
+            return self._messages.pop(0)
+        await asyncio.Event().wait()
+
+    async def send_bytes(self, data):
+        pass
+
+    async def send_text(self, text):
+        pass
+
+
+class _IdleSession:
+    def __init__(self):
+        self.audio = []
+
+    def send_audio(self, data):
+        self.audio.append(data)
+
+    def send_text(self, text):
+        pass
+
+    async def events(self):
+        await asyncio.Event().wait()
+        yield  # pragma: no cover - never reached
+
+
+class _BlockingWS:
+    async def receive(self):
+        await asyncio.Event().wait()
+
+    async def send_bytes(self, data):
+        pass
+
+    async def send_text(self, text):
+        pass
+
+
+class _ErrorSession:
+    def send_audio(self, data):
+        pass
+
+    async def events(self):
+        raise RuntimeError("adk stream failed")
+        yield  # pragma: no cover - makes this an async generator
+
+
+async def test_run_voice_bridge_cancels_pending_and_returns():
+    # Client disconnects (one task finishes); the session pump is cancelled and
+    # awaited, and the bridge returns without raising.
+    ws = _OneAudioThenDisconnectWS()
+    session = _IdleSession()
+    await run_voice_bridge(ws, session)
+    assert session.audio == [b"a"]
+
+
+async def test_run_voice_bridge_propagates_pump_error():
+    # An error in a pump must surface (so the handler logs it and sends an error
+    # frame) rather than being swallowed by asyncio.wait.
+    with pytest.raises(RuntimeError):
+        await run_voice_bridge(_BlockingWS(), _ErrorSession())
