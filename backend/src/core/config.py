@@ -64,6 +64,10 @@ class Config(BaseSettings):
     GOOGLE_GENAI_USE_VERTEXAI: bool = False
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
+    # Clinic-local timezone for medication dose times (F3 get_next_dose computes
+    # the next dose against this wall clock). IANA name.
+    CLINIC_TIMEZONE: str = "America/New_York"
+
     # Auth (JWT)
     JWT_SECRET_KEY: SecretStr = SecretStr(_PLACEHOLDER_JWT_SECRET)
     JWT_ALGORITHM: str = "HS256"

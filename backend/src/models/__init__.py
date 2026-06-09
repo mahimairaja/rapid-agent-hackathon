@@ -1,6 +1,7 @@
 from src.models.appointment_model import Appointment
 from src.models.base_model import TimestampedDocument
 from src.models.care_plan_model import CarePlanChunk
+from src.models.escalation_model import Escalation
 from src.models.guideline_model import GuidelineChunk
 from src.models.medication_model import Medication
 from src.models.patient_model import Patient
@@ -14,12 +15,14 @@ DOCUMENT_MODELS = [
     Appointment,
     CarePlanChunk,
     GuidelineChunk,
+    Escalation,
 ]
 
 __all__ = [
     "DOCUMENT_MODELS",
     "Appointment",
     "CarePlanChunk",
+    "Escalation",
     "GuidelineChunk",
     "Medication",
     "Patient",
