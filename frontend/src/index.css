@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   RAPID AGENT — Design System v2
+   Rapid Recovery — Design System v2
    Premium Healthcare AI · Hackathon Edition
 ───────────────────────────────────────────────────────────────────────────── */
 
@@ -296,6 +296,7 @@ ol {
 }
 
 @keyframes pulse-dot {
+
   0%,
   100% {
     opacity: 1;
@@ -309,6 +310,7 @@ ol {
 }
 
 @keyframes typing-bounce {
+
   0%,
   60%,
   100% {
@@ -347,6 +349,7 @@ ol {
 }
 
 @keyframes glow-pulse {
+
   0%,
   100% {
     opacity: 1;
@@ -358,6 +361,7 @@ ol {
 }
 
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0);
@@ -1251,7 +1255,7 @@ ol {
 /* ── Stat Cards ────────────────────────────────────────────────────────────── */
 .stat-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -1380,12 +1384,10 @@ ol {
 
 /* ── Patient Hero Card ─────────────────────────────────────────────────────── */
 .patient-card {
-  background: linear-gradient(
-    135deg,
-    var(--navy-950) 0%,
-    var(--navy-850) 40%,
-    var(--navy-700) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--navy-950) 0%,
+      var(--navy-850) 40%,
+      var(--navy-700) 100%);
   border-radius: var(--radius-2xl);
   padding: 30px 32px;
   color: var(--white);
@@ -1434,7 +1436,7 @@ ol {
   z-index: 0;
 }
 
-.patient-card > *:not(.patient-card-texture) {
+.patient-card>*:not(.patient-card-texture) {
   position: relative;
   z-index: 1;
 }
@@ -2928,12 +2930,10 @@ input[type='range']::-webkit-slider-thumb:hover {
 
 /* Skeleton shimmer */
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--slate-200) 25%,
-    var(--slate-100) 50%,
-    var(--slate-200) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--slate-200) 25%,
+      var(--slate-100) 50%,
+      var(--slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-md);
@@ -3666,7 +3666,7 @@ input[type='range']::-webkit-slider-thumb:hover {
   z-index: 0;
 }
 
-.dashboard-hero > *:not(.dashboard-hero-texture) {
+.dashboard-hero>*:not(.dashboard-hero-texture) {
   position: relative;
   z-index: 1;
 }
@@ -4222,19 +4222,19 @@ input[type='range']::-webkit-slider-thumb:hover {
 ══════════════════════════════════════════════════════════════════════════════ */
 
 /* Staggered card entrance */
-.dashboard-grid > *:nth-child(1) {
+.dashboard-grid>*:nth-child(1) {
   animation-delay: 0.05s;
 }
 
-.dashboard-grid > *:nth-child(2) {
+.dashboard-grid>*:nth-child(2) {
   animation-delay: 0.1s;
 }
 
-.dashboard-grid > *:nth-child(3) {
+.dashboard-grid>*:nth-child(3) {
   animation-delay: 0.15s;
 }
 
-.dashboard-grid > *:nth-child(4) {
+.dashboard-grid>*:nth-child(4) {
   animation-delay: 0.2s;
 }
 
@@ -4255,7 +4255,7 @@ input[type='range']::-webkit-slider-thumb:hover {
 }
 
 /* Soft page-entry animation for non-dashboard views */
-.page-body > div {
+.page-body>div {
   animation: slide-up 0.3s var(--ease-out);
 }
 

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { login, setStoredToken, signUp } from '../api/client'
 
 interface LoginScreenProps {
-  onLogin: (token: string, isDemoMode: boolean) => void
+  onLogin: (token: string, isDemoMode: boolean, role: 'patient' | 'professional') => void
 }
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
@@ -11,6 +11,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
+  const [selectedRole, setSelectedRole] = useState<'none' | 'patient' | 'professional'>('none')
   const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -40,7 +41,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     try {
       const token = await login(email, password)
       setStoredToken(token.access_token)
-      onLogin(token.access_token, false)
+      onLogin(token.access_token, false, selectedRole === 'professional' ? 'professional' : 'patient')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
     } finally {
@@ -49,7 +50,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   }
 
   const handleDemoAccess = () => {
-    onLogin('demo', true)
+    onLogin('demo', true, selectedRole === 'professional' ? 'professional' : 'patient')
   }
 
   return (
@@ -75,7 +76,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
             </div>
-            <span className="login-hero-logo-text">Rapid Agent</span>
+            <span className="login-hero-logo-text">Rapid Recovery</span>
           </div>
 
           {/* Eyebrow */}
@@ -89,7 +90,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           </h1>
 
           <p className="login-hero-sub">
-            Post-discharge shouldn't be a guessing game. Rapid Agent gives every patient a
+            Post-discharge shouldn't be a guessing game. Rapid Recovery gives every patient a
             personalized AI recovery guide — 24/7 monitoring, intelligent triage, and real-time care
             coordination.
           </p>
@@ -167,423 +168,637 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 letterSpacing: '-0.4px',
               }}
             >
-              Rapid Agent
+              Rapid Recovery
             </span>
           </div>
 
-          <div className="auth-tab-switcher">
-            <button
-              id="login-tab-btn"
-              type="button"
-              className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
-              onClick={() => setActiveTab('login')}
-              disabled={activeTab === 'login'}
-            >
-              Sign in
-            </button>
-            <button
-              id="signup-tab-btn"
-              type="button"
-              className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
-              onClick={() => setActiveTab('signup')}
-              disabled={activeTab === 'signup'}
-            >
-              Create account
-            </button>
-          </div>
+          {selectedRole === 'none' ? (
+            <div className="role-selection">
+              <h2 style={{ textAlign: 'center', marginBottom: 24, color: 'var(--text-primary)' }}>Welcome to Rapid Recovery</h2>
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: 32 }}>Please select your portal to continue</p>
 
-          <form
-            className="login-form"
-            onSubmit={activeTab === 'login' ? handleLogin : handleSignup}
-          >
-            {error && (
-              <div
-                className="form-error"
-                role="alert"
-                style={{
-                  color: 'var(--red-500)',
-                  background: 'var(--red-50)',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  marginBottom: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                }}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0 }}
+              <div className="role-cards" style={{ display: 'grid', gap: 16 }}>
+                <button
+                  type="button"
+                  className="card role-card"
+                  onClick={() => setSelectedRole('patient')}
+                  style={{ textAlign: 'left', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', border: '1px solid var(--border-light)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--blue-500)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
                 >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                {error}
-              </div>
-            )}
+                  <div className="card-body" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--blue-50)', color: 'var(--blue-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                      👤
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>Patient Portal</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Access your recovery plan and AI assistant</div>
+                    </div>
+                  </div>
+                </button>
 
-            {activeTab === 'login' ? (
-              <>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="login-email">
-                    Email address
-                  </label>
-                  <input
-                    id="login-email"
-                    className="form-input"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    required
-                    aria-required="true"
-                  />
+                <button
+                  type="button"
+                  className="card role-card"
+                  onClick={() => setSelectedRole('professional')}
+                  style={{ textAlign: 'left', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', border: '1px solid var(--border-light)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--teal-500)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+                >
+                  <div className="card-body" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--teal-50)', color: 'var(--teal-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                      ⚕️
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>Care Provider</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Monitor patients and triage escalations</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('none')}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: 0, marginBottom: 24, fontSize: 14, fontWeight: 500 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                Back to portals
+              </button>
+
+              {selectedRole === 'professional' ? (
+                <div className="professional-login">
+                  <h2 style={{ marginBottom: 8, color: 'var(--text-primary)' }}>Provider Dashboard</h2>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Sign in with your staff credentials to access the queue.</p>
+
+                  <form
+                    className="login-form"
+                    onSubmit={handleLogin}
+                  >
+                    {error && (
+                      <div
+                        className="form-error"
+                        role="alert"
+                        style={{
+                          color: 'var(--red-500)',
+                          background: 'var(--red-50)',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{ flexShrink: 0 }}
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="12" />
+                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        {error}
+                      </div>
+                    )}
+
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="pro-login-email">
+                        Staff Email
+                      </label>
+                      <input
+                        id="pro-login-email"
+                        className="form-input"
+                        type="email"
+                        placeholder="dr.smith@hospital.org"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                        required
+                        aria-required="true"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: 6,
+                        }}
+                      >
+                        <label
+                          className="form-label"
+                          htmlFor="pro-login-password"
+                          style={{ marginBottom: 0 }}
+                        >
+                          Password
+                        </label>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          id="pro-login-password"
+                          className="form-input"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          autoComplete="current-password"
+                          required
+                          aria-required="true"
+                          style={{ paddingRight: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--text-muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 0,
+                          }}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          title={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      id="pro-login-submit-btn"
+                      type="submit"
+                      className="login-submit-btn"
+                      disabled={loading || !email || !password}
+                      aria-busy={loading}
+                      style={{ background: 'linear-gradient(135deg, var(--teal-500), var(--emerald-400))' }}
+                    >
+                      {loading ? (
+                        <>
+                          <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                          <p style={{ color: 'var(--text-primary)' }}>Signing in…</p>
+                        </>
+                      ) : (
+                        <p style={{ color: 'var(--text-primary)' }}>Sign in as Provider</p>
+                      )}
+                    </button>
+                  </form>
+
+                  <div className="login-divider">
+                    <div className="login-divider-line" />
+                    <span className="login-divider-text">or</span>
+                    <div className="login-divider-line" />
+                  </div>
+
+                  <button
+                    id="pro-demo-access-btn"
+                    type="button"
+                    className="login-demo-btn"
+                    onClick={handleDemoAccess}
+                  >
+                    🎭 &nbsp;View Provider Demo
+                  </button>
                 </div>
-                <div className="form-group">
-                  <div
+              ) : (
+                <>
+                  <div className="auth-tab-switcher">
+                    <button
+                      id="login-tab-btn"
+                      type="button"
+                      className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('login')}
+                      disabled={activeTab === 'login'}
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      id="signup-tab-btn"
+                      type="button"
+                      className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('signup')}
+                      disabled={activeTab === 'signup'}
+                    >
+                      Create account
+                    </button>
+                  </div>
+
+                  <form
+                    className="login-form"
+                    onSubmit={activeTab === 'login' ? handleLogin : handleSignup}
+                  >
+                    {error && (
+                      <div
+                        className="form-error"
+                        role="alert"
+                        style={{
+                          color: 'var(--red-500)',
+                          background: 'var(--red-50)',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{ flexShrink: 0 }}
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="12" />
+                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        {error}
+                      </div>
+                    )}
+
+                    {activeTab === 'login' ? (
+                      <>
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="login-email">
+                            Email address
+                          </label>
+                          <input
+                            id="login-email"
+                            className="form-input"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="email"
+                            required
+                            aria-required="true"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: 6,
+                            }}
+                          >
+                            <label
+                              className="form-label"
+                              htmlFor="login-password"
+                              style={{ marginBottom: 0 }}
+                            >
+                              Password
+                            </label>
+                          </div>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              id="login-password"
+                              className="form-input"
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              autoComplete="current-password"
+                              required
+                              aria-required="true"
+                              style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              style={{
+                                position: 'absolute',
+                                right: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0,
+                              }}
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
+                              title={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showPassword ? (
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                              ) : (
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                  <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <button
+                          id="login-submit-btn"
+                          type="submit"
+                          className="login-submit-btn"
+                          disabled={loading || !email || !password}
+                          aria-busy={loading}
+                        >
+                          {loading ? (
+                            <>
+                              <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                              Signing in…
+                            </>
+                          ) : (
+                            'Sign in to dashboard'
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="signup-name">
+                            Full name
+                          </label>
+                          <input
+                            id="signup-name"
+                            className="form-input"
+                            type="text"
+                            placeholder="Your full name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            autoComplete="name"
+                            required
+                            aria-required="true"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="signup-email">
+                            Email address
+                          </label>
+                          <input
+                            id="signup-email"
+                            className="form-input"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="email"
+                            required
+                            aria-required="true"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="signup-password">
+                            Create password
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              id="signup-password"
+                              className="form-input"
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              autoComplete="new-password"
+                              required
+                              aria-required="true"
+                              minLength={8}
+                              aria-describedby="password-help"
+                              style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              style={{
+                                position: 'absolute',
+                                right: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0,
+                              }}
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
+                              title={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showPassword ? (
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                              ) : (
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                  <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                          <p id="password-help" className="form-help">
+                            Minimum 8 characters
+                          </p>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="signup-confirm-password">
+                            Confirm password
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              id="signup-confirm-password"
+                              className="form-input"
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              autoComplete="new-password"
+                              required
+                              aria-required="true"
+                              style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              style={{
+                                position: 'absolute',
+                                right: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 0,
+                              }}
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
+                              title={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showPassword ? (
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                              ) : (
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                  <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <button
+                          id="signup-submit-btn"
+                          type="submit"
+                          className="login-submit-btn"
+                          disabled={loading || !email || !password || !name || !confirmPassword}
+                          aria-busy={loading}
+                        >
+                          {loading ? (
+                            <>
+                              <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                              Creating account…
+                            </>
+                          ) : (
+                            'Create account'
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </form>
+
+                  <div className="login-divider">
+                    <div className="login-divider-line" />
+                    <span className="login-divider-text">or</span>
+                    <div className="login-divider-line" />
+                  </div>
+
+                  <button
+                    id="demo-access-btn"
+                    type="button"
+                    className="login-demo-btn"
+                    onClick={handleDemoAccess}
+                  >
+                    🎭 &nbsp;View Live Demo
+                  </button>
+
+                  <p
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 6,
+                      fontSize: 11.5,
+                      color: 'var(--text-muted)',
+                      textAlign: 'center',
+                      marginTop: 10,
+                      lineHeight: 1.5,
                     }}
                   >
-                    <label
-                      className="form-label"
-                      htmlFor="login-password"
-                      style={{ marginBottom: 0 }}
-                    >
-                      Password
-                    </label>
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="login-password"
-                      className="form-input"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="current-password"
-                      required
-                      aria-required="true"
-                      style={{ paddingRight: '40px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-muted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0,
-                      }}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                          <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                      ) : (
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <button
-                  id="login-submit-btn"
-                  type="submit"
-                  className="login-submit-btn"
-                  disabled={loading || !email || !password}
-                  aria-busy={loading}
-                >
-                  {loading ? (
-                    <>
-                      <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                      Signing in…
-                    </>
-                  ) : (
-                    'Sign in to dashboard'
-                  )}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="signup-name">
-                    Full name
-                  </label>
-                  <input
-                    id="signup-name"
-                    className="form-input"
-                    type="text"
-                    placeholder="Your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    autoComplete="name"
-                    required
-                    aria-required="true"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="signup-email">
-                    Email address
-                  </label>
-                  <input
-                    id="signup-email"
-                    className="form-input"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    required
-                    aria-required="true"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="signup-password">
-                    Create password
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="signup-password"
-                      className="form-input"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="new-password"
-                      required
-                      aria-required="true"
-                      minLength={8}
-                      aria-describedby="password-help"
-                      style={{ paddingRight: '40px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-muted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0,
-                      }}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                          <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                      ) : (
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                  <p id="password-help" className="form-help">
-                    Minimum 8 characters
+                    Demo dashboard uses <strong>John Matthews</strong>, 64 — Total Hip Replacement patient.
+                    <br />
+                    Assistant chat connects to the backend when it is running.
                   </p>
-                </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="signup-confirm-password">
-                    Confirm password
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="signup-confirm-password"
-                      className="form-input"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      autoComplete="new-password"
-                      required
-                      aria-required="true"
-                      style={{ paddingRight: '40px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-muted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0,
-                      }}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                          <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                      ) : (
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
-                    </button>
+                  <div className="login-disclaimer">
+                    By signing in you agree to our{' '}
+                    <span style={{ color: 'var(--blue-500)', fontWeight: 600 }}>Terms</span> and{' '}
+                    <span style={{ color: 'var(--blue-500)', fontWeight: 600 }}>Privacy Policy</span>.<br />
+                    This platform uses synthetic data for demonstration purposes.
                   </div>
-                </div>
-
-                <button
-                  id="signup-submit-btn"
-                  type="submit"
-                  className="login-submit-btn"
-                  disabled={loading || !email || !password || !name || !confirmPassword}
-                  aria-busy={loading}
-                >
-                  {loading ? (
-                    <>
-                      <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                      Creating account…
-                    </>
-                  ) : (
-                    'Create account'
-                  )}
-                </button>
-              </>
-            )}
-          </form>
-
-          <div className="login-divider">
-            <div className="login-divider-line" />
-            <span className="login-divider-text">or</span>
-            <div className="login-divider-line" />
-          </div>
-
-          <button
-            id="demo-access-btn"
-            type="button"
-            className="login-demo-btn"
-            onClick={handleDemoAccess}
-          >
-            🎭 &nbsp;View Live Demo
-          </button>
-
-          <p
-            style={{
-              fontSize: 11.5,
-              color: 'var(--text-muted)',
-              textAlign: 'center',
-              marginTop: 10,
-              lineHeight: 1.5,
-            }}
-          >
-            Demo dashboard uses <strong>John Matthews</strong>, 64 — Total Hip Replacement patient.
-            <br />
-            Assistant chat connects to the backend when it is running.
-          </p>
-
-          <div className="login-disclaimer">
-            By signing in you agree to our{' '}
-            <span style={{ color: 'var(--blue-500)', fontWeight: 600 }}>Terms</span> and{' '}
-            <span style={{ color: 'var(--blue-500)', fontWeight: 600 }}>Privacy Policy</span>.<br />
-            This platform uses synthetic data for demonstration purposes.
-          </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
