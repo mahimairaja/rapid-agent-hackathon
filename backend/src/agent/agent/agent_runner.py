@@ -20,11 +20,13 @@ import asyncio
 import logging
 from collections import OrderedDict
 
+from google.adk.events import Event, EventActions
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from src.agent.agent.root_agent import root_agent
+from src.agent.agent.session_state import CLIENT_TIME_ZONE, set_client_time_zone
 
 logger = logging.getLogger(__name__)
 
@@ -99,11 +101,40 @@ async def _ensure_session(session_id: str | None) -> str:
     return session.id
 
 
-async def run_turn(session_id: str | None, message: str) -> tuple[str, str]:
+async def _set_turn_preferences(
+    session_id: str, *, time_zone: str | None = None
+) -> None:
+    if not time_zone:
+        return
+    session = await _session_service.get_session(
+        app_name=_APP_NAME, user_id=_USER_ID, session_id=session_id
+    )
+    if session is not None:
+        state_delta: dict = {}
+        set_client_time_zone(state_delta, time_zone)
+        if state_delta:
+            await _session_service.append_event(
+                session,
+                Event(
+                    author="system",
+                    actions=EventActions(
+                        state_delta={CLIENT_TIME_ZONE: state_delta[CLIENT_TIME_ZONE]}
+                    ),
+                ),
+            )
+
+
+async def run_turn(
+    session_id: str | None,
+    message: str,
+    *,
+    time_zone: str | None = None,
+) -> tuple[str, str]:
     """Run one conversational turn and return ``(session_id, reply_text)``."""
     sid = await _ensure_session(session_id)
     lock = await _lock_for(sid)
     async with lock:
+        await _set_turn_preferences(sid, time_zone=time_zone)
         content = types.Content(role="user", parts=[types.Part(text=message)])
         reply_parts: list[str] = []
         async for event in _runner.run_async(

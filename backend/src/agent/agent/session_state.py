@@ -11,6 +11,7 @@ from typing import Any
 PATIENT_ID = "patient_id"
 PATIENT_VERIFIED = "patient_verified"
 PATIENT_NAME = "patient_name"
+CLIENT_TIME_ZONE = "client_time_zone"
 
 
 def is_verified(state: Any) -> bool:
@@ -29,6 +30,16 @@ def verified_patient_id(state: Any) -> str | None:
 def patient_name(state: Any) -> str | None:
     name = state.get(PATIENT_NAME)
     return str(name) if name else None
+
+
+def client_time_zone(state: Any) -> str | None:
+    value = state.get(CLIENT_TIME_ZONE)
+    return str(value) if value else None
+
+
+def set_client_time_zone(state: Any, time_zone: str | None) -> None:
+    if time_zone and time_zone.strip():
+        state[CLIENT_TIME_ZONE] = time_zone.strip()
 
 
 def set_verified(state: Any, *, patient_id: str, name: str) -> None:

@@ -7,6 +7,10 @@ class ChatRequest(BaseModel):
         default=None,
         description="Server-issued session id; omit to start a new conversation.",
     )
+    time_zone: str | None = Field(
+        default=None,
+        description="Optional IANA timezone for appointment slot display.",
+    )
 
 
 class ChatResponse(BaseModel):

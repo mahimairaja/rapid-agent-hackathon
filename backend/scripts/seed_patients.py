@@ -42,6 +42,12 @@ def _parse_dt(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _parse_bool(value: str | None) -> bool | None:
+    if value is None or value == "":
+        return None
+    return value.strip().lower() in {"1", "true", "yes", "y"}
+
+
 def _split(value: str | None, sep: str) -> list[str]:
     if not value:
         return []
@@ -70,9 +76,14 @@ async def seed() -> None:
                 city=r.get("CITY") or None,
                 state=r.get("STATE") or None,
                 phone=r.get("PHONE") or None,
+                email=r.get("EMAIL") or None,
                 patient_code=(r.get("PATIENT_CODE") or "").strip().upper() or None,
                 discharge_reason=r.get("DISCHARGE_REASON") or None,
                 assigned_clinician=r.get("ASSIGNED_CLINICIAN") or None,
+                follow_up_required=_parse_bool(r.get("FOLLOW_UP_REQUIRED")),
+                follow_up_window_start=_parse_dt(r.get("FOLLOW_UP_WINDOW_START")),
+                follow_up_window_end=_parse_dt(r.get("FOLLOW_UP_WINDOW_END")),
+                follow_up_kind=r.get("FOLLOW_UP_KIND") or None,
             )
             for r in patient_rows
         ]

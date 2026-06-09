@@ -68,18 +68,25 @@ async def seed_demo(db):
         first_name="Margaret",
         last_name="Chen",
         birth_date=date(1948, 3, 12),
+        email="margaret.chen@example.com",
         patient_code="HW-1001",
         discharge_reason="Acute exacerbation of chronic congestive heart failure",
         assigned_clinician="Dr. Helen Park (Cardiology)",
+        follow_up_required=True,
+        follow_up_window_start=datetime(2099, 1, 1, 8, 0, tzinfo=UTC),
+        follow_up_window_end=datetime(2099, 1, 3, 17, 0, tzinfo=UTC),
+        follow_up_kind="cardiology follow-up",
     )
     james = Patient(
         patient_id="pid-james",
         first_name="James",
         last_name="Okafor",
         birth_date=date(1972, 11, 5),
+        email="james.okafor@example.com",
         patient_code="HW-1002",
         discharge_reason="Elective right total knee replacement",
         assigned_clinician="Dr. Marcus Reed (Orthopedics)",
+        follow_up_required=False,
     )
     await Patient.insert_many([margaret, james])
 

@@ -20,7 +20,11 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 @router.post("/chat", response_model=ChatResponse)
 async def chat(payload: ChatRequest) -> ChatResponse:
     try:
-        session_id, reply = await run_turn(payload.session_id, payload.message)
+        session_id, reply = await run_turn(
+            payload.session_id,
+            payload.message,
+            time_zone=payload.time_zone,
+        )
     except Exception:
         logger.warning("agent chat turn failed", exc_info=True)
         raise HTTPException(

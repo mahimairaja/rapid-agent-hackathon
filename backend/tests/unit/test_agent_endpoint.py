@@ -9,8 +9,9 @@ from src.api.endpoints import agent as agent_module
 
 @pytest.fixture
 def chat_app(monkeypatch):
-    async def fake_run_turn(session_id, message):
-        return "sess-123", f"echo:{message}"
+    async def fake_run_turn(session_id, message, *, time_zone=None):
+        suffix = f":{time_zone}" if time_zone else ""
+        return "sess-123", f"echo:{message}{suffix}"
 
     monkeypatch.setattr(agent_module, "run_turn", fake_run_turn)
     app = FastAPI()
@@ -25,15 +26,21 @@ async def _post(app, body):
 
 
 async def test_chat_returns_reply_and_session(chat_app):
-    resp = await _post(chat_app, {"message": "hi"})
+    resp = await _post(app=chat_app, body={"message": "hi"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["session_id"] == "sess-123"
     assert body["reply"] == "echo:hi"
 
 
+async def test_chat_accepts_time_zone(chat_app):
+    resp = await _post(chat_app, {"message": "hi", "time_zone": "America/Toronto"})
+    assert resp.status_code == 200
+    assert resp.json()["reply"] == "echo:hi:America/Toronto"
+
+
 async def test_chat_returns_502_on_error(chat_app, monkeypatch):
-    async def boom(session_id, message):
+    async def boom(session_id, message, *, time_zone=None):
         raise RuntimeError("agent down")
 
     monkeypatch.setattr(agent_module, "run_turn", boom)
