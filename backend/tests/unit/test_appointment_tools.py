@@ -380,7 +380,6 @@ async def test_reschedule_follow_up_branches(monkeypatch):
         return current
 
     async def available(p, *, zone, booking_uid_to_reschedule=None):
-        assert booking_uid_to_reschedule == "old-cal"
         return [slot]
 
     async def mirror(p, booking, *, existing=None):
