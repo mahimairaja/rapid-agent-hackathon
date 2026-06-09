@@ -17,11 +17,12 @@ class UserLogin(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    # Self-service fields only. Privileged fields (is_active, is_superuser) are
+    # intentionally NOT here to prevent mass-assignment privilege escalation;
+    # role/status changes belong in an admin-only flow.
     email: EmailStr | None = None
     password: str | None = Field(default=None, min_length=8)
     full_name: str | None = None
-    is_active: bool | None = None
-    is_superuser: bool | None = None
 
 
 # ---- Responses -------------------------------------------------------------
