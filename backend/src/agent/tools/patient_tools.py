@@ -99,8 +99,10 @@ async def find_patient(
     try:
         dob: date | None = None
         if patient_code:
+            # Codes are stored upper-cased (see seed), so match case-insensitively
+            # by normalizing the input the same way.
             candidates = (
-                await Patient.find(Patient.patient_code == patient_code.strip())
+                await Patient.find(Patient.patient_code == patient_code.strip().upper())
                 .limit(2)
                 .to_list()
             )
@@ -108,9 +110,9 @@ async def find_patient(
             dob = _parse_dob(date_of_birth)
             if dob is None:
                 return {"status": "not_found"}
-            candidates = (
-                await Patient.find(Patient.birth_date == dob).limit(5).to_list()
-            )
+            # No limit: select_patient must see every same-birth-date candidate, so a
+            # large same-DOB cohort cannot drop the real patient or hide an ambiguity.
+            candidates = await Patient.find(Patient.birth_date == dob).to_list()
         else:
             return {"status": "not_found"}
     except Exception:

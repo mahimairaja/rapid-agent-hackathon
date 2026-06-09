@@ -64,7 +64,7 @@ async def seed() -> None:
                 city=r.get("CITY") or None,
                 state=r.get("STATE") or None,
                 phone=r.get("PHONE") or None,
-                patient_code=r.get("PATIENT_CODE") or None,
+                patient_code=(r.get("PATIENT_CODE") or "").strip().upper() or None,
                 discharge_reason=r.get("DISCHARGE_REASON") or None,
                 assigned_clinician=r.get("ASSIGNED_CLINICIAN") or None,
             )
