@@ -1,10 +1,19 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from beanie import Indexed
+from pydantic import field_validator
 from pymongo import ASCENDING, IndexModel
 
 from src.models.base_model import TimestampedDocument
+
+
+def _utc_datetime(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).replace(microsecond=0)
 
 
 class Patient(TimestampedDocument):
@@ -18,10 +27,19 @@ class Patient(TimestampedDocument):
     phone: str | None = None
     email: str | None = None
 
-    # F1 plan-recognition fields.
     patient_code: str | None = None
     discharge_reason: str | None = None
     assigned_clinician: str | None = None
+
+    follow_up_required: bool | None = None
+    follow_up_window_start: datetime | None = None
+    follow_up_window_end: datetime | None = None
+    follow_up_kind: str | None = None
+
+    @field_validator("follow_up_window_start", "follow_up_window_end", mode="after")
+    @classmethod
+    def normalize_follow_up_window_utc(cls, value: datetime | None) -> datetime | None:
+        return _utc_datetime(value)
 
     class Settings:
         name = "patients"
