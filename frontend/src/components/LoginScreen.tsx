@@ -75,7 +75,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
             </div>
-            <span className="login-hero-logo-text">Rapid Agent</span>
+            <span className="login-hero-logo-text">Rapid Recovery</span>
           </div>
 
           {/* Eyebrow */}
@@ -89,7 +89,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           </h1>
 
           <p className="login-hero-sub">
-            Post-discharge shouldn't be a guessing game. Rapid Agent gives every patient a
+            Post-discharge shouldn't be a guessing game. Rapid Recovery gives every patient a
             personalized AI recovery guide — 24/7 monitoring, intelligent triage, and real-time care
             coordination.
           </p>
@@ -167,7 +167,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 letterSpacing: '-0.4px',
               }}
             >
-              Rapid Agent
+              Rapid Recovery
             </span>
           </div>
 

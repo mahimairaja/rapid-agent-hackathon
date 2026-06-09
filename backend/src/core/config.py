@@ -36,7 +36,7 @@ class Config(BaseSettings):
     MCP_STR: str = "/mcp"
     MCP_SERVER_URL: str = "http://127.0.0.1:8000/mcp"
 
-    PROJECT_NAME: str = "Rapid Agent"
+    PROJECT_NAME: str = "Rapid Recovery"
 
     # CORS. CORS_ORIGINS_STR is a comma-separated allow-list; empty means allow
     # all ("*"). BACKEND_CORS_ORIGINS is derived from it at load time by
