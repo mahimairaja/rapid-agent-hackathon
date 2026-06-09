@@ -2,7 +2,7 @@ import logging
 from functools import lru_cache
 
 from dotenv import load_dotenv
-from pydantic import SecretStr, model_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.core.enums import EnvironmentOption
@@ -68,6 +68,13 @@ class Config(BaseSettings):
     # the next dose against this wall clock). IANA name.
     CLINIC_TIMEZONE: str = "America/New_York"
 
+    CAL_API_KEY: SecretStr | None = None
+    CAL_API_BASE_URL: str = "https://api.cal.com"
+    CAL_SLOTS_API_VERSION: str = "2024-09-04"
+    CAL_BOOKINGS_API_VERSION: str = "2026-02-25"
+    CAL_USERNAME: str | None = None
+    CAL_EVENT_TYPE_SLUG: str | None = None
+
     # Auth (JWT)
     JWT_SECRET_KEY: SecretStr = SecretStr(_PLACEHOLDER_JWT_SECRET)
     JWT_ALGORITHM: str = "HS256"
@@ -76,6 +83,13 @@ class Config(BaseSettings):
     # Pagination defaults
     PAGE: int = 1
     PAGE_SIZE: int = 20
+
+    @field_validator("CLINIC_TIMEZONE", mode="before")
+    @classmethod
+    def default_blank_clinic_timezone(cls, value):
+        if value is None or str(value).strip() == "":
+            return "America/New_York"
+        return value
 
     @model_validator(mode="after")
     def set_debug_default(self):
