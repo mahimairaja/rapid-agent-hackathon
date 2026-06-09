@@ -1,0 +1,8 @@
+PATIENT,KIND,START,END,PROVIDER,LOCATION,REASON,STATUS
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223301,Lab,2026-06-15T08:30:00Z,2026-06-15T09:00:00Z,Quest Diagnostics,Boston Medical Center,Basic metabolic panel and BNP,scheduled
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223301,Cardiology follow-up,2026-06-16T10:00:00Z,2026-06-16T10:30:00Z,Dr. Helen Vasquez,Boston Medical Center,Heart failure follow-up,scheduled
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223302,Physical therapy,2026-06-12T09:00:00Z,2026-06-12T10:00:00Z,Cambridge Rehab,Cambridge Health,Post-op knee rehabilitation,scheduled
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223302,Orthopedic follow-up,2026-06-22T14:00:00Z,2026-06-22T14:30:00Z,Dr. Samuel Reed,Cambridge Health,Surgical site check,scheduled
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223303,Diabetes education,2026-06-18T13:00:00Z,2026-06-18T14:00:00Z,RN Diabetes Educator,Somerville Clinic,Diabetes self-management education,scheduled
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223303,Endocrinology follow-up,2026-07-06T11:00:00Z,2026-07-06T11:30:00Z,Dr. Priya Anand,Somerville Clinic,New type 2 diabetes follow-up,scheduled
+8f1c0a2e-1d3b-4a6c-9e21-aa0011223304,Pulmonology follow-up,2026-06-20T10:30:00Z,2026-06-20T11:00:00Z,Dr. Marcus Lee,Quincy Medical,COPD exacerbation follow-up,scheduled

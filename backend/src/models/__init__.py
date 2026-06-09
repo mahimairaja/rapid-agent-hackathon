@@ -1,8 +1,28 @@
-from src.models.base_model import BaseModel, BaseUUIDModel
-from src.models.users_model import User
+from src.models.appointment_model import Appointment
+from src.models.base_model import TimestampedDocument
+from src.models.care_plan_model import CarePlanChunk
+from src.models.guideline_model import GuidelineChunk
+from src.models.medication_model import Medication
+from src.models.patient_model import Patient
+from src.models.user_model import User
+
+# Registered with Beanie at startup (src/core/database.py).
+DOCUMENT_MODELS = [
+    User,
+    Patient,
+    Medication,
+    Appointment,
+    CarePlanChunk,
+    GuidelineChunk,
+]
 
 __all__ = [
-    "BaseModel",
-    "BaseUUIDModel",
+    "DOCUMENT_MODELS",
+    "Appointment",
+    "CarePlanChunk",
+    "GuidelineChunk",
+    "Medication",
+    "Patient",
+    "TimestampedDocument",
     "User",
 ]

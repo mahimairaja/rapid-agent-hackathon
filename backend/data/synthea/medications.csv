@@ -1,0 +1,11 @@
+START,STOP,PATIENT,CODE,DESCRIPTION,REASONDESCRIPTION
+2026-06-08T10:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223301,310429,Furosemide 40 MG Oral Tablet,Chronic congestive heart failure
+2026-06-08T10:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223301,197361,Lisinopril 10 MG Oral Tablet,Chronic congestive heart failure
+2026-06-08T10:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223301,866412,Metoprolol Succinate 25 MG Extended Release Oral Tablet,Chronic congestive heart failure
+2026-06-07T16:00:00Z,2026-06-14T16:00:00Z,8f1c0a2e-1d3b-4a6c-9e21-aa0011223302,1049221,Oxycodone 5 MG Oral Tablet,Postoperative pain - total knee replacement
+2026-06-07T16:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223302,243670,Aspirin 81 MG Oral Tablet,Venous thromboembolism prophylaxis
+2026-06-07T16:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223302,313782,Acetaminophen 500 MG Oral Tablet,Postoperative pain - total knee replacement
+2026-06-05T09:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223303,860975,Metformin 500 MG Oral Tablet,Type 2 diabetes mellitus
+2026-06-06T11:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223304,745752,Albuterol 90 MCG Metered Dose Inhaler,COPD exacerbation
+2026-06-06T11:00:00Z,2026-06-16T11:00:00Z,8f1c0a2e-1d3b-4a6c-9e21-aa0011223304,205923,Prednisone 20 MG Oral Tablet,COPD exacerbation
+2026-06-06T11:00:00Z,,8f1c0a2e-1d3b-4a6c-9e21-aa0011223304,896188,Tiotropium 18 MCG Inhalation Powder,Chronic obstructive pulmonary disease

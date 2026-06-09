@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 import jwt
+from bson import ObjectId
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 
@@ -38,12 +39,16 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
     salt = bytes.fromhex(salt_hex)
     expected_digest = bytes.fromhex(digest_hex)
-    actual_digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
+    actual_digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, 200_000
+    )
     return hmac.compare_digest(actual_digest, expected_digest)
 
 
 def create_access_token(subject: str) -> str:
-    expires_at = datetime.now(UTC) + timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expires_at = datetime.now(UTC) + timedelta(
+        minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
     payload = {
         "sub": subject,
         "exp": expires_at,
@@ -80,22 +85,18 @@ def decode_access_token(token: str) -> dict[str, Any]:
 
 async def get_current_user(
     token: Annotated[Any, Depends(oauth2_scheme)],
-) -> int:
+) -> str:
+    """Return the authenticated user's id (Mongo ObjectId hex string)."""
     payload = decode_access_token(token.credentials)
     sub = payload.get("sub")
 
-    if sub is None:
+    # Reject a missing or malformed subject at the auth boundary (a valid id is
+    # a 24-hex Mongo ObjectId) so bad tokens get a 401 rather than a later 404.
+    if not sub or not ObjectId.is_valid(str(sub)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token subject is missing",
+            detail="Token subject is missing or invalid",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    try:
-        return int(sub)
-    except (TypeError, ValueError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token subject is invalid",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+    return str(sub)

@@ -1,16 +1,17 @@
-# Rapid Agent Hackathon Backend
+# Rapid Agent Hackathon Backend (Homeward)
 
-A FastAPI app with clean layering (API → service → repository → model),
-dependency injection, async SQLModel/PostgreSQL, JWT auth, and an MCP tool
-surface. Ships with a single `User` domain you can copy as the pattern for new
-resources.
+A FastAPI app with clean layering (API → service → model), dependency injection,
+async MongoDB Atlas via the Beanie ODM, JWT auth, an MCP tool surface, and the
+M0 "Data Foundation" (synthetic patients + an embedded knowledge corpus for
+Atlas Vector Search).
 
 ## Stack
 
 - **FastAPI** (+ `fastapi[standard]`) for HTTP and OpenAPI
 - **fastapi-mcp** to expose endpoints tagged `mcp-tools` as MCP tools at `/mcp`
-- **SQLModel** + async **SQLAlchemy** + **asyncpg** (PostgreSQL)
-- **dependency-injector** for wiring config / DB / repositories / services
+- **MongoDB Atlas** via **Beanie** (async ODM on pymongo `AsyncMongoClient`)
+- **Voyage AI** embeddings (`voyage-3.5`, 1024-dim) + **Atlas Vector Search**
+- **dependency-injector** for wiring config / services
 - **PyJWT** + PBKDF2 password hashing for auth
 - **loguru** / Rich logging, **asgi-correlation-id**, optional **Sentry**
 - Tooling: **uv**, **ruff**, **mypy**, **pytest**
@@ -20,37 +21,48 @@ resources.
 ```
 src/
   main.py            ASGI app factory (AppCreator) — exports `app`
-  core/              config, DI container, database, security (JWT), events, exceptions
-  api/
-    routes.py        aggregates versioned routers under /api/v1
-    mcps.py          placeholder router for MCP-only endpoints
-    endpoints/
-      health.py      GET /health, /health/detailed   (public)
-      users.py       /api/v1/users CRUD + auth        (JWT-protected, except register/login)
-  models/            SQLModel tables (BaseModel + User)
+  db/mongo.py        motor-free pymongo AsyncMongoClient + Beanie init
+  core/              config, DI container, security (JWT), events, exceptions
+  api/endpoints/     health.py (public), users.py (auth + CRUD)
+  models/            Beanie documents: User, Patient, Medication, Appointment,
+                     CarePlanChunk, GuidelineChunk
   schemas/           Pydantic request/response DTOs
-  repository/        generic CRUD repository + UsersRepository
-  services/          business logic (BaseService + UsersService)
-  util/              singleton, query builder, schema helpers
-tests/               pytest (DB-free unit tests for health/security/validation)
+  services/          UsersService, embeddings (Voyage), chunking
+  util/              singleton, front-matter parser
+scripts/             M0 data pipeline (see below)
+data/                synthea CSVs, patient narratives, guidelines, SOURCES.md
+tests/               pytest (DB-free unit tests)
 ```
 
 ## Quickstart
 
 ```bash
-cp .env.example .env          # then edit DB_* and JWT_SECRET_KEY
+cp .env.example .env          # set MONGODB_URI, VOYAGE_API_KEY, JWT_SECRET_KEY
 uv sync                       # install deps into .venv
 
-# Create tables (dev convenience; use migrations for real projects)
-uv run python -c "import asyncio; from src.main import db; asyncio.run(db.create_database())"
-
-# Run the API
 uv run uvicorn src.main:app --reload
 # OpenAPI docs:  http://127.0.0.1:8000/docs
 # MCP endpoint:  http://127.0.0.1:8000/mcp
 ```
 
-`uv run uvicorn main:app` also works (root `main.py` re-exports `app`).
+`uv run uvicorn main:app` also works (root `main.py` re-exports `app`). Beanie
+collections and indexes are created on startup; no migration tool is needed
+(MongoDB is schemaless).
+
+## M0 data pipeline
+
+Loads the synthetic Data Foundation into the `homeward` database. Run in order
+from the `backend/` directory:
+
+```bash
+uv run python scripts/seed_patients.py      # patients / medications / appointments
+uv run python scripts/load_narratives.py    # care_plans (chunk + Voyage embed)
+uv run python scripts/ingest_guidelines.py  # guidelines (chunk + Voyage embed)
+uv run python scripts/create_indexes.py     # Atlas Vector Search indexes
+```
+
+All data is fully synthetic; see `data/SOURCES.md` for provenance and licenses.
+The scripts are idempotent.
 
 ## Auth flow
 
@@ -65,36 +77,21 @@ uv run uvicorn src.main:app --reload
 | DELETE | `/api/v1/users/{id}`          | self or admin | -            |
 | GET    | `/health`, `/health/detailed` | public        | -            |
 
-Access control: a Bearer token is required for everything except register, login,
-and health. Ownership is enforced (you can only read/update/delete your own
-account); admins (`is_superuser`) may act on any account and list all users. The
-public update schema deliberately omits `is_active` / `is_superuser` to prevent
-mass-assignment privilege escalation.
+Ownership is enforced (you can only read/update/delete your own account); admins
+(`is_superuser`) may act on any account and list all users. The public update
+schema deliberately omits `is_active` / `is_superuser` to prevent mass-assignment
+privilege escalation. User ids are Mongo ObjectId hex strings.
 
-`register` always creates a non-admin user. Promote the first admin out-of-band,
-e.g. `UPDATE users SET is_superuser = true WHERE email = 'you@example.com';`
-(or in a seed script / migration).
-
-```bash
-# register, then login to get a token
-curl -s localhost:8000/api/v1/users/register \
-  -H 'content-type: application/json' \
-  -d '{"email":"a@b.com","password":"Password1","full_name":"A B"}'
-
-TOKEN=$(curl -s localhost:8000/api/v1/users/login \
-  -H 'content-type: application/json' \
-  -d '{"email":"a@b.com","password":"Password1"}' | python -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
-
-curl -s localhost:8000/api/v1/users/me -H "authorization: Bearer $TOKEN"
-```
+`register` always creates a non-admin user. Promote the first admin out-of-band:
+`db.users.updateOne({email: "you@example.com"}, {$set: {is_superuser: true}})`.
 
 ## Adding a new resource
 
-Copy the `User` slice: `models/<x>.py`, `schemas/<x>_schemas.py`,
-`repository/<x>_repository.py` (subclass `BaseRepository`),
-`services/<x>_service.py` (subclass `BaseService`), `api/endpoints/<x>.py`,
-then register the repository/service in `core/container.py`, add the module to
-the container's `wiring_config`, and include the router in `api/routes.py`.
+Copy the `User` slice: a Beanie `Document` in `models/<x>.py`, DTOs in
+`schemas/<x>_schemas.py`, a `<X>Service` in `services/`, a router in
+`api/endpoints/<x>.py`, then register the document in `models/__init__.py`
+(`DOCUMENT_MODELS`), the service in `core/container.py`, the module in the
+container `wiring_config`, and include the router in `api/routes.py`.
 
 ## Dev commands
 

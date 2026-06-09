@@ -4,7 +4,7 @@ from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
-from sqlalchemy.exc import SQLAlchemyError
+from pymongo.errors import DuplicateKeyError
 
 from src.core.config import config
 from src.core.exceptions import (
@@ -83,14 +83,16 @@ def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    # Never leak SQL / schema details to clients in production.
-    logger.error(f"Database error occurred: {exc}", exc_info=True)
+def duplicate_key_error_handler(request: Request, exc: DuplicateKeyError):
+    # A unique-index violation (e.g. concurrent same-email registration, or an
+    # update colliding with an existing value). Return a clean 400, never leak
+    # the raw Mongo write error.
+    logger.warning(f"Duplicate key error: {exc}")
     return create_error_response(
-        status_code=500,
-        message="A database error occurred",
-        error=str(exc) if config.DEBUG else "Internal server error",
-        error_type="DatabaseError",
+        status_code=400,
+        message="Duplicate entry found",
+        error="A record with these unique values already exists",
+        error_type="DuplicatedError",
         details={
             "path": request.url.path,
             "method": request.method,
