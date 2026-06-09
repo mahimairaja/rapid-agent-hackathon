@@ -67,16 +67,25 @@ def compute_next_dose(schedule_times: list[str], now: datetime) -> datetime | No
         try:
             hour, minute = int(parts[0]), int(parts[1])
             today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            # Normalize through UTC so a skipped/ambiguous wall-clock time on a DST
+            # transition day resolves to a real instant.
+            today = today.astimezone(UTC).astimezone(now.tzinfo)
         except ValueError:
             # Skip malformed or out-of-range times (e.g. "25:00").
             continue
-        candidates.append(today if today > now else today + timedelta(days=1))
+        # ">=" so a dose due at exactly now surfaces today, not tomorrow.
+        candidates.append(today if today >= now else today + timedelta(days=1))
     return min(candidates) if candidates else None
 
 
 async def _active_medications(patient_id: str, now: datetime) -> list[Medication]:
     meds = await Medication.find(Medication.patient_id == patient_id).to_list()
-    return [m for m in meds if m.stop is None or _aware(m.stop) >= now]
+    return [
+        m
+        for m in meds
+        if (m.start is None or _aware(m.start) <= now)
+        and (m.stop is None or _aware(m.stop) >= now)
+    ]
 
 
 async def get_medications(*, tool_context: ToolContext) -> dict:

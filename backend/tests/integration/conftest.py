@@ -43,7 +43,13 @@ async def db():
     test_db = os.environ.get("MONGODB_TEST_DB", "homeward_test")
     client = AsyncMongoClient(uri)
     database = client[test_db]
-    await init_beanie(database=database, document_models=DOCUMENT_MODELS)
+    # allow_index_dropping reconciles a stale index definition (e.g. an older
+    # sparse patient_code index) so the suite runs on a reused test database.
+    await init_beanie(
+        database=database,
+        document_models=DOCUMENT_MODELS,
+        allow_index_dropping=True,
+    )
     for name in _COLLECTIONS:
         await database[name].delete_many({})
     try:

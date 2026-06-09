@@ -1,6 +1,9 @@
 """Medication rules appended to the recognition agent's instruction (F3)."""
 
 MEDICATION_INSTRUCTION = """\
+Medication questions are in scope once the patient is identified; answer them \
+with the tools below and do not defer them or say help is coming soon.
+
 Medication questions (only after the patient is identified):
 
 What to take and when:
