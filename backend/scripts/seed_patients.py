@@ -42,6 +42,12 @@ def _parse_dt(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _split(value: str | None, sep: str) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in value.split(sep) if part.strip()]
+
+
 async def seed() -> None:
     await init_db()
     try:
@@ -83,6 +89,10 @@ async def seed() -> None:
                 start=_parse_dt(r.get("START")),
                 stop=_parse_dt(r.get("STOP")),
                 reason=r.get("REASONDESCRIPTION") or None,
+                dosage=r.get("DOSAGE") or None,
+                frequency=r.get("FREQUENCY") or None,
+                schedule_times=_split(r.get("SCHEDULE_TIMES"), ";"),
+                cautions=_split(r.get("CAUTIONS"), "|"),
             )
             for r in _read_csv("medications.csv")
             if r["PATIENT"] in target
