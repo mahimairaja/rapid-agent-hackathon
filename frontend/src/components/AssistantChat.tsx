@@ -57,6 +57,8 @@ function renderMarkdown(text: string): string {
 }
 
 interface AssistantChatProps {
+  initialInput?: string | null
+  onTurnComplete?: () => void
   token: string | null
   userInitials: string
 }
@@ -69,9 +71,14 @@ const INITIAL_MESSAGE: ChatMessage = {
   timestamp: new Date(),
 }
 
-export function AssistantChat({ token, userInitials }: AssistantChatProps) {
+export function AssistantChat({
+  initialInput,
+  onTurnComplete,
+  token,
+  userInitials,
+}: AssistantChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE])
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(initialInput ?? '')
   const [isTyping, setIsTyping] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [chatMode, setChatMode] = useState<ChatMode>('ready')
@@ -129,6 +136,7 @@ export function AssistantChat({ token, userInitials }: AssistantChatProps) {
 
     setMessages((prev) => [...prev, assistantMsg])
     setIsTyping(false)
+    onTurnComplete?.()
     inputRef.current?.focus()
   }
 

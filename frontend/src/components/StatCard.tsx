@@ -1,6 +1,7 @@
 import type { Patient } from '../types'
 
 interface StatCardsProps {
+  hasMedicationAdherence: boolean
   patient: Patient
   medicationsDue: number
   nextAppointmentDays: number
@@ -8,6 +9,7 @@ interface StatCardsProps {
 }
 
 export function StatCards({
+  hasMedicationAdherence,
   patient,
   medicationsDue,
   nextAppointmentDays,
@@ -27,9 +29,13 @@ export function StatCards({
       <div className="stat-card">
         <div className="stat-card-icon blue">💊</div>
         <div className="stat-card-value">{medicationsDue}</div>
-        <div className="stat-card-label">Medications Due Today</div>
+        <div className="stat-card-label">
+          {hasMedicationAdherence ? 'Medications Due Today' : 'Active Medications'}
+        </div>
         <div className="stat-card-trend neutral">
-          {completedToday} of {medicationsDue + completedToday} taken
+          {hasMedicationAdherence
+            ? `${completedToday} of ${medicationsDue + completedToday} taken`
+            : 'From discharge plan'}
         </div>
       </div>
 

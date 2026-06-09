@@ -136,6 +136,7 @@ function App() {
   }
 
   const handleDemoAccess = () => {
+    clearStoredToken()
     setToken('demo')
     setIsDemoMode(true)
     clearStoredPatientCode()
@@ -178,6 +179,7 @@ function App() {
   }
 
   const handleAssistantTurnComplete = () => {
+    setAssistantDraft(null)
     if (token && token !== 'demo' && patientCode) {
       setRefreshKey((prev) => prev + 1)
     }
@@ -360,8 +362,8 @@ function App() {
               </div>
               <div className="card" style={{ overflow: 'hidden' }}>
                 <AssistantChat
-                  draft={assistantDraft}
-                  onDraftConsumed={() => setAssistantDraft(null)}
+                  key={assistantDraft ?? 'assistant-view'}
+                  initialInput={assistantDraft}
                   onTurnComplete={handleAssistantTurnComplete}
                   token={token === 'demo' ? null : token}
                   userInitials={userInitials}
@@ -543,7 +545,7 @@ function DashboardView({
               <span className="badge badge-green live-dot">Online</span>
             </div>
             <AssistantChat
-              draft={null}
+              initialInput={null}
               onTurnComplete={onAssistantTurnComplete}
               token={token}
               userInitials={`${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()}

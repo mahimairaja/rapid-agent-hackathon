@@ -98,7 +98,7 @@ export interface Medication {
 
 // ── Appointment ───────────────────────────────────────────────────────────────
 
-export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'upcoming'
+export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'upcoming' | (string & {})
 
 export interface Appointment {
   id: string
