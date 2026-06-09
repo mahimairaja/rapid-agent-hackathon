@@ -27,58 +27,65 @@ DATA_DIR = BACKEND_DIR / "data" / "guidelines"
 
 async def ingest() -> None:
     await init_db()
-
-    files = sorted(DATA_DIR.glob("*.md"))
-    # (source_id, title, url, license, chunks)
-    plan: list[tuple[str, str, str | None, str | None, list[str]]] = []
-    for path in files:
-        meta, body = parse_front_matter(path.read_text(encoding="utf-8"))
-        source_id = meta.get("source_id")
-        if not source_id:
-            print(f"skip {path.name}: no source_id in front matter")
-            continue
-        plan.append(
-            (
-                source_id,
-                meta.get("title", path.stem),
-                meta.get("url"),
-                meta.get("license"),
-                chunk_text(body),
+    try:
+        files = sorted(DATA_DIR.glob("*.md"))
+        # (source_id, title, url, license, chunks)
+        plan: list[tuple[str, str, str | None, str | None, list[str]]] = []
+        for path in files:
+            meta, body = parse_front_matter(path.read_text(encoding="utf-8"))
+            source_id = meta.get("source_id")
+            if not source_id:
+                print(f"skip {path.name}: no source_id in front matter")
+                continue
+            plan.append(
+                (
+                    source_id,
+                    meta.get("title", path.stem),
+                    meta.get("url"),
+                    meta.get("license"),
+                    chunk_text(body),
+                )
             )
-        )
 
-    # Embed every chunk in one batched call (kind to Voyage rate limits).
-    all_chunks = [c for *_, chunks in plan for c in chunks]
-    all_vectors = embed_texts(all_chunks, input_type="document")
+        # Embed every chunk in one batched call (kind to Voyage rate limits).
+        all_chunks = [c for *_, chunks in plan for c in chunks]
+        all_vectors = embed_texts(all_chunks, input_type="document")
 
-    cursor = 0
-    total_chunks = 0
-    for source_id, title, url, lic, chunks in plan:
-        vectors = all_vectors[cursor : cursor + len(chunks)]
-        cursor += len(chunks)
+        cursor = 0
+        total_chunks = 0
+        for source_id, title, url, lic, chunks in plan:
+            vectors = all_vectors[cursor : cursor + len(chunks)]
+            cursor += len(chunks)
 
-        # Idempotent: drop this source's existing chunks.
-        await GuidelineChunk.find(GuidelineChunk.source_id == source_id).delete()
+            if len(vectors) != len(chunks):
+                raise ValueError(
+                    f"embedding count {len(vectors)} != chunk count {len(chunks)} "
+                    f"for {source_id}; aborting before delete."
+                )
 
-        docs = [
-            GuidelineChunk(
-                source_id=source_id,
-                title=title,
-                url=url,
-                license=lic,
-                chunk_index=i,
-                text=text,
-                embedding=vector,
-            )
-            for i, (text, vector) in enumerate(zip(chunks, vectors, strict=True))
-        ]
-        if docs:
-            await GuidelineChunk.insert_many(docs)
-        total_chunks += len(docs)
-        print(f"{source_id}: {len(docs)} chunks")
+            # Idempotent: drop this source's existing chunks.
+            await GuidelineChunk.find(GuidelineChunk.source_id == source_id).delete()
 
-    print(f"Ingested {total_chunks} guideline chunks from {len(files)} sources.")
-    await close_db()
+            docs = [
+                GuidelineChunk(
+                    source_id=source_id,
+                    title=title,
+                    url=url,
+                    license=lic,
+                    chunk_index=i,
+                    text=text,
+                    embedding=vector,
+                )
+                for i, (text, vector) in enumerate(zip(chunks, vectors, strict=True))
+            ]
+            if docs:
+                await GuidelineChunk.insert_many(docs)
+            total_chunks += len(docs)
+            print(f"{source_id}: {len(docs)} chunks")
+
+        print(f"Ingested {total_chunks} guideline chunks from {len(files)} sources.")
+    finally:
+        await close_db()
 
 
 if __name__ == "__main__":

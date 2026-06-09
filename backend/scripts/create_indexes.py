@@ -76,25 +76,25 @@ async def _wait_until_queryable(coll, index_name: str, timeout: float = 240.0) -
 
 async def create() -> None:
     db = get_client()[config.MONGODB_DB]
+    try:
+        for coll_name, index_name, fields in VECTOR_INDEXES:
+            coll = db[coll_name]
+            if index_name in await _existing_index_names(coll):
+                print(f"{coll_name}.{index_name}: already exists")
+                continue
+            model = SearchIndexModel(
+                definition={"fields": fields},
+                name=index_name,
+                type="vectorSearch",
+            )
+            await coll.create_search_index(model)
+            print(f"{coll_name}.{index_name}: created, building...")
 
-    for coll_name, index_name, fields in VECTOR_INDEXES:
-        coll = db[coll_name]
-        if index_name in await _existing_index_names(coll):
-            print(f"{coll_name}.{index_name}: already exists")
-            continue
-        model = SearchIndexModel(
-            definition={"fields": fields},
-            name=index_name,
-            type="vectorSearch",
-        )
-        await coll.create_search_index(model)
-        print(f"{coll_name}.{index_name}: created, building...")
-
-    print("Waiting for indexes to become queryable...")
-    for coll_name, index_name, _ in VECTOR_INDEXES:
-        await _wait_until_queryable(db[coll_name], index_name)
-
-    await close_db()
+        print("Waiting for indexes to become queryable...")
+        for coll_name, index_name, _ in VECTOR_INDEXES:
+            await _wait_until_queryable(db[coll_name], index_name)
+    finally:
+        await close_db()
 
 
 if __name__ == "__main__":

@@ -49,6 +49,20 @@ def test_embed_texts_retries_on_rate_limit(monkeypatch):
     assert calls["n"] == 2  # retried once after the rate-limit error
 
 
+def test_embed_texts_raises_on_cardinality_mismatch(monkeypatch):
+    import pytest
+
+    class _Bad:
+        def embed(self, texts, model, input_type, output_dimension):
+            # Return fewer vectors than inputs to break the 1:1 contract.
+            return _FakeResult([[0.0] * output_dimension])
+
+    monkeypatch.setattr(embeddings, "_get_client", lambda: _Bad())
+    monkeypatch.setattr(embeddings, "_MIN_INTERVAL", 0)
+    with pytest.raises(ValueError):
+        embeddings.embed_texts(["a", "b"])
+
+
 def test_embed_texts_batches_and_shapes(monkeypatch):
     fake = _FakeClient()
     monkeypatch.setattr(embeddings, "_get_client", lambda: fake)

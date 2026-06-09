@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 import jwt
+from bson import ObjectId
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 
@@ -89,10 +90,12 @@ async def get_current_user(
     payload = decode_access_token(token.credentials)
     sub = payload.get("sub")
 
-    if not sub:
+    # Reject a missing or malformed subject at the auth boundary (a valid id is
+    # a 24-hex Mongo ObjectId) so bad tokens get a 401 rather than a later 404.
+    if not sub or not ObjectId.is_valid(str(sub)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token subject is missing",
+            detail="Token subject is missing or invalid",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

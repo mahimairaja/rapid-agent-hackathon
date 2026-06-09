@@ -48,7 +48,7 @@ class Config(BaseSettings):
 
     # MongoDB Atlas. MONGODB_URI is the SRV connection string
     # (mongodb+srv://...). Optional so tests / tooling can import config without
-    # a database; src/db/mongo.py raises clearly if it is missing at connect time.
+    # a database; src/core/database.py raises clearly if it is missing at connect time.
     MONGODB_URI: SecretStr | None = None
     MONGODB_DB: str = "homeward"
 

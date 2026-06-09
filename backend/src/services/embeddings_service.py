@@ -49,6 +49,11 @@ def _batch(texts: list[str]) -> list[list[str]]:
     current_tokens = 0
     for text in texts:
         tokens = _estimate_tokens(text)
+        if tokens > _MAX_TOKENS_PER_REQUEST:
+            raise ValueError(
+                f"A single text (~{tokens} tokens) exceeds the per-request budget "
+                f"of {_MAX_TOKENS_PER_REQUEST} tokens; split it upstream before embedding."
+            )
         if current and (
             len(current) >= _MAX_BATCH
             or current_tokens + tokens > _MAX_TOKENS_PER_REQUEST
@@ -98,5 +103,11 @@ def embed_texts(texts: list[str], input_type: str = "document") -> list[list[flo
     client = _get_client()
     vectors: list[list[float]] = []
     for batch in _batch(texts):
-        vectors.extend(_embed_one(client, batch, input_type))
+        batch_vectors = _embed_one(client, batch, input_type)
+        if len(batch_vectors) != len(batch):
+            raise ValueError(
+                f"Embedding count {len(batch_vectors)} does not match input count "
+                f"{len(batch)}; refusing to return misaligned vectors."
+            )
+        vectors.extend(batch_vectors)
     return vectors

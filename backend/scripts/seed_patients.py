@@ -44,68 +44,73 @@ def _parse_dt(value: str | None) -> datetime | None:
 
 async def seed() -> None:
     await init_db()
+    try:
+        patient_rows = _read_csv("patients.csv")
+        patient_ids = [r["Id"] for r in patient_rows]
+        target = set(patient_ids)
 
-    patient_rows = _read_csv("patients.csv")
-    patient_ids = [r["Id"] for r in patient_rows]
+        # Idempotent: clear existing rows for these patients before inserting.
+        await Patient.find({"patient_id": {"$in": patient_ids}}).delete()
+        await Medication.find({"patient_id": {"$in": patient_ids}}).delete()
+        await Appointment.find({"patient_id": {"$in": patient_ids}}).delete()
 
-    # Idempotent: clear existing rows for these patients before inserting.
-    await Patient.find({"patient_id": {"$in": patient_ids}}).delete()
-    await Medication.find({"patient_id": {"$in": patient_ids}}).delete()
-    await Appointment.find({"patient_id": {"$in": patient_ids}}).delete()
+        patients = [
+            Patient(
+                patient_id=r["Id"],
+                first_name=r["FIRST"],
+                last_name=r["LAST"],
+                birth_date=_parse_date(r.get("BIRTHDATE")),
+                gender=r.get("GENDER") or None,
+                city=r.get("CITY") or None,
+                state=r.get("STATE") or None,
+                phone=r.get("PHONE") or None,
+            )
+            for r in patient_rows
+        ]
+        if patients:
+            await Patient.insert_many(patients)
 
-    patients = [
-        Patient(
-            patient_id=r["Id"],
-            first_name=r["FIRST"],
-            last_name=r["LAST"],
-            birth_date=_parse_date(r.get("BIRTHDATE")),
-            gender=r.get("GENDER") or None,
-            city=r.get("CITY") or None,
-            state=r.get("STATE") or None,
-            phone=r.get("PHONE") or None,
+        # Only seed meds/appointments for the patients we cleared above, so the
+        # delete and insert scopes match and re-runs stay idempotent.
+        medications = [
+            Medication(
+                patient_id=r["PATIENT"],
+                name=r["DESCRIPTION"],
+                code=r.get("CODE") or None,
+                start=_parse_dt(r.get("START")),
+                stop=_parse_dt(r.get("STOP")),
+                reason=r.get("REASONDESCRIPTION") or None,
+            )
+            for r in _read_csv("medications.csv")
+            if r["PATIENT"] in target
+        ]
+        if medications:
+            await Medication.insert_many(medications)
+
+        # Appointment.start is required; skip rows without a START value.
+        appointments = [
+            Appointment(
+                patient_id=r["PATIENT"],
+                kind=r["KIND"],
+                start=_parse_dt(r["START"]),
+                end=_parse_dt(r.get("END")),
+                provider=r.get("PROVIDER") or None,
+                location=r.get("LOCATION") or None,
+                reason=r.get("REASON") or None,
+                status=r.get("STATUS") or "scheduled",
+            )
+            for r in _read_csv("appointments.csv")
+            if r["PATIENT"] in target and r.get("START")
+        ]
+        if appointments:
+            await Appointment.insert_many(appointments)
+
+        print(
+            f"Seeded {len(patients)} patients, {len(medications)} medications, "
+            f"{len(appointments)} appointments."
         )
-        for r in patient_rows
-    ]
-    if patients:
-        await Patient.insert_many(patients)
-
-    medications = [
-        Medication(
-            patient_id=r["PATIENT"],
-            name=r["DESCRIPTION"],
-            code=r.get("CODE") or None,
-            start=_parse_dt(r.get("START")),
-            stop=_parse_dt(r.get("STOP")),
-            reason=r.get("REASONDESCRIPTION") or None,
-        )
-        for r in _read_csv("medications.csv")
-    ]
-    if medications:
-        await Medication.insert_many(medications)
-
-    # Appointment.start is required; skip rows without a START value.
-    appointments = [
-        Appointment(
-            patient_id=r["PATIENT"],
-            kind=r["KIND"],
-            start=_parse_dt(r["START"]),
-            end=_parse_dt(r.get("END")),
-            provider=r.get("PROVIDER") or None,
-            location=r.get("LOCATION") or None,
-            reason=r.get("REASON") or None,
-            status=r.get("STATUS") or "scheduled",
-        )
-        for r in _read_csv("appointments.csv")
-        if r.get("START")
-    ]
-    if appointments:
-        await Appointment.insert_many(appointments)
-
-    print(
-        f"Seeded {len(patients)} patients, {len(medications)} medications, "
-        f"{len(appointments)} appointments."
-    )
-    await close_db()
+    finally:
+        await close_db()
 
 
 if __name__ == "__main__":

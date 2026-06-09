@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import UTC, datetime
 
@@ -6,6 +7,8 @@ from fastapi.responses import JSONResponse
 
 from src.core.config import config
 from src.core.database import ping
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 START_TIME = time.time()
@@ -29,7 +32,9 @@ async def health_detailed() -> JSONResponse:
         await ping()
         checks["mongodb"] = "healthy"
     except Exception as exc:
-        # Never leak raw connection/host details to clients in production.
+        # Full detail to the server log; never leak connection/host details to
+        # clients in production (only surface them when DEBUG).
+        logger.warning("MongoDB health check failed", exc_info=True)
         checks["mongodb"] = f"unhealthy: {exc}" if config.DEBUG else "unhealthy"
 
     all_healthy = all(value == "healthy" for value in checks.values())
