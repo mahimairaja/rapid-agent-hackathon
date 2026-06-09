@@ -24,6 +24,7 @@ class Appointment(TimestampedDocument):
     location: str | None = None
     reason: str | None = None
     status: str = "scheduled"
+
     cal_booking_uid: str | None = None
     follow_up_window_start: datetime | None = None
     follow_up_window_end: datetime | None = None

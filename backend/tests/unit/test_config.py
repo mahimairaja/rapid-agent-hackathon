@@ -35,3 +35,8 @@ def test_dev_allows_placeholder_secret():
 def test_mongodb_db_default_is_homeward():
     cfg = Config(ENV="dev")
     assert cfg.MONGODB_DB == "homeward"
+
+
+def test_blank_clinic_timezone_uses_default():
+    cfg = Config(ENV="dev", CLINIC_TIMEZONE="")
+    assert cfg.CLINIC_TIMEZONE == "America/New_York"

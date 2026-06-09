@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
-from src.agent.agent.session_state import set_verified
+from src.agent.agent.session_state import set_client_time_zone, set_verified
 from src.agent.tools import appointment_tools
 from src.agent.tools.appointment_tools import (
     book_follow_up_slot,
@@ -16,9 +16,10 @@ from src.models import Appointment, Patient
 from src.services.calcom_service import CalBooking
 
 
-def _ctx(patient_id: str):
+def _ctx(patient_id: str, time_zone: str | None = None):
     state: dict = {}
     set_verified(state, patient_id=patient_id, name="Test Patient")
+    set_client_time_zone(state, time_zone)
     return SimpleNamespace(state=state)
 
 
@@ -112,7 +113,7 @@ async def test_list_follow_up_slots_filters_to_plan_window(seed_demo, monkeypatc
     )
 
     res = await list_follow_up_slots(
-        time_zone="America/Toronto", tool_context=_ctx("pid-margaret")
+        tool_context=_ctx("pid-margaret", time_zone="America/Toronto")
     )
 
     assert res["status"] == "ok"
@@ -129,6 +130,16 @@ async def test_no_follow_up_path(seed_demo, monkeypatch):
     res = await list_follow_up_slots(tool_context=_ctx("pid-james"))
 
     assert res["status"] == "none_required"
+
+
+async def test_invalid_time_zone_is_rejected(seed_demo, monkeypatch):
+    _patch_cal(monkeypatch, FakeCalComClient([]))
+
+    res = await list_follow_up_slots(
+        time_zone="Not/AZone", tool_context=_ctx("pid-margaret")
+    )
+
+    assert res["status"] == "invalid_time_zone"
 
 
 async def test_book_follow_up_slot_mirrors_cal_booking(db, monkeypatch):

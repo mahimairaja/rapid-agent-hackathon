@@ -9,6 +9,7 @@ import pytest
 from google.adk.sessions import InMemorySessionService
 
 from src.agent.agent import agent_runner as ar
+from src.agent.agent.session_state import CLIENT_TIME_ZONE
 
 
 @pytest.fixture(autouse=True)
@@ -63,3 +64,10 @@ async def test_lru_eviction_bounds_session_count(monkeypatch):
     for kept in ids[2:]:
         assert kept in ar._session_lru
         assert await _get(kept) is not None
+
+
+async def test_turn_preferences_store_client_time_zone():
+    sid = await ar._ensure_session(None)
+    await ar._set_turn_preferences(sid, time_zone="America/Toronto")
+    session = await _get(sid)
+    assert session.state[CLIENT_TIME_ZONE] == "America/Toronto"
