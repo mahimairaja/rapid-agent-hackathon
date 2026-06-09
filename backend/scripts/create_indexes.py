@@ -71,7 +71,7 @@ async def _wait_until_queryable(coll, index_name: str, timeout: float = 240.0) -
                 print(f"  {index_name}: queryable")
                 return
         await asyncio.sleep(5)
-    print(f"  WARNING: {index_name} not queryable within {int(timeout)}s")
+    raise RuntimeError(f"{index_name} did not become queryable within {int(timeout)}s")
 
 
 async def create() -> None:

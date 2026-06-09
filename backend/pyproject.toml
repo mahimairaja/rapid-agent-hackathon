@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 authors = [{ name = "Mahimai Raja J", email = "mahi@mahimai.ca" }]
 dependencies = [
   "asgi-correlation-id>=5.0.0",
-  "beanie>=1.27.0",
+  "beanie>=2.1.0",
   "dependency-injector>=4.49.0",
   "fastapi-mcp>=0.4.0",
   "fastapi[standard]>=0.136.3",
@@ -60,6 +60,11 @@ typeCheckingMode = "off"
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+# main.py is the ASGI composition root (DI wiring, MCP mount); it is exercised
+# by running the app (e2e/integration), not by unit tests.
+omit = ["src/main.py"]
 
 [tool.ruff]
 target-version = "py311"

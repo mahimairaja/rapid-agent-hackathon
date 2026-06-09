@@ -19,6 +19,36 @@ def test_embed_texts_empty_returns_empty():
     assert embeddings.embed_texts([]) == []
 
 
+def test_embed_texts_no_key_raises(monkeypatch):
+    import pytest
+
+    monkeypatch.setattr(embeddings, "_client", None)
+    monkeypatch.setattr(embeddings.config, "VOYAGE_API_KEY", None)
+    with pytest.raises(RuntimeError):
+        embeddings.embed_texts(["a"])
+
+
+def test_embed_texts_retries_on_rate_limit(monkeypatch):
+    from voyageai.error import RateLimitError
+
+    calls = {"n": 0}
+
+    class _Flaky:
+        def embed(self, texts, model, input_type, output_dimension):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RateLimitError("rate limited")
+            return _FakeResult([[0.0] * output_dimension for _ in texts])
+
+    monkeypatch.setattr(embeddings, "_get_client", lambda: _Flaky())
+    monkeypatch.setattr(embeddings, "_MIN_INTERVAL", 0)
+    monkeypatch.setattr(embeddings.time, "sleep", lambda _s: None)
+
+    vectors = embeddings.embed_texts(["a"])
+    assert len(vectors) == 1
+    assert calls["n"] == 2  # retried once after the rate-limit error
+
+
 def test_embed_texts_batches_and_shapes(monkeypatch):
     fake = _FakeClient()
     monkeypatch.setattr(embeddings, "_get_client", lambda: fake)

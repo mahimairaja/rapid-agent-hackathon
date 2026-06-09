@@ -59,6 +59,13 @@ class UsersService:
     async def modify(self, user_id: str, payload: UserUpdate) -> User:
         user = await self.get_by_id(user_id)
         data = payload.model_dump(exclude_none=True)
+        new_email = data.get("email")
+        if (
+            new_email
+            and new_email != user.email
+            and await User.find_one(User.email == new_email)
+        ):
+            raise DuplicatedError(detail="A user with this email already exists")
         if "password" in data:
             validate_password(data["password"])
             user.hashed_password = hash_password(data.pop("password"))

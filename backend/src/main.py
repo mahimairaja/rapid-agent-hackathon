@@ -6,6 +6,7 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi_mcp import FastApiMCP
+from pymongo.errors import DuplicateKeyError
 from starlette.middleware.cors import CORSMiddleware
 
 from src.api.endpoints.health import router as health_router
@@ -16,6 +17,7 @@ from src.core.container import Container
 from src.core.events import lifespan
 from src.core.exception_handlers import (
     auth_error_handler,
+    duplicate_key_error_handler,
     duplicated_error_handler,
     global_exception_handler,
     not_found_error_handler,
@@ -88,7 +90,10 @@ class AppCreator:
         logger.info("Monitoring configured")
 
     def _register_exception_handlers(self):
-        self.app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+        self.app.add_exception_handler(
+            RequestValidationError, request_validation_exception_handler
+        )
+        self.app.add_exception_handler(DuplicateKeyError, duplicate_key_error_handler)
 
         custom_exceptions = [
             (DuplicatedError, duplicated_error_handler),

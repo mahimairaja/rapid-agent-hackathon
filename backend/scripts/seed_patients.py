@@ -66,7 +66,8 @@ async def seed() -> None:
         )
         for r in patient_rows
     ]
-    await Patient.insert_many(patients)
+    if patients:
+        await Patient.insert_many(patients)
 
     medications = [
         Medication(
@@ -79,8 +80,10 @@ async def seed() -> None:
         )
         for r in _read_csv("medications.csv")
     ]
-    await Medication.insert_many(medications)
+    if medications:
+        await Medication.insert_many(medications)
 
+    # Appointment.start is required; skip rows without a START value.
     appointments = [
         Appointment(
             patient_id=r["PATIENT"],
@@ -93,8 +96,10 @@ async def seed() -> None:
             status=r.get("STATUS") or "scheduled",
         )
         for r in _read_csv("appointments.csv")
+        if r.get("START")
     ]
-    await Appointment.insert_many(appointments)
+    if appointments:
+        await Appointment.insert_many(appointments)
 
     print(
         f"Seeded {len(patients)} patients, {len(medications)} medications, "

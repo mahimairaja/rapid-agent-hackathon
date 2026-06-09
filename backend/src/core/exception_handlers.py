@@ -4,6 +4,7 @@ from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
+from pymongo.errors import DuplicateKeyError
 
 from src.core.config import config
 from src.core.exceptions import (
@@ -75,6 +76,23 @@ def global_exception_handler(request: Request, exc: Exception):
         message="An unexpected error occurred",
         error=str(exc) if config.DEBUG else "Internal server error",
         error_type=exc.__class__.__name__ if config.DEBUG else "InternalServerError",
+        details={
+            "path": request.url.path,
+            "method": request.method,
+        },
+    )
+
+
+def duplicate_key_error_handler(request: Request, exc: DuplicateKeyError):
+    # A unique-index violation (e.g. concurrent same-email registration, or an
+    # update colliding with an existing value). Return a clean 400, never leak
+    # the raw Mongo write error.
+    logger.warning(f"Duplicate key error: {exc}")
+    return create_error_response(
+        status_code=400,
+        message="Duplicate entry found",
+        error="A record with these unique values already exists",
+        error_type="DuplicatedError",
         details={
             "path": request.url.path,
             "method": request.method,

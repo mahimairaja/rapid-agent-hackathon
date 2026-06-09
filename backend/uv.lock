@@ -283,7 +283,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "asgi-correlation-id", specifier = ">=5.0.0" },
-    { name = "beanie", specifier = ">=1.27.0" },
+    { name = "beanie", specifier = ">=2.1.0" },
     { name = "dependency-injector", specifier = ">=4.49.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.136.3" },
     { name = "fastapi-mcp", specifier = ">=0.4.0" },
