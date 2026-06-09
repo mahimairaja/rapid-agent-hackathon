@@ -35,16 +35,8 @@ def _to_async_url(url: str) -> str:
     """
     parts = urlsplit(url)
     base_scheme = parts.scheme.split("+", 1)[0]
-    scheme = (
-        "postgresql+asyncpg"
-        if base_scheme in {"postgres", "postgresql"}
-        else parts.scheme
-    )
-    query = [
-        (k, v)
-        for k, v in parse_qsl(parts.query)
-        if k.lower() not in _LIBPQ_ONLY_PARAMS
-    ]
+    scheme = "postgresql+asyncpg" if base_scheme in {"postgres", "postgresql"} else parts.scheme
+    query = [(k, v) for k, v in parse_qsl(parts.query) if k.lower() not in _LIBPQ_ONLY_PARAMS]
     return urlunsplit((scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
@@ -83,7 +75,7 @@ class Config(BaseSettings):
     MCP_STR: str = "/mcp"
     MCP_SERVER_URL: str = "http://127.0.0.1:8000/mcp"
 
-    PROJECT_NAME: str = "Template Backend"
+    PROJECT_NAME: str = "Rapid Agent"
 
     # CORS
     CORS_ORIGINS_STR: str | None = ""

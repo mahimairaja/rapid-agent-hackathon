@@ -41,10 +41,6 @@ COPY --from=builder --chown=appuser:appuser /app /app
 USER appuser
 EXPOSE 8080
 
-# gunicorn (uvicorn worker) serving the real ASGI app at src.main:app.
-# Shell form so ${PORT}/${WEB_CONCURRENCY} expand — Cloud Run injects PORT (default 8080).
-# --timeout 0 disables gunicorn's worker timeout (Cloud Run enforces request timeouts;
-# avoids killing workers during CPU-throttled cold starts).
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD exec gunicorn -k uvicorn.workers.UvicornWorker src.main:app \
     --bind "0.0.0.0:${PORT:-8080}" \
