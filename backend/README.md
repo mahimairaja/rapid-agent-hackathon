@@ -86,6 +86,13 @@ privilege escalation. User ids are Mongo ObjectId hex strings.
 `register` always creates a non-admin user. Promote the first admin out-of-band:
 `db.users.updateOne({email: "you@example.com"}, {$set: {is_superuser: true}})`.
 
+## Agent chat
+
+`POST /api/v1/agent/chat` accepts `message`, optional `session_id`, and optional
+`time_zone` as an IANA timezone (for example `America/Toronto`). F4 appointment
+tools store booking datetimes in UTC and use `time_zone` only for Cal.com
+availability display and spoken read-back strings.
+
 ## Adding a new resource
 
 Copy the `User` slice: a Beanie `Document` in `models/<x>.py`, DTOs in
