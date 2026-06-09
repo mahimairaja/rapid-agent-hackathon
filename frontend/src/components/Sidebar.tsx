@@ -179,7 +179,7 @@ export function Sidebar({
               </svg>
             </div>
             <div className="logo-text">
-              <span className="logo-name">Rapid Agent</span>
+              <span className="logo-name">Rapid Recovery</span>
               <span className="logo-tagline">Recovery Assistant</span>
             </div>
           </div>

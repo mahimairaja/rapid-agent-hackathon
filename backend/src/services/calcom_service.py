@@ -20,7 +20,7 @@ from src.models import Patient
 # Cal.com sits behind Cloudflare, which blocks the stdlib default
 # ("Python-urllib/x.y") User-Agent with a 1010 "Access denied" 403. Send an
 # explicit application User-Agent so requests are allowed through.
-_USER_AGENT = "Homeward/1.0 (Rapid Agent F4 scheduler)"
+_USER_AGENT = "Homeward/1.0 (Rapid Recovery F4 scheduler)"
 
 
 class CalComError(RuntimeError):

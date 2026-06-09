@@ -281,7 +281,7 @@ You also have a Nurse Check-in call on June 11 at 2:00 PM with Nurse Emily Rodri
 
 📞 Nurse Emily Rodriguez: (555) 204-1102`,
 
-  default: `I'm Rapid Agent, your AI-powered recovery assistant for your Total Hip Replacement recovery.
+  default: `I'm Rapid Recovery, your AI-powered recovery assistant for your Total Hip Replacement recovery.
 
 I can help you with:
 - 💊 Medication schedules and instructions
