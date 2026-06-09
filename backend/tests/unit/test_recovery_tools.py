@@ -17,9 +17,7 @@ from src.agent.tools.recovery_tools import (
 
 
 def test_build_plan_search_pipeline_shape():
-    pipeline = build_plan_search_pipeline(
-        [0.1, 0.2, 0.3], "patient-123"
-    )
+    pipeline = build_plan_search_pipeline([0.1, 0.2, 0.3], "patient-123")
     assert len(pipeline) == 2
     vs = pipeline[0]["$vectorSearch"]
     assert vs["index"] == "care_plans_vector"
@@ -29,9 +27,7 @@ def test_build_plan_search_pipeline_shape():
 
 
 def test_build_plan_search_pipeline_top_k():
-    pipeline = build_plan_search_pipeline(
-        [0.1], "p1", top_k=6, num_candidates=60
-    )
+    pipeline = build_plan_search_pipeline([0.1], "p1", top_k=6, num_candidates=60)
     vs = pipeline[0]["$vectorSearch"]
     assert vs["limit"] == 6
     assert vs["numCandidates"] == 60
@@ -42,13 +38,31 @@ def test_build_plan_search_pipeline_top_k():
 
 def test_format_context_extracts_fields():
     raw = [
-        {"text": "Weigh yourself daily.", "source_file": "margaret-chen.md", "chunk_index": 0, "score": 0.9},
-        {"text": "Limit salt.", "source_file": "margaret-chen.md", "chunk_index": 1, "score": 0.8},
+        {
+            "text": "Weigh yourself daily.",
+            "source_file": "margaret-chen.md",
+            "chunk_index": 0,
+            "score": 0.9,
+        },
+        {
+            "text": "Limit salt.",
+            "source_file": "margaret-chen.md",
+            "chunk_index": 1,
+            "score": 0.8,
+        },
     ]
     result = format_context(raw)
     assert len(result) == 2
-    assert result[0] == {"text": "Weigh yourself daily.", "source_file": "margaret-chen.md", "chunk_index": 0}
-    assert result[1] == {"text": "Limit salt.", "source_file": "margaret-chen.md", "chunk_index": 1}
+    assert result[0] == {
+        "text": "Weigh yourself daily.",
+        "source_file": "margaret-chen.md",
+        "chunk_index": 0,
+    }
+    assert result[1] == {
+        "text": "Limit salt.",
+        "source_file": "margaret-chen.md",
+        "chunk_index": 1,
+    }
 
 
 def test_format_context_empty_input():
@@ -73,7 +87,9 @@ def _unverified_ctx():
 
 
 async def test_answer_recovery_question_unverified_guard():
-    res = await answer_recovery_question("what should I eat?", tool_context=_unverified_ctx())
+    res = await answer_recovery_question(
+        "what should I eat?", tool_context=_unverified_ctx()
+    )
     assert res["status"] == "unverified"
 
 

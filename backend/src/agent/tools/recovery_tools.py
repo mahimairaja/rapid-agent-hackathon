@@ -86,9 +86,7 @@ def format_context(raw_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-async def answer_recovery_question(
-    question: str, *, tool_context: ToolContext
-) -> dict:
+async def answer_recovery_question(question: str, *, tool_context: ToolContext) -> dict:
     """Answer a recovery question using the verified patient's discharge plan.
 
     Pass the patient's question. Returns matching excerpts from their plan so
@@ -102,9 +100,7 @@ async def answer_recovery_question(
     try:
         # Voyage embed_texts is synchronous; run in a thread to avoid blocking
         # the event loop.
-        vectors = await asyncio.to_thread(
-            embed_texts, [question], "query"
-        )
+        vectors = await asyncio.to_thread(embed_texts, [question], "query")
         if not vectors or not vectors[0]:
             logger.warning("embedding returned empty for recovery question")
             return {"status": "error"}
