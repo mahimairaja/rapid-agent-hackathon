@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from src.core.config import config
 from src.models import Patient
@@ -226,7 +226,7 @@ class CalComClient:
             raise CalComAPIError(502, "Cal.com returned invalid JSON") from exc
         if payload.get("status") == "error":
             raise CalComAPIError(502, json.dumps(payload))
-        return payload
+        return cast(dict[str, Any], payload)
 
     def _event_type_slug(self) -> str:
         if not config.CAL_EVENT_TYPE_SLUG:
