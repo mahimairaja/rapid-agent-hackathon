@@ -43,6 +43,13 @@ export function clearStoredToken(): void {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
+export async function signUp(email: string, password: string, name: string): Promise<AuthToken> {
+  return request<AuthToken>('/users/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, name }),
+  })
+}
+
 export async function login(email: string, password: string): Promise<AuthToken> {
   return request<AuthToken>('/users/login', {
     method: 'POST',

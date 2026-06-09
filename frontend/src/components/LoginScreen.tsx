@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { login, setStoredToken } from '../api/client'
+import { login, setStoredToken, signUp } from '../api/client'
 
 interface LoginScreenProps {
   onLogin: (token: string, isDemoMode: boolean) => void
@@ -10,6 +10,28 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
+  const [name, setName] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+    setError('')
+    setLoading(true)
+    try {
+      await signUp(email, password, name)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Signup failed. Please try again.')
+    } finally {
+      setLoading(false)
+      setActiveTab('login')
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,71 +171,382 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             </span>
           </div>
 
-          <h2 className="login-form-title">Welcome back</h2>
-          <p className="login-form-sub">Sign in to access your recovery dashboard.</p>
+          <div className="auth-tab-switcher">
+            <button
+              id="login-tab-btn"
+              type="button"
+              className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
+              onClick={() => setActiveTab('login')}
+              disabled={activeTab === 'login'}
+            >
+              Sign in
+            </button>
+            <button
+              id="signup-tab-btn"
+              type="button"
+              className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
+              onClick={() => setActiveTab('signup')}
+              disabled={activeTab === 'signup'}
+            >
+              Create account
+            </button>
+          </div>
 
-          <form onSubmit={handleLogin} noValidate>
-            <div className="form-group">
-              <label className="form-label" htmlFor="login-email">
-                Email address
-              </label>
-              <input
-                id="login-email"
-                className="form-input"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-                aria-required="true"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="login-password">
-                Password
-              </label>
-              <input
-                id="login-password"
-                className="form-input"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-                aria-required="true"
-              />
-            </div>
-
+          <form
+            className="login-form"
+            onSubmit={activeTab === 'login' ? handleLogin : handleSignup}
+          >
             {error && (
               <div
                 className="form-error"
                 role="alert"
-                aria-live="assertive"
-                style={{ marginBottom: 8 }}
+                style={{
+                  color: 'var(--red-500)',
+                  background: 'var(--red-50)',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px',
+                }}
               >
-                ⚠️ {error}
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ flexShrink: 0 }}
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {error}
               </div>
             )}
 
-            <button
-              id="login-submit-btn"
-              type="submit"
-              className="login-submit-btn"
-              disabled={loading || !email || !password}
-              aria-busy={loading}
-            >
-              {loading ? (
-                <>
-                  <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                  Signing in…
-                </>
-              ) : (
-                'Sign in to dashboard'
-              )}
-            </button>
+            {activeTab === 'login' ? (
+              <>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="login-email">
+                    Email address
+                  </label>
+                  <input
+                    id="login-email"
+                    className="form-input"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                <div className="form-group">
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 6,
+                    }}
+                  >
+                    <label
+                      className="form-label"
+                      htmlFor="login-password"
+                      style={{ marginBottom: 0 }}
+                    >
+                      Password
+                    </label>
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      id="login-password"
+                      className="form-input"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                      aria-required="true"
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                      }}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  id="login-submit-btn"
+                  type="submit"
+                  className="login-submit-btn"
+                  disabled={loading || !email || !password}
+                  aria-busy={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                      Signing in…
+                    </>
+                  ) : (
+                    'Sign in to dashboard'
+                  )}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="signup-name">
+                    Full name
+                  </label>
+                  <input
+                    id="signup-name"
+                    className="form-input"
+                    type="text"
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="signup-email">
+                    Email address
+                  </label>
+                  <input
+                    id="signup-email"
+                    className="form-input"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="signup-password">
+                    Create password
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      id="signup-password"
+                      className="form-input"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
+                      required
+                      aria-required="true"
+                      minLength={8}
+                      aria-describedby="password-help"
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                      }}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <p id="password-help" className="form-help">
+                    Minimum 8 characters
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="signup-confirm-password">
+                    Confirm password
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      id="signup-confirm-password"
+                      className="form-input"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
+                      required
+                      aria-required="true"
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                      }}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  id="signup-submit-btn"
+                  type="submit"
+                  className="login-submit-btn"
+                  disabled={loading || !email || !password || !name || !confirmPassword}
+                  aria-busy={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                      Creating account…
+                    </>
+                  ) : (
+                    'Create account'
+                  )}
+                </button>
+              </>
+            )}
           </form>
 
           <div className="login-divider">
