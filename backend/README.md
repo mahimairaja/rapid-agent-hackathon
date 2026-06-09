@@ -11,6 +11,7 @@ Atlas Vector Search).
 - **fastapi-mcp** to expose endpoints tagged `mcp-tools` as MCP tools at `/mcp`
 - **MongoDB Atlas** via **Beanie** (async ODM on pymongo `AsyncMongoClient`)
 - **Voyage AI** embeddings (`voyage-3.5`, 1024-dim) + **Atlas Vector Search**
+- **Cal.com API v2** for follow-up appointment availability and bookings
 - **dependency-injector** for wiring config / services
 - **PyJWT** + PBKDF2 password hashing for auth
 - **loguru** / Rich logging, **asgi-correlation-id**, optional **Sentry**
@@ -37,7 +38,7 @@ tests/               pytest (DB-free unit tests)
 ## Quickstart
 
 ```bash
-cp .env.example .env          # set MONGODB_URI, VOYAGE_API_KEY, JWT_SECRET_KEY
+cp .env.example .env          # set Mongo, Voyage, Gemini, Cal.com, JWT values
 uv sync                       # install deps into .venv
 
 uv run uvicorn src.main:app --reload
