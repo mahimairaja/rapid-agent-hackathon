@@ -41,7 +41,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     try {
       const token = await login(email, password)
       setStoredToken(token.access_token)
-      onLogin(token.access_token, false, selectedRole === 'professional' ? 'professional' : 'patient')
+      onLogin(
+        token.access_token,
+        false,
+        selectedRole === 'professional' ? 'professional' : 'patient',
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
     } finally {
@@ -174,25 +178,59 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
           {selectedRole === 'none' ? (
             <div className="role-selection">
-              <h2 style={{ textAlign: 'center', marginBottom: 24, color: 'var(--text-primary)' }}>Welcome to Rapid Recovery</h2>
-              <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: 32 }}>Please select your portal to continue</p>
+              <h2 style={{ textAlign: 'center', marginBottom: 24, color: 'var(--text-primary)' }}>
+                Welcome to Rapid Recovery
+              </h2>
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: 32 }}>
+                Please select your portal to continue
+              </p>
 
               <div className="role-cards" style={{ display: 'grid', gap: 16 }}>
                 <button
                   type="button"
                   className="card role-card"
                   onClick={() => setSelectedRole('patient')}
-                  style={{ textAlign: 'left', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', border: '1px solid var(--border-light)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--blue-500)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+                  style={{
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    border: '1px solid var(--border-light)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.borderColor = 'var(--blue-500)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none'
+                    e.currentTarget.style.borderColor = 'var(--border-light)'
+                  }}
                 >
-                  <div className="card-body" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--blue-50)', color: 'var(--blue-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                  <div
+                    className="card-body"
+                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}
+                  >
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        background: 'var(--blue-50)',
+                        color: 'var(--blue-600)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 24,
+                      }}
+                    >
                       👤
                     </div>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>Patient Portal</div>
-                      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Access your recovery plan and AI assistant</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Patient Portal
+                      </div>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
+                        Access your recovery plan and AI assistant
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -201,17 +239,47 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   type="button"
                   className="card role-card"
                   onClick={() => setSelectedRole('professional')}
-                  style={{ textAlign: 'left', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', border: '1px solid var(--border-light)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--teal-500)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+                  style={{
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    border: '1px solid var(--border-light)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.borderColor = 'var(--teal-500)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none'
+                    e.currentTarget.style.borderColor = 'var(--border-light)'
+                  }}
                 >
-                  <div className="card-body" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--teal-50)', color: 'var(--teal-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                  <div
+                    className="card-body"
+                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}
+                  >
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        background: 'var(--teal-50)',
+                        color: 'var(--teal-600)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 24,
+                      }}
+                    >
                       ⚕️
                     </div>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>Care Provider</div>
-                      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Monitor patients and triage escalations</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Care Provider
+                      </div>
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
+                        Monitor patients and triage escalations
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -222,21 +290,45 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               <button
                 type="button"
                 onClick={() => setSelectedRole('none')}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: 0, marginBottom: 24, fontSize: 14, fontWeight: 500 }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  cursor: 'pointer',
+                  padding: 0,
+                  marginBottom: 24,
+                  fontSize: 14,
+                  fontWeight: 500,
+                }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
                 Back to portals
               </button>
 
               {selectedRole === 'professional' ? (
                 <div className="professional-login">
-                  <h2 style={{ marginBottom: 8, color: 'var(--text-primary)' }}>Provider Dashboard</h2>
-                  <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Sign in with your staff credentials to access the queue.</p>
+                  <h2 style={{ marginBottom: 8, color: 'var(--text-primary)' }}>
+                    Provider Dashboard
+                  </h2>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>
+                    Sign in with your staff credentials to access the queue.
+                  </p>
 
-                  <form
-                    className="login-form"
-                    onSubmit={handleLogin}
-                  >
+                  <form className="login-form" onSubmit={handleLogin}>
                     {error && (
                       <div
                         className="form-error"
@@ -339,9 +431,33 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                           title={showPassword ? 'Hide password' : 'Show password'}
                         >
                           {showPassword ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                              <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
                           ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
                           )}
                         </button>
                       </div>
@@ -352,11 +468,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       className="login-submit-btn"
                       disabled={loading || !email || !password}
                       aria-busy={loading}
-                      style={{ background: 'linear-gradient(135deg, var(--teal-500), var(--emerald-400))' }}
+                      style={{
+                        background: 'linear-gradient(135deg, var(--teal-500), var(--emerald-400))',
+                      }}
                     >
                       {loading ? (
                         <>
-                          <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                          <div
+                            className="spinner"
+                            style={{ width: 16, height: 16, borderWidth: 2 }}
+                          />
                           <p style={{ color: 'var(--text-primary)' }}>Signing in…</p>
                         </>
                       ) : (
@@ -551,7 +672,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                         >
                           {loading ? (
                             <>
-                              <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                              <div
+                                className="spinner"
+                                style={{ width: 16, height: 16, borderWidth: 2 }}
+                              />
                               Signing in…
                             </>
                           ) : (
@@ -749,7 +873,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                         >
                           {loading ? (
                             <>
-                              <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                              <div
+                                className="spinner"
+                                style={{ width: 16, height: 16, borderWidth: 2 }}
+                              />
                               Creating account…
                             </>
                           ) : (
@@ -784,7 +911,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       lineHeight: 1.5,
                     }}
                   >
-                    Demo dashboard uses <strong>John Matthews</strong>, 64 — Total Hip Replacement patient.
+                    Demo dashboard uses <strong>John Matthews</strong>, 64 — Total Hip Replacement
+                    patient.
                     <br />
                     Assistant chat connects to the backend when it is running.
                   </p>
@@ -792,7 +920,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   <div className="login-disclaimer">
                     By signing in you agree to our{' '}
                     <span style={{ color: 'var(--blue-500)', fontWeight: 600 }}>Terms</span> and{' '}
-                    <span style={{ color: 'var(--blue-500)', fontWeight: 600 }}>Privacy Policy</span>.<br />
+                    <span style={{ color: 'var(--blue-500)', fontWeight: 600 }}>
+                      Privacy Policy
+                    </span>
+                    .<br />
                     This platform uses synthetic data for demonstration purposes.
                   </div>
                 </>

@@ -65,17 +65,31 @@ export function ProfessionalSidebar({
                 onClose()
               }}
             >
-              <span className="sidebar-nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span
+                className="sidebar-nav-icon"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
                 {item.icon}
               </span>
               <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-              {item.badge && <span className={`badge ${item.id === 'escalation-center' ? 'badge-red' : 'badge-amber'}`} style={{ marginLeft: 'auto' }}>{item.badge}</span>}
+              {item.badge && (
+                <span
+                  className={`badge ${item.id === 'escalation-center' ? 'badge-red' : 'badge-amber'}`}
+                  style={{ marginLeft: 'auto' }}
+                >
+                  {item.badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
 
         <div className="sidebar-patient">
-          <div className="sidebar-patient-avatar" aria-hidden="true" style={{ background: 'var(--teal-500)', color: 'white' }}>
+          <div
+            className="sidebar-patient-avatar"
+            aria-hidden="true"
+            style={{ background: 'var(--teal-500)', color: 'white' }}
+          >
             {providerName.charAt(0)}
           </div>
           <div className="sidebar-patient-name">{providerName}</div>

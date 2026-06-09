@@ -120,9 +120,8 @@ export interface Appointment {
 }
 
 export interface ProfessionalAppointment extends Appointment {
-  patient_name: string;
+  patient_name: string
 }
-
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
@@ -230,4 +229,3 @@ export interface ProfessionalEscalation {
   status: 'open' | 'resolved'
   created_at: string
 }
-

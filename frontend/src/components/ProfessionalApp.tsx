@@ -70,25 +70,44 @@ export function ProfessionalApp({ onLogout }: ProfessionalAppProps) {
 
         <main className="page-body">
           {activeView === 'patient-queue' && <PatientQueue onNavigate={handleNavigate} />}
-          {activeView === 'patient-profile' && selectedPatientId && <ProfessionalPatientProfile patientId={selectedPatientId} onNavigate={handleNavigate} />}
-          {activeView === 'patient-profile' && !selectedPatientId && <PatientDirectory onNavigate={handleNavigate} />}
-          {activeView === 'appointments' && <ProfessionalAppointments />}
-          {activeView === 'escalation-center' && <ProfessionalEscalationCenter onNavigate={handleNavigate} />}
-
-          {activeView !== 'patient-queue' && activeView !== 'patient-profile' && activeView !== 'appointments' && activeView !== 'escalation-center' && (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
-              <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Under Construction</h2>
-              <p>The {title} view is coming soon.</p>
-              <button
-                type="button"
-                onClick={() => setActiveView('patient-queue')}
-                style={{ marginTop: 24, padding: '8px 16px', background: 'var(--blue-500)', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
-              >
-                Return to Patient Queue
-              </button>
-            </div>
+          {activeView === 'patient-profile' && selectedPatientId && (
+            <ProfessionalPatientProfile patientId={selectedPatientId} onNavigate={handleNavigate} />
           )}
+          {activeView === 'patient-profile' && !selectedPatientId && (
+            <PatientDirectory onNavigate={handleNavigate} />
+          )}
+          {activeView === 'appointments' && <ProfessionalAppointments />}
+          {activeView === 'escalation-center' && (
+            <ProfessionalEscalationCenter onNavigate={handleNavigate} />
+          )}
+
+          {activeView !== 'patient-queue' &&
+            activeView !== 'patient-profile' &&
+            activeView !== 'appointments' &&
+            activeView !== 'escalation-center' && (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
+                <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>
+                  Under Construction
+                </h2>
+                <p>The {title} view is coming soon.</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('patient-queue')}
+                  style={{
+                    marginTop: 24,
+                    padding: '8px 16px',
+                    background: 'var(--blue-500)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Return to Patient Queue
+                </button>
+              </div>
+            )}
         </main>
       </div>
     </div>

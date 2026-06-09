@@ -95,7 +95,7 @@ export const MOCK_PATIENT_DIRECTORY: PatientQueueItem[] = [
     status: 'inactive',
     last_check_in: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString(),
     assigned_staff: 'Dr. Johnson',
-  }
+  },
 ]
 
 export const MOCK_PROFESSIONAL_APPOINTMENTS: ProfessionalAppointment[] = [
@@ -189,7 +189,7 @@ export const MOCK_PROFESSIONAL_APPOINTMENTS: ProfessionalAppointment[] = [
     location: 'Clinic Room C',
     reason: 'Routine monitoring after discharge.',
     status: 'scheduled',
-  }
+  },
 ]
 
 export const MOCK_PROFESSIONAL_ESCALATIONS: ProfessionalEscalation[] = [
@@ -199,7 +199,8 @@ export const MOCK_PROFESSIONAL_ESCALATIONS: ProfessionalEscalation[] = [
     patient_name: 'John Doe',
     kind: 'symptom_triage',
     level: 'critical',
-    message: 'Severe chest pain reported during symptom check-in. Immediate clinical call recommended.',
+    message:
+      'Severe chest pain reported during symptom check-in. Immediate clinical call recommended.',
     status: 'open',
     created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30m ago
   },
@@ -219,7 +220,8 @@ export const MOCK_PROFESSIONAL_ESCALATIONS: ProfessionalEscalation[] = [
     patient_name: 'Mark Kim',
     kind: 'pharmacist_question',
     level: 'medium',
-    message: 'Potential mild drug interaction flagged: Patient reports self-administering over-the-counter NSAIDs along with prescribed anticoagulants.',
+    message:
+      'Potential mild drug interaction flagged: Patient reports self-administering over-the-counter NSAIDs along with prescribed anticoagulants.',
     status: 'open',
     created_at: new Date(Date.now() - 1000 * 60 * 240).toISOString(), // 4h ago
   },
@@ -229,10 +231,9 @@ export const MOCK_PROFESSIONAL_ESCALATIONS: ProfessionalEscalation[] = [
     patient_name: 'James Brown',
     kind: 'symptom_triage',
     level: 'low',
-    message: 'Mild ankle stiffness reported during morning check-in. Normal recovery stage behavior.',
+    message:
+      'Mild ankle stiffness reported during morning check-in. Normal recovery stage behavior.',
     status: 'resolved',
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-  }
+  },
 ]
-
-

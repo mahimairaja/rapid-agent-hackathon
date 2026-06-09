@@ -14,7 +14,12 @@ import type {
   ProfessionalEscalation,
 } from '../types'
 import { MOCK_PATIENT, MOCK_MEDICATIONS, MOCK_APPOINTMENTS } from '../data/mockData'
-import { MOCK_PATIENT_QUEUE, MOCK_PATIENT_DIRECTORY, MOCK_PROFESSIONAL_APPOINTMENTS, MOCK_PROFESSIONAL_ESCALATIONS } from '../data/mockProfessionalData'
+import {
+  MOCK_PATIENT_QUEUE,
+  MOCK_PATIENT_DIRECTORY,
+  MOCK_PROFESSIONAL_APPOINTMENTS,
+  MOCK_PROFESSIONAL_ESCALATIONS,
+} from '../data/mockProfessionalData'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
 
@@ -153,7 +158,10 @@ export async function fetchPatientDirectory(): Promise<PatientQueueItem[]> {
       method: 'GET',
     })
   } catch (error) {
-    console.warn('Backend /professional/patients endpoint failed. Falling back to mock data.', error)
+    console.warn(
+      'Backend /professional/patients endpoint failed. Falling back to mock data.',
+      error,
+    )
     return new Promise((resolve) => setTimeout(() => resolve(MOCK_PATIENT_DIRECTORY), 800))
   }
 }
@@ -164,7 +172,10 @@ export async function fetchProfessionalAppointments(): Promise<ProfessionalAppoi
       method: 'GET',
     })
   } catch (error) {
-    console.warn('Backend /professional/appointments endpoint failed. Falling back to mock data.', error)
+    console.warn(
+      'Backend /professional/appointments endpoint failed. Falling back to mock data.',
+      error,
+    )
     return new Promise((resolve) => setTimeout(() => resolve(MOCK_PROFESSIONAL_APPOINTMENTS), 800))
   }
 }
@@ -202,8 +213,13 @@ export async function fetchProfessionalEscalations(): Promise<ProfessionalEscala
       method: 'GET',
     })
   } catch (error) {
-    console.warn('Backend /professional/escalations endpoint failed. Falling back to mock data.', error)
-    return new Promise((resolve) => setTimeout(() => resolve([...MOCK_PROFESSIONAL_ESCALATIONS]), 800))
+    console.warn(
+      'Backend /professional/escalations endpoint failed. Falling back to mock data.',
+      error,
+    )
+    return new Promise((resolve) =>
+      setTimeout(() => resolve([...MOCK_PROFESSIONAL_ESCALATIONS]), 800),
+    )
   }
 }
 
@@ -213,13 +229,15 @@ export async function resolveProfessionalEscalation(id: string): Promise<{ succe
       method: 'POST',
     })
   } catch (error) {
-    console.warn(`Backend /professional/escalations/${id}/resolve endpoint failed. Simulating local resolution.`, error)
+    console.warn(
+      `Backend /professional/escalations/${id}/resolve endpoint failed. Simulating local resolution.`,
+      error,
+    )
     // Simulate updating mock data state locally
-    const index = MOCK_PROFESSIONAL_ESCALATIONS.findIndex(e => e.id === id)
+    const index = MOCK_PROFESSIONAL_ESCALATIONS.findIndex((e) => e.id === id)
     if (index !== -1) {
       MOCK_PROFESSIONAL_ESCALATIONS[index].status = 'resolved'
     }
     return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 500))
   }
 }
-

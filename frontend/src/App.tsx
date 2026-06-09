@@ -146,7 +146,11 @@ function App() {
     }
   }, [patientCode, refreshKey, token])
 
-  const handleLogin = (newToken: string, demo: boolean, userRole: 'patient' | 'professional' = 'patient') => {
+  const handleLogin = (
+    newToken: string,
+    demo: boolean,
+    userRole: 'patient' | 'professional' = 'patient',
+  ) => {
     setToken(newToken)
     setIsDemoMode(demo)
     setRole(userRole)

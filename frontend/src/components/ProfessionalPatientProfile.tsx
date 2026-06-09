@@ -11,7 +11,10 @@ interface ProfessionalPatientProfileProps {
   onNavigate: (view: ProfessionalAppView, payload?: string) => void
 }
 
-export function ProfessionalPatientProfile({ patientId, onNavigate }: ProfessionalPatientProfileProps) {
+export function ProfessionalPatientProfile({
+  patientId,
+  onNavigate,
+}: ProfessionalPatientProfileProps) {
   const [loading, setLoading] = useState(true)
   const [patientData, setPatientData] = useState<{
     patient: Patient | null
@@ -25,7 +28,6 @@ export function ProfessionalPatientProfile({ patientId, onNavigate }: Profession
 
   useEffect(() => {
     if (!patientId) {
-      setLoading(false)
       return
     }
 
@@ -62,10 +64,18 @@ export function ProfessionalPatientProfile({ patientId, onNavigate }: Profession
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
         <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>No Patient Selected</h2>
         <p>Please select a patient from the queue to view their profile.</p>
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={() => onNavigate('patient-queue')}
-          style={{ marginTop: 24, padding: '8px 16px', background: 'var(--blue-500)', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+          style={{
+            marginTop: 24,
+            padding: '8px 16px',
+            background: 'var(--blue-500)',
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
+          }}
         >
           Return to Patient Queue
         </button>
@@ -87,21 +97,21 @@ export function ProfessionalPatientProfile({ patientId, onNavigate }: Profession
   return (
     <div className="patient-profile-view">
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={() => onNavigate('patient-profile', undefined)}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 8, 
-            padding: '8px 12px', 
-            background: 'white', 
-            border: '1px solid var(--border)', 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 12px',
+            background: 'white',
+            border: '1px solid var(--border)',
             borderRadius: 'var(--radius-md)',
             color: 'var(--text-secondary)',
             fontWeight: 500,
             cursor: 'pointer',
-            boxShadow: 'var(--shadow-xs)'
+            boxShadow: 'var(--shadow-xs)',
           }}
         >
           <span>←</span> Back to Directory

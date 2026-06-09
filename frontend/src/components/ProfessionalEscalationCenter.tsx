@@ -30,8 +30,8 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
     setResolvingId(id)
     try {
       await resolveProfessionalEscalation(id)
-      setEscalations(prev => 
-        prev.map(esc => esc.id === id ? { ...esc, status: 'resolved' as const } : esc)
+      setEscalations((prev) =>
+        prev.map((esc) => (esc.id === id ? { ...esc, status: 'resolved' as const } : esc)),
       )
     } catch (err) {
       console.error('Failed to resolve escalation', err)
@@ -40,14 +40,18 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
     }
   }
 
-  const filteredEscalations = escalations.filter(esc => esc.status === statusFilter)
+  const filteredEscalations = escalations.filter((esc) => esc.status === statusFilter)
 
   const getPriorityBadgeClass = (level: string) => {
     switch (level) {
-      case 'critical': return 'badge-red'
-      case 'high': return 'badge-amber'
-      case 'medium': return 'badge-blue'
-      default: return 'badge-navy'
+      case 'critical':
+        return 'badge-red'
+      case 'high':
+        return 'badge-amber'
+      case 'medium':
+        return 'badge-blue'
+      default:
+        return 'badge-navy'
     }
   }
 
@@ -58,6 +62,7 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
   }
 
   const formatTimeAgo = (iso: string) => {
+    // eslint-disable-next-line react-hooks/purity
     const diffMs = Date.now() - new Date(iso).getTime()
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMins / 60)
@@ -79,7 +84,16 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
         <div className="dashboard-grid">
           <div className="col-full">
             {/* Tabs & Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 16,
+                marginBottom: 24,
+              }}
+            >
               <div className="auth-tab-switcher" style={{ maxWidth: 300, margin: 0 }}>
                 <button
                   type="button"
@@ -93,7 +107,7 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
                   className={`auth-tab ${statusFilter === 'resolved' ? 'active' : ''}`}
                   onClick={() => setStatusFilter('resolved')}
                 >
-                  Resolved ({escalations.filter(e => e.status === 'resolved').length})
+                  Resolved ({escalations.filter((e) => e.status === 'resolved').length})
                 </button>
               </div>
 
@@ -104,31 +118,53 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
 
             {/* List */}
             {filteredEscalations.length === 0 ? (
-              <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+              <div
+                className="card"
+                style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}
+              >
                 No {statusFilter} escalations found.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {filteredEscalations.map(esc => (
-                  <div 
-                    key={esc.id} 
-                    className="card" 
-                    style={{ 
-                      padding: 20, 
+                {filteredEscalations.map((esc) => (
+                  <div
+                    key={esc.id}
+                    className="card"
+                    style={{
+                      padding: 20,
                       position: 'relative',
-                      borderLeft: esc.status === 'open' 
-                        ? `4px solid var(--${esc.level === 'critical' ? 'red-500' : esc.level === 'high' ? 'amber-500' : 'blue-500'})` 
-                        : '4px solid var(--border-light)',
+                      borderLeft:
+                        esc.status === 'open'
+                          ? `4px solid var(--${esc.level === 'critical' ? 'red-500' : esc.level === 'high' ? 'amber-500' : 'blue-500'})`
+                          : '4px solid var(--border-light)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        flexWrap: 'wrap',
+                        gap: 16,
+                      }}
+                    >
                       {/* Priority and Source Info */}
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            flexWrap: 'wrap',
+                            marginBottom: 8,
+                          }}
+                        >
                           <span className={`badge ${getPriorityBadgeClass(esc.level)}`}>
                             {esc.level.toUpperCase()}
                           </span>
-                          <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
+                          <span
+                            style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}
+                          >
                             {getKindLabel(esc.kind)}
                           </span>
                           <span style={{ color: 'var(--border-light)' }}>•</span>
@@ -138,14 +174,16 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
                         </div>
 
                         {/* Escalation Message */}
-                        <p style={{ 
-                          fontSize: 15, 
-                          color: 'var(--text-primary)', 
-                          fontWeight: 500,
-                          lineHeight: 1.5,
-                          margin: '0 0 16px 0',
-                          maxWidth: '700px'
-                        }}>
+                        <p
+                          style={{
+                            fontSize: 15,
+                            color: 'var(--text-primary)',
+                            fontWeight: 500,
+                            lineHeight: 1.5,
+                            margin: '0 0 16px 0',
+                            maxWidth: '700px',
+                          }}
+                        >
                           {esc.message}
                         </p>
 
@@ -166,7 +204,7 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
                               textDecoration: 'underline',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: 4
+                              gap: 4,
                             }}
                           >
                             {esc.patient_name} ({esc.patient_id})
@@ -211,7 +249,10 @@ export function ProfessionalEscalationCenter({ onNavigate }: ProfessionalEscalat
                         >
                           {resolvingId === esc.id ? (
                             <>
-                              <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                              <div
+                                className="spinner"
+                                style={{ width: 14, height: 14, borderWidth: 2 }}
+                              />
                               Resolving...
                             </>
                           ) : (
