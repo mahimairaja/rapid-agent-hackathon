@@ -47,7 +47,7 @@ export async function signUp(email: string, password: string, name: string): Pro
   return request<AuthToken>('/users/register', {
     method: 'POST',
     body: JSON.stringify({ email, password, name }),
-  });
+  })
 }
 
 export async function login(email: string, password: string): Promise<AuthToken> {
