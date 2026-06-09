@@ -4,7 +4,7 @@ match_medications and compute_next_dose carry the matching and timing logic for
 AC-HW-MED-001.1 and 001.3; they are pure so they run without a database or model.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -70,6 +70,34 @@ def test_next_dose_ignores_malformed_times():
     now = datetime(2026, 6, 9, 10, 0, tzinfo=TZ)
     assert compute_next_dose(["not-a-time"], now) is None
     assert compute_next_dose(["25:00"], now) is None
+
+
+def test_next_dose_equal_time_surfaces_today():
+    now = datetime(2026, 6, 9, 8, 0, tzinfo=TZ)
+    assert compute_next_dose(["08:00"], now) == datetime(2026, 6, 9, 8, 0, tzinfo=TZ)
+
+
+def test_next_dose_picks_earliest_still_ahead_not_list_order():
+    now = datetime(2026, 6, 9, 10, 0, tzinfo=TZ)
+    # 08:00 is tomorrow, 12:00 is today: result must be today 12:00.
+    assert compute_next_dose(["08:00", "12:00"], now) == datetime(
+        2026, 6, 9, 12, 0, tzinfo=TZ
+    )
+
+
+def test_next_dose_crosses_spring_forward_keeps_wall_clock():
+    now = datetime(2026, 3, 7, 21, 0, tzinfo=TZ)  # evening before spring forward
+    nxt = compute_next_dose(["08:00"], now)
+    assert nxt == datetime(2026, 3, 8, 8, 0, tzinfo=TZ)
+    assert nxt.utcoffset() == timedelta(hours=-4)  # EDT after the transition
+
+
+def test_medication_tools_are_not_public():
+    from src.agent.tools.guards import PUBLIC_TOOLS
+
+    assert {"get_medications", "get_next_dose", "flag_pharmacist"}.isdisjoint(
+        PUBLIC_TOOLS
+    )
 
 
 def _unverified_ctx():

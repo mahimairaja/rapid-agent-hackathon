@@ -128,3 +128,79 @@ async def test_agent_flags_uncertain_interaction_to_pharmacist(seed_demo):
     docs = await Escalation.find(Escalation.patient_id == "pid-margaret").to_list()
     assert len(docs) == 1
     assert docs[0].level == "non-urgent"
+
+
+class _UnverifiedFlagLlm(BaseLlm):
+    """Scripted: attempt flag_pharmacist BEFORE identifying, to hit the deny path."""
+
+    model: str = "scripted-unverified-flag"
+
+    @staticmethod
+    def supported_models() -> list[str]:
+        return ["scripted-unverified-flag"]
+
+    async def generate_content_async(self, llm_request, stream=False):
+        seen = _responses(llm_request)
+        if "flag_pharmacist" not in seen:
+            yield _call("flag_pharmacist", {"question": "ibuprofen with lisinopril?"})
+            return
+        yield _say("I need to confirm who you are before I can help with that.")
+
+
+class _NotFoundDoseLlm(BaseLlm):
+    """Scripted: identify, then ask for a medication not on the plan."""
+
+    model: str = "scripted-notfound-dose"
+
+    @staticmethod
+    def supported_models() -> list[str]:
+        return ["scripted-notfound-dose"]
+
+    async def generate_content_async(self, llm_request, stream=False):
+        seen = _responses(llm_request)
+        if "find_patient" not in seen:
+            yield _call("find_patient", _MARGARET)
+            return
+        if "get_next_dose" not in seen:
+            yield _call("get_next_dose", {"medication_name": "acetaminophen"})
+            return
+        if seen["get_next_dose"].get("status") == "not_found":
+            yield _say(
+                "Acetaminophen is not on your plan. Please check with your care team."
+            )
+        else:
+            yield _say("Here is your dose.")
+
+
+async def test_medication_tool_blocked_before_identification(seed_demo):
+    service = InMemorySessionService()
+    runner = Runner(
+        agent=build_recognition_agent(model=_UnverifiedFlagLlm()),
+        app_name=_APP,
+        session_service=service,
+    )
+    reply, calls = await _drive(
+        runner, service, "Can I take ibuprofen with lisinopril?"
+    )
+    # The model attempted the tool (so the gate ran) but it must be blocked, and
+    # no escalation may be written before identification.
+    assert "flag_pharmacist" in calls
+    assert (
+        await Escalation.find(Escalation.patient_id == "pid-margaret").to_list() == []
+    )
+    assert "flagged" not in reply.lower()
+
+
+async def test_agent_says_not_on_plan_without_inventing_dosage(seed_demo):
+    service = InMemorySessionService()
+    runner = Runner(
+        agent=build_recognition_agent(model=_NotFoundDoseLlm()),
+        app_name=_APP,
+        session_service=service,
+    )
+    reply, calls = await _drive(
+        runner, service, "I'm Margaret Chen, when do I take acetaminophen?"
+    )
+    assert "get_next_dose" in calls
+    assert "not on your plan" in reply.lower()
+    assert "mg" not in reply.lower()  # no invented dosage
