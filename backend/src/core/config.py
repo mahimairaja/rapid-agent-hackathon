@@ -100,9 +100,10 @@ class Config(BaseSettings):
         """
         if self.BACKEND_CORS_ORIGINS is None:
             raw = (self.CORS_ORIGINS_STR or "").strip()
-            self.BACKEND_CORS_ORIGINS = (
-                [o.strip() for o in raw.split(",") if o.strip()] if raw else ["*"]
-            )
+            parsed = [o.strip() for o in raw.split(",") if o.strip()]
+            # Fall back to allow-all when nothing usable is configured, so a
+            # blank or all-separator value never silently disables CORS.
+            self.BACKEND_CORS_ORIGINS = parsed or ["*"]
         return self
 
     @model_validator(mode="after")

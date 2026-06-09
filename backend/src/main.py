@@ -64,7 +64,9 @@ class AppCreator:
             # browser rejects "*" + Allow-Credentials, and Starlette would echo
             # any origin back). Auth here is a Bearer header, not cookies, so
             # credentials are only enabled when origins are explicitly listed.
-            allow_all = allow_origins == ["*"]
+            # Starlette treats any list containing "*" as allow-all, so detect
+            # membership rather than an exact ["*"] match.
+            allow_all = "*" in allow_origins
             self.app.add_middleware(
                 CORSMiddleware,
                 allow_origins=allow_origins,

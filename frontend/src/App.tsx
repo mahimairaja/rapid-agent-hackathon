@@ -163,6 +163,7 @@ function App() {
 
   const handleChangePatient = () => {
     clearStoredPatientCode()
+    loadedCodeRef.current = null
     setPatientCode(null)
     setPatient(null)
     setMedications([])
@@ -174,6 +175,7 @@ function App() {
   const handleLogout = () => {
     clearStoredToken()
     clearStoredPatientCode()
+    loadedCodeRef.current = null
     setToken(null)
     setPatientCode(null)
     setPatient(null)

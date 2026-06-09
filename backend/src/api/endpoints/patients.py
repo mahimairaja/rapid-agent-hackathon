@@ -31,7 +31,7 @@ def _is_active_medication(medication: Medication, now: datetime) -> bool:
 
 def _is_upcoming_appointment(appointment: Appointment, now: datetime) -> bool:
     return (
-        appointment.status.lower() not in {"completed", "cancelled"}
+        appointment.status.lower() not in {"completed", "cancelled", "rejected"}
         and _aware(appointment.start) >= now
     )
 

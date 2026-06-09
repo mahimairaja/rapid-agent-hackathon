@@ -26,7 +26,11 @@ _UNVERIFIED = {
     "status": "unverified",
     "message": "No patient has been identified in this conversation yet.",
 }
-_BOOKED_STATUSES = {"scheduled", "upcoming", "accepted"}
+# Statuses that mean the patient currently holds this follow-up slot, so it must
+# not be double-booked. "pending" (awaiting host confirmation) still holds the
+# slot and must count here, or a retry would create a duplicate booking;
+# "cancelled"/"rejected" release the slot and are intentionally excluded.
+_BOOKED_STATUSES = {"scheduled", "upcoming", "accepted", "pending"}
 _DEFAULT_SLOT_LIMIT = 3
 _DEFAULT_TIME_ZONE = "America/New_York"
 
