@@ -15,6 +15,7 @@ from google.adk.models.base_llm import BaseLlm
 from src.agent.prompts.appointment_prompt import APPOINTMENT_INSTRUCTION
 from src.agent.prompts.medication_prompt import MEDICATION_INSTRUCTION
 from src.agent.prompts.recognition_prompt import RECOGNITION_INSTRUCTION
+from src.agent.prompts.recovery_prompt import RECOVERY_INSTRUCTION
 from src.agent.tools.appointment_tools import (
     book_follow_up_slot,
     get_follow_up_booking,
@@ -28,6 +29,7 @@ from src.agent.tools.medication_tools import (
     get_next_dose,
 )
 from src.agent.tools.patient_tools import find_patient, get_my_plan
+from src.agent.tools.recovery_tools import answer_recovery_question
 from src.core.config import config
 
 
@@ -61,6 +63,7 @@ def build_recognition_agent(model: BaseLlm | str | None = None) -> Agent:
         instruction="\n\n".join(
             [
                 RECOGNITION_INSTRUCTION,
+                RECOVERY_INSTRUCTION,
                 MEDICATION_INSTRUCTION,
                 APPOINTMENT_INSTRUCTION,
             ]
@@ -68,6 +71,7 @@ def build_recognition_agent(model: BaseLlm | str | None = None) -> Agent:
         tools=[
             find_patient,
             get_my_plan,
+            answer_recovery_question,
             get_medications,
             get_next_dose,
             flag_pharmacist,
