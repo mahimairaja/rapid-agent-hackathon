@@ -39,8 +39,11 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app /app
 
 USER appuser
-EXPOSE 8000
+EXPOSE 8080
 
-# gunicorn (uvicorn worker) serving the real ASGI app at src.main:app
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "src.main:app", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "8", "--timeout", "60"]
+CMD exec gunicorn -k uvicorn.workers.UvicornWorker src.main:app \
+    --bind "0.0.0.0:${PORT:-8080}" \
+    --workers "${WEB_CONCURRENCY:-2}" \
+    --timeout 0 \
+    --access-logfile - --error-logfile -

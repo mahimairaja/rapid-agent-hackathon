@@ -210,8 +210,10 @@ class BaseRepository:
                         "total_count": total_count,
                     },
                 }
-            except sa_exc.SQLAlchemyError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+            except sa_exc.SQLAlchemyError:
+                # Re-raise so the central SQLAlchemy handler formats it
+                # (generic message in prod, full detail only when DEBUG).
+                raise
 
     def _build_filter_conditions(self, filter_dict: dict, query: Any) -> Any:
         conditions = []
@@ -328,8 +330,10 @@ class BaseRepository:
                         detail=f"{self.model.__tablename__.capitalize()} with id {id} not found."
                     )
                 return result
-            except sa_exc.SQLAlchemyError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+            except sa_exc.SQLAlchemyError:
+                # Re-raise so the central SQLAlchemy handler formats it
+                # (generic message in prod, full detail only when DEBUG).
+                raise
 
     async def create(self, schema: T):
         async with self.session_factory() as session:
@@ -343,8 +347,10 @@ class BaseRepository:
                 raise
             except sa_exc.IntegrityError as e:
                 raise DuplicatedError(detail=str(e.orig)) from e
-            except sa_exc.SQLAlchemyError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+            except sa_exc.SQLAlchemyError:
+                # Re-raise so the central SQLAlchemy handler formats it
+                # (generic message in prod, full detail only when DEBUG).
+                raise
 
     async def update(self, id: int, schema: T):
         async with self.session_factory() as session:
@@ -366,9 +372,10 @@ class BaseRepository:
 
                 return db_obj
 
-            except sa_exc.SQLAlchemyError as e:
+            except sa_exc.SQLAlchemyError:
                 await session.rollback()
-                raise HTTPException(status_code=500, detail=str(e)) from e
+                # Re-raise for the central handler (generic in prod).
+                raise
 
     async def update_attr(self, id: int, column: str, value: Any):
         async with self.session_factory() as session:
@@ -384,8 +391,10 @@ class BaseRepository:
                 await session.commit()
                 await session.refresh(db_obj)
                 return db_obj
-            except sa_exc.SQLAlchemyError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+            except sa_exc.SQLAlchemyError:
+                # Re-raise so the central SQLAlchemy handler formats it
+                # (generic message in prod, full detail only when DEBUG).
+                raise
 
     async def whole_update(self, id: int, schema: T):
         async with self.session_factory() as session:
@@ -405,8 +414,10 @@ class BaseRepository:
                 await session.commit()
                 await session.refresh(db_obj)
                 return db_obj
-            except sa_exc.SQLAlchemyError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+            except sa_exc.SQLAlchemyError:
+                # Re-raise so the central SQLAlchemy handler formats it
+                # (generic message in prod, full detail only when DEBUG).
+                raise
 
     async def delete_by_id(self, id: int):
         async with self.session_factory() as session:
@@ -421,8 +432,10 @@ class BaseRepository:
                 return {
                     "message": f"{self.model.__tablename__.capitalize()} with id {id} deleted successfully."
                 }
-            except sa_exc.SQLAlchemyError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+            except sa_exc.SQLAlchemyError:
+                # Re-raise so the central SQLAlchemy handler formats it
+                # (generic message in prod, full detail only when DEBUG).
+                raise
 
     async def get_unique_values(self, schema: T) -> dict:
         async with self.session_factory() as session:
@@ -470,8 +483,10 @@ class BaseRepository:
                         "total_count": total_count,
                     },
                 }
-            except sa_exc.SQLAlchemyError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+            except sa_exc.SQLAlchemyError:
+                # Re-raise so the central SQLAlchemy handler formats it
+                # (generic message in prod, full detail only when DEBUG).
+                raise
 
     async def close_scoped_session(self):
         # With async session factory/context manager, typically we trust the context manager

@@ -54,16 +54,26 @@ uv run uvicorn src.main:app --reload
 
 ## Auth flow
 
-| Method | Path                     | Auth   | MCP tool     |
-| ------ | ------------------------ | ------ | ------------ |
-| POST   | `/api/v1/users/register` | public | -            |
-| POST   | `/api/v1/users/login`    | public | -            |
-| GET    | `/api/v1/users/me`       | Bearer | -            |
-| GET    | `/api/v1/users`          | Bearer | `list_users` |
-| GET    | `/api/v1/users/{id}`     | Bearer | `get_user`   |
-| PATCH  | `/api/v1/users/{id}`     | Bearer | -            |
-| DELETE | `/api/v1/users/{id}`     | Bearer | -            |
-| GET    | `/health`, `/health/detailed` | public | -       |
+| Method | Path                     | Access            | MCP tool     |
+| ------ | ------------------------ | ----------------- | ------------ |
+| POST   | `/api/v1/users/register` | public            | -            |
+| POST   | `/api/v1/users/login`    | public            | -            |
+| GET    | `/api/v1/users/me`       | any logged-in     | -            |
+| GET    | `/api/v1/users`          | admin only        | `list_users` |
+| GET    | `/api/v1/users/{id}`     | self or admin     | `get_user`   |
+| PATCH  | `/api/v1/users/{id}`     | self or admin     | -            |
+| DELETE | `/api/v1/users/{id}`     | self or admin     | -            |
+| GET    | `/health`, `/health/detailed` | public       | -            |
+
+Access control: a Bearer token is required for everything except register, login,
+and health. Ownership is enforced (you can only read/update/delete your own
+account); admins (`is_superuser`) may act on any account and list all users. The
+public update schema deliberately omits `is_active` / `is_superuser` to prevent
+mass-assignment privilege escalation.
+
+`register` always creates a non-admin user. Promote the first admin out-of-band,
+e.g. `UPDATE users SET is_superuser = true WHERE email = 'you@example.com';`
+(or in a seed script / migration).
 
 ```bash
 # register, then login to get a token
