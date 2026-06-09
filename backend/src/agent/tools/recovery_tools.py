@@ -108,10 +108,14 @@ async def answer_recovery_question(question: str, *, tool_context: ToolContext) 
         embedding = vectors[0]
         pipeline = build_plan_search_pipeline(embedding, patient_id)
 
-        collection = CarePlanChunk.get_motor_collection()
-        raw: list[dict[str, Any]] = []
-        async for doc in collection.aggregate(pipeline):
-            raw.append(doc)
+        # Beanie 2.x runs on pymongo's AsyncMongoClient (no motor); the raw
+        # collection getter is get_pymongo_collection() (the retired
+        # get_motor_collection() name raises AttributeError on every call), and
+        # pymongo's async aggregate() is a coroutine returning the cursor, so it
+        # must be awaited before async-iterating (motor returned it directly).
+        collection = CarePlanChunk.get_pymongo_collection()
+        cursor = await collection.aggregate(pipeline)
+        raw: list[dict[str, Any]] = [doc async for doc in cursor]
 
         context = format_context(raw)
         if not context:

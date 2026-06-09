@@ -7,11 +7,14 @@ model. The unverified-guard test confirms the tool refuses before verification.
 
 from types import SimpleNamespace
 
+from src.agent.agent.session_state import set_verified
+from src.agent.tools import recovery_tools
 from src.agent.tools.recovery_tools import (
     answer_recovery_question,
     build_plan_search_pipeline,
     format_context,
 )
+from src.models import CarePlanChunk
 
 # -- build_plan_search_pipeline ------------------------------------------------
 
@@ -100,3 +103,78 @@ def test_recovery_tools_not_public():
     from src.agent.tools.guards import PUBLIC_TOOLS
 
     assert {"answer_recovery_question"}.isdisjoint(PUBLIC_TOOLS)
+
+
+# -- DB-access path (stubbed cursor, real collection getter) --------------------
+#
+# These exercise the production path through CarePlanChunk.get_pymongo_collection()
+# and the async aggregate cursor, which the pure-helper tests never reach. The
+# embedding and the cursor are stubbed (no Voyage key, no Atlas vector search),
+# but the collection getter is the REAL one: if the tool reverts to the retired
+# get_motor_collection() name, the monkeypatch below does not apply, the missing
+# method raises AttributeError, the tool returns "error", and these tests fail.
+
+
+def _verified_ctx(patient_id: str = "pid-margaret"):
+    state: dict = {}
+    set_verified(state, patient_id=patient_id, name="Test Patient")
+    return SimpleNamespace(state=state)
+
+
+class _FakeCollection:
+    def __init__(self, docs: list[dict]):
+        self._docs = docs
+        self.pipeline: list | None = None
+
+    async def aggregate(self, pipeline):
+        # pymongo's async aggregate() is a coroutine that resolves to the cursor.
+        self.pipeline = pipeline
+        docs = self._docs
+
+        async def _gen():
+            for doc in docs:
+                yield doc
+
+        return _gen()
+
+
+def _stub_embedding(monkeypatch):
+    monkeypatch.setattr(
+        recovery_tools, "embed_texts", lambda texts, input_type: [[0.1] * 1024]
+    )
+
+
+async def test_answer_recovery_question_returns_grounded_context(monkeypatch):
+    _stub_embedding(monkeypatch)
+    fake = _FakeCollection(
+        [{"text": "Take short daily walks.", "source_file": "m.md", "chunk_index": 0}]
+    )
+    monkeypatch.setattr(
+        CarePlanChunk, "get_pymongo_collection", classmethod(lambda cls: fake)
+    )
+
+    res = await answer_recovery_question(
+        "How much should I walk?", tool_context=_verified_ctx()
+    )
+
+    assert res["status"] == "ok"
+    assert res["context"][0]["text"] == "Take short daily walks."
+    # The vector search must be scoped to the verified patient only.
+    assert fake.pipeline[0]["$vectorSearch"]["filter"] == {
+        "patient_id": {"$eq": "pid-margaret"}
+    }
+
+
+async def test_answer_recovery_question_no_context(monkeypatch):
+    _stub_embedding(monkeypatch)
+    monkeypatch.setattr(
+        CarePlanChunk,
+        "get_pymongo_collection",
+        classmethod(lambda cls: _FakeCollection([])),
+    )
+
+    res = await answer_recovery_question(
+        "anything in my plan about this?", tool_context=_verified_ctx()
+    )
+
+    assert res["status"] == "no_context"
