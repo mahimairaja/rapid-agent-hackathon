@@ -3,6 +3,8 @@ import type {
   AgentChatResponse,
   AgentChatResult,
   AuthToken,
+  PatientDashboardRequest,
+  PatientDashboardResponse,
   UserMe,
   Patient,
   Medication,
@@ -37,6 +39,7 @@ async function request<T>(
 // ── Token storage ─────────────────────────────────────────────────────────────
 
 const TOKEN_KEY = 'rapid_agent_token'
+const PATIENT_CODE_KEY = 'rapid_agent_patient_code'
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -48,6 +51,18 @@ export function setStoredToken(token: string): void {
 
 export function clearStoredToken(): void {
   localStorage.removeItem(TOKEN_KEY)
+}
+
+export function getStoredPatientCode(): string | null {
+  return localStorage.getItem(PATIENT_CODE_KEY)
+}
+
+export function setStoredPatientCode(patientCode: string): void {
+  localStorage.setItem(PATIENT_CODE_KEY, patientCode)
+}
+
+export function clearStoredPatientCode(): void {
+  localStorage.removeItem(PATIENT_CODE_KEY)
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -76,7 +91,7 @@ interface DashboardData {
   patient: Patient
   medications: Medication[]
   appointments: Appointment[]
-  demo: true
+  demo: boolean
 }
 
 export async function loadDashboardData(): Promise<DashboardData> {
@@ -86,6 +101,21 @@ export async function loadDashboardData(): Promise<DashboardData> {
     appointments: [...MOCK_APPOINTMENTS],
     demo: true,
   }
+}
+
+export async function fetchPatientDashboard(
+  payload: PatientDashboardRequest,
+  token: string,
+): Promise<DashboardData> {
+  const data = await request<PatientDashboardResponse>(
+    '/patients/dashboard',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    token,
+  )
+  return { ...data, demo: false }
 }
 
 export function getClientTimeZone(): string | null {

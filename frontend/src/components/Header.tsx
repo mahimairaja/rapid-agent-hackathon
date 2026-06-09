@@ -4,6 +4,8 @@ interface HeaderProps {
   isDemoMode: boolean
   onMenuClick: () => void
   onLogout: () => void
+  onChangePatient?: () => void
+  patientCode?: string | null
   userInitials: string
 }
 
@@ -11,8 +13,10 @@ export function Header({
   title,
   subtitle,
   isDemoMode,
+  onChangePatient,
   onMenuClick,
   onLogout,
+  patientCode,
   userInitials,
 }: HeaderProps) {
   return (
@@ -59,6 +63,17 @@ export function Header({
             <span className="demo-badge-dot" aria-hidden="true" />
             Demo Data
           </div>
+        )}
+
+        {!isDemoMode && patientCode && onChangePatient && (
+          <button
+            type="button"
+            className="patient-code-badge"
+            onClick={onChangePatient}
+            title="Change patient code"
+          >
+            {patientCode}
+          </button>
         )}
 
         <button

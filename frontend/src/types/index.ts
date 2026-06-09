@@ -138,6 +138,17 @@ export interface AgentChatResult {
   demo: boolean
 }
 
+export interface PatientDashboardRequest {
+  patient_code: string
+  time_zone?: string | null
+}
+
+export interface PatientDashboardResponse {
+  patient: Patient
+  medications: Medication[]
+  appointments: Appointment[]
+}
+
 export type MessageRole = 'user' | 'assistant'
 
 export interface ChatMessage {

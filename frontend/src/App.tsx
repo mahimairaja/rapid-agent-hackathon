@@ -16,8 +16,18 @@ import { AssistantChat } from './components/AssistantChat'
 import { SymptomCheckInForm } from './components/SymptomCheckIn'
 import { CareTeamPanel } from './components/CareTeamPanel'
 import { LoadingState } from './components/LoadingState'
+import { PatientCodeGate } from './components/PatientCodeGate'
 
-import { getStoredToken, clearStoredToken, loadDashboardData } from './api/client'
+import {
+  getStoredToken,
+  clearStoredToken,
+  clearStoredPatientCode,
+  fetchPatientDashboard,
+  getClientTimeZone,
+  getStoredPatientCode,
+  loadDashboardData,
+  setStoredPatientCode,
+} from './api/client'
 
 // ── Page metadata ──────────────────────────────────────────────────────────────
 
@@ -45,49 +55,142 @@ function daysUntil(iso: string) {
 
 function App() {
   const [token, setToken] = useState<string | null>(getStoredToken)
+  const [patientCode, setPatientCode] = useState<string | null>(getStoredPatientCode)
   const [isDemoMode, setIsDemoMode] = useState(false)
 
   const [patient, setPatient] = useState<Patient | null>(null)
   const [medications, setMedications] = useState<Medication[]>([])
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(false)
+  const [dashboardError, setDashboardError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const [activeView, setActiveView] = useState<AppView>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [assistantDraft, setAssistantDraft] = useState<string | null>(null)
 
   // Load data when we have a token
   useEffect(() => {
     if (!token) return
+    let cancelled = false
 
     void (async () => {
+      if (token === 'demo') {
+        setLoading(true)
+        const data = await loadDashboardData()
+        if (!cancelled) {
+          setPatient(data.patient)
+          setMedications(data.medications)
+          setAppointments(data.appointments)
+          setIsDemoMode(data.demo)
+          setDashboardError('')
+          setLoading(false)
+        }
+        return
+      }
+
+      if (!patientCode) {
+        setPatient(null)
+        setMedications([])
+        setAppointments([])
+        setIsDemoMode(false)
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
-      const data = await loadDashboardData()
-      setPatient(data.patient)
-      setMedications(data.medications)
-      setAppointments(data.appointments)
-      setIsDemoMode(data.demo)
-      setLoading(false)
+      setDashboardError('')
+      try {
+        const data = await fetchPatientDashboard(
+          { patient_code: patientCode, time_zone: getClientTimeZone() },
+          token,
+        )
+        if (!cancelled) {
+          setPatient(data.patient)
+          setMedications(data.medications)
+          setAppointments(data.appointments)
+          setIsDemoMode(data.demo)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPatient(null)
+          setMedications([])
+          setAppointments([])
+          setDashboardError(err instanceof Error ? err.message : 'Could not load this patient.')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     })()
-  }, [token])
+
+    return () => {
+      cancelled = true
+    }
+  }, [patientCode, refreshKey, token])
 
   const handleLogin = (newToken: string, demo: boolean) => {
     setToken(newToken)
     setIsDemoMode(demo)
   }
 
+  const handleDemoAccess = () => {
+    setToken('demo')
+    setIsDemoMode(true)
+    clearStoredPatientCode()
+    setPatientCode(null)
+  }
+
+  const handlePatientCodeSubmit = (newPatientCode: string) => {
+    const normalized = newPatientCode.trim().toUpperCase()
+    setStoredPatientCode(normalized)
+    setPatientCode(normalized)
+    setRefreshKey((prev) => prev + 1)
+  }
+
+  const handleChangePatient = () => {
+    clearStoredPatientCode()
+    setPatientCode(null)
+    setPatient(null)
+    setMedications([])
+    setAppointments([])
+    setDashboardError('')
+    setActiveView('dashboard')
+  }
+
   const handleLogout = () => {
     clearStoredToken()
+    clearStoredPatientCode()
     setToken(null)
+    setPatientCode(null)
     setPatient(null)
     setMedications([])
     setAppointments([])
     setIsDemoMode(false)
     setActiveView('dashboard')
+    setDashboardError('')
+  }
+
+  const handleAssistantPrompt = (prompt: string) => {
+    setAssistantDraft(prompt)
+    setActiveView('assistant')
+  }
+
+  const handleAssistantTurnComplete = () => {
+    if (token && token !== 'demo' && patientCode) {
+      setRefreshKey((prev) => prev + 1)
+    }
   }
 
   // Derived values
-  const medicationsDue = medications.filter((m) => !m.taken_today).length
-  const completedToday = medications.filter((m) => m.taken_today).length
+  const hasMedicationAdherence = medications.some((m) => typeof m.taken_today === 'boolean')
+  const medicationsDue = hasMedicationAdherence
+    ? medications.filter((m) => m.taken_today === false).length
+    : medications.length
+  const completedToday = hasMedicationAdherence
+    ? medications.filter((m) => m.taken_today).length
+    : 0
   const nextAppointment = appointments
     .filter((a) => a.status !== 'completed')
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
@@ -96,6 +199,19 @@ function App() {
   // Not logged in
   if (!token) {
     return <LoginScreen onLogin={handleLogin} />
+  }
+
+  if (token !== 'demo' && (!patientCode || dashboardError)) {
+    return (
+      <PatientCodeGate
+        error={dashboardError}
+        initialCode={patientCode}
+        loading={loading}
+        onDemoAccess={handleDemoAccess}
+        onLogout={handleLogout}
+        onSubmit={handlePatientCodeSubmit}
+      />
+    )
   }
 
   // Loading initial data
@@ -145,6 +261,8 @@ function App() {
           isDemoMode={isDemoMode}
           onMenuClick={() => setSidebarOpen(true)}
           onLogout={handleLogout}
+          onChangePatient={token === 'demo' ? undefined : handleChangePatient}
+          patientCode={token === 'demo' ? null : patientCode}
           userInitials={userInitials}
         />
 
@@ -156,7 +274,10 @@ function App() {
               appointments={appointments}
               medicationsDue={medicationsDue}
               completedToday={completedToday}
+              hasMedicationAdherence={hasMedicationAdherence}
               nextAppointmentDays={nextAppointmentDays}
+              onAssistantPrompt={handleAssistantPrompt}
+              onAssistantTurnComplete={handleAssistantTurnComplete}
               token={token === 'demo' ? null : token}
               onNavigate={setActiveView}
             />
@@ -167,7 +288,9 @@ function App() {
               <div className="view-header">
                 <div className="view-header-title">💊 Medication Schedule</div>
                 <div className="view-header-sub">
-                  {completedToday} of {medications.length} medications taken today — keep it up!
+                  {hasMedicationAdherence
+                    ? `${completedToday} of ${medications.length} medications taken today`
+                    : `${medications.length} active medication${medications.length !== 1 ? 's' : ''} on this plan`}
                 </div>
               </div>
               <div className="card">
@@ -191,6 +314,34 @@ function App() {
               </div>
               <div className="card">
                 <div className="card-accent-bar" />
+                <div className="card-header" style={{ paddingBottom: 0 }}>
+                  <div>
+                    <div className="card-title">Follow-up scheduling</div>
+                    <div className="card-subtitle">
+                      Use the assistant to book, check, or move a visit
+                    </div>
+                  </div>
+                </div>
+                <div className="appointment-actions">
+                  <button
+                    type="button"
+                    onClick={() => handleAssistantPrompt('Can you book my follow-up?')}
+                  >
+                    Book
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAssistantPrompt('When is my follow-up?')}
+                  >
+                    Check
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAssistantPrompt('Can I move my follow-up?')}
+                  >
+                    Move
+                  </button>
+                </div>
                 <div className="card-body" style={{ paddingTop: 20 }}>
                   <AppointmentTimeline appointments={appointments} />
                 </div>
@@ -209,6 +360,9 @@ function App() {
               </div>
               <div className="card" style={{ overflow: 'hidden' }}>
                 <AssistantChat
+                  draft={assistantDraft}
+                  onDraftConsumed={() => setAssistantDraft(null)}
+                  onTurnComplete={handleAssistantTurnComplete}
                   token={token === 'demo' ? null : token}
                   userInitials={userInitials}
                 />
@@ -261,7 +415,10 @@ interface DashboardViewProps {
   appointments: Appointment[]
   medicationsDue: number
   completedToday: number
+  hasMedicationAdherence: boolean
   nextAppointmentDays: number
+  onAssistantPrompt: (prompt: string) => void
+  onAssistantTurnComplete: () => void
   token: string | null
   onNavigate: (view: AppView) => void
 }
@@ -272,7 +429,10 @@ function DashboardView({
   appointments,
   medicationsDue,
   completedToday,
+  hasMedicationAdherence,
   nextAppointmentDays,
+  onAssistantPrompt,
+  onAssistantTurnComplete,
   token,
   onNavigate,
 }: DashboardViewProps) {
@@ -283,6 +443,7 @@ function DashboardView({
         patient={patient}
         medications={medications}
         appointments={appointments}
+        hasMedicationAdherence={hasMedicationAdherence}
         onNavigate={onNavigate}
       />
 
@@ -292,6 +453,7 @@ function DashboardView({
         medicationsDue={medicationsDue}
         nextAppointmentDays={nextAppointmentDays}
         completedToday={completedToday}
+        hasMedicationAdherence={hasMedicationAdherence}
       />
 
       {/* ③ Main grid */}
@@ -322,10 +484,12 @@ function DashboardView({
               <div>
                 <div className="card-title">💊 Today's Medications</div>
                 <div className="card-subtitle">
-                  {completedToday} of {medications.length} taken
+                  {hasMedicationAdherence
+                    ? `${completedToday} of ${medications.length} taken`
+                    : `${medications.length} active on plan`}
                 </div>
               </div>
-              {medicationsDue > 0 && (
+              {hasMedicationAdherence && medicationsDue > 0 && (
                 <span className="badge badge-amber">{medicationsDue} due</span>
               )}
             </div>
@@ -349,6 +513,17 @@ function DashboardView({
                 {appointments.filter((a) => a.status !== 'completed').length} scheduled
               </span>
             </div>
+            <div className="appointment-actions compact">
+              <button type="button" onClick={() => onAssistantPrompt('Can you book my follow-up?')}>
+                Book follow-up
+              </button>
+              <button type="button" onClick={() => onAssistantPrompt('When is my follow-up?')}>
+                Check
+              </button>
+              <button type="button" onClick={() => onAssistantPrompt('Can I move my follow-up?')}>
+                Move
+              </button>
+            </div>
             <div className="card-body">
               <AppointmentTimeline appointments={appointments.slice(0, 2)} />
             </div>
@@ -368,6 +543,8 @@ function DashboardView({
               <span className="badge badge-green live-dot">Online</span>
             </div>
             <AssistantChat
+              draft={null}
+              onTurnComplete={onAssistantTurnComplete}
               token={token}
               userInitials={`${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()}
             />
