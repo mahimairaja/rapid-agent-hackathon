@@ -10,6 +10,7 @@ safe.
 import os
 
 from google.adk.agents import Agent
+from google.adk.models.base_llm import BaseLlm
 
 from src.agent.prompts.recognition_prompt import RECOGNITION_INSTRUCTION
 from src.agent.tools.guards import verification_gate
@@ -34,12 +35,22 @@ def _export_gemini_env() -> None:
         )
 
 
+def build_recognition_agent(model: BaseLlm | str | None = None) -> Agent:
+    """Construct the recognition agent with its tools and verification gate.
+
+    Production calls this with no argument (the Gemini model from config); tests
+    pass a scripted ``BaseLlm`` so they exercise the same wiring (tools + gate) as
+    production, and dropping the gate here would fail those tests.
+    """
+    return Agent(
+        name="recognition_agent",
+        model=model or config.GEMINI_MODEL,
+        instruction=RECOGNITION_INSTRUCTION,
+        tools=[find_patient, get_my_plan],
+        before_tool_callback=verification_gate,
+    )
+
+
 _export_gemini_env()
 
-root_agent = Agent(
-    name="recognition_agent",
-    model=config.GEMINI_MODEL,
-    instruction=RECOGNITION_INSTRUCTION,
-    tools=[find_patient, get_my_plan],
-    before_tool_callback=verification_gate,
-)
+root_agent = build_recognition_agent()

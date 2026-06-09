@@ -79,7 +79,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
-      # The live Gemini agent test is skipped automatically without GOOGLE_API_KEY;
-      # the scripted-LLM agent test still runs and covers the reply behavior.
+      # The live Gemini agent test is opt-in (marker "live") and excluded here;
+      # the deterministic scripted-LLM agent tests cover the reply behavior.
       - name: Run integration tests
-        run: uv run pytest tests/integration/ -v
+        run: uv run pytest tests/integration/ -v -m "not live"
