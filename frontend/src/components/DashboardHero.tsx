@@ -1,10 +1,10 @@
-import type { Patient, Medication, Appointment } from '../types';
+import type { Patient, Medication, Appointment } from '../types'
 
 interface DashboardHeroProps {
-  patient: Patient;
-  medications: Medication[];
-  appointments: Appointment[];
-  onNavigate: (view: 'assistant' | 'symptom-check' | 'medications' | 'appointments') => void;
+  patient: Patient
+  medications: Medication[]
+  appointments: Appointment[]
+  onNavigate: (view: 'assistant' | 'symptom-check' | 'medications' | 'appointments') => void
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -14,7 +14,7 @@ const STAGE_LABELS: Record<string, string> = {
   'week-4': 'Week 4 Recovery',
   'month-2': 'Month 2',
   'month-3': 'Month 3',
-};
+}
 
 const STAGE_PROGRESS: Record<string, number> = {
   'week-1': 8,
@@ -23,41 +23,45 @@ const STAGE_PROGRESS: Record<string, number> = {
   'week-4': 50,
   'month-2': 70,
   'month-3': 90,
-};
+}
 
 function daysSince(iso: string) {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24))
 }
 
 function daysUntil(iso: string) {
-  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 }
-
-
 
 function getInitials(first: string, last: string) {
-  return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase();
+  return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase()
 }
 
-export function DashboardHero({ patient, medications, appointments, onNavigate }: DashboardHeroProps) {
-  const stage = patient.recovery_stage ?? 'week-1';
-  const progress = STAGE_PROGRESS[stage] ?? 8;
-  const stageLabel = STAGE_LABELS[stage] ?? 'Recovery';
-  const daysSinceDischarge = patient.discharge_date ? daysSince(patient.discharge_date) : 3;
-  const initials = getInitials(patient.first_name, patient.last_name);
+export function DashboardHero({
+  patient,
+  medications,
+  appointments,
+  onNavigate,
+}: DashboardHeroProps) {
+  const stage = patient.recovery_stage ?? 'week-1'
+  const progress = STAGE_PROGRESS[stage] ?? 8
+  const stageLabel = STAGE_LABELS[stage] ?? 'Recovery'
+  const daysSinceDischarge = patient.discharge_date ? daysSince(patient.discharge_date) : 3
+  const initials = getInitials(patient.first_name, patient.last_name)
 
-  const medicationsTotal = medications.length;
-  const completedToday = medications.filter(m => m.taken_today).length;
+  const medicationsTotal = medications.length
+  const completedToday = medications.filter((m) => m.taken_today).length
 
   const nextAppt = appointments
-    .filter(a => a.status !== 'completed')
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
+    .filter((a) => a.status !== 'completed')
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
 
-  const nextApptDays = nextAppt ? daysUntil(nextAppt.start) : 7;
-  const nextApptLabel = nextApptDays === 0 ? 'Today' : nextApptDays === 1 ? 'Tomorrow' : `In ${nextApptDays} days`;
+  const nextApptDays = nextAppt ? daysUntil(nextAppt.start) : 7
+  const nextApptLabel =
+    nextApptDays === 0 ? 'Today' : nextApptDays === 1 ? 'Tomorrow' : `In ${nextApptDays} days`
 
   // AI-generated care summary based on patient state
-  const aiInsights = buildAIInsights(patient, medications, appointments);
+  const aiInsights = buildAIInsights(patient, medications, appointments)
 
   return (
     <div className="dashboard-hero">
@@ -81,11 +85,7 @@ export function DashboardHero({ patient, medications, appointments, onNavigate }
             {patient.gender && <span aria-hidden>·</span>}
             {patient.gender && <span>{patient.gender}</span>}
             {patient.procedure && <span aria-hidden>·</span>}
-            {patient.procedure && (
-              <span className="dh-procedure-tag">
-                🦴 {patient.procedure}
-              </span>
-            )}
+            {patient.procedure && <span className="dh-procedure-tag">🦴 {patient.procedure}</span>}
           </div>
         </div>
       </div>
@@ -123,7 +123,9 @@ export function DashboardHero({ patient, medications, appointments, onNavigate }
             type="button"
           >
             <span className="dh-qs-icon med">💊</span>
-            <span className="dh-qs-val">{completedToday}/{medicationsTotal}</span>
+            <span className="dh-qs-val">
+              {completedToday}/{medicationsTotal}
+            </span>
             <span className="dh-qs-lbl">Meds taken</span>
           </button>
           <div className="dh-qs-divider" />
@@ -147,10 +149,19 @@ export function DashboardHero({ patient, medications, appointments, onNavigate }
             <span className="dh-qs-icon risk">
               {patient.risk_level === 'low' ? '🟢' : patient.risk_level === 'high' ? '🔴' : '🟡'}
             </span>
-            <span className="dh-qs-val" style={{
-              color: patient.risk_level === 'low' ? 'var(--green-400)' : patient.risk_level === 'high' ? 'var(--red-400)' : 'var(--amber-400)'
-            }}>
-              {(patient.risk_level ?? 'Moderate').charAt(0).toUpperCase() + (patient.risk_level ?? 'moderate').slice(1)}
+            <span
+              className="dh-qs-val"
+              style={{
+                color:
+                  patient.risk_level === 'low'
+                    ? 'var(--green-400)'
+                    : patient.risk_level === 'high'
+                      ? 'var(--red-400)'
+                      : 'var(--amber-400)',
+              }}
+            >
+              {(patient.risk_level ?? 'Moderate').charAt(0).toUpperCase() +
+                (patient.risk_level ?? 'moderate').slice(1)}
             </span>
             <span className="dh-qs-lbl">Risk level</span>
           </button>
@@ -178,27 +189,32 @@ export function DashboardHero({ patient, medications, appointments, onNavigate }
           ))}
         </div>
 
-        <button
-          type="button"
-          className="dh-ask-ai-btn"
-          onClick={() => onNavigate('assistant')}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <button type="button" className="dh-ask-ai-btn" onClick={() => onNavigate('assistant')}>
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           Ask AI Assistant
         </button>
       </div>
     </div>
-  );
+  )
 }
 
-type InsightType = 'alert' | 'caution' | 'ok' | 'info';
+type InsightType = 'alert' | 'caution' | 'ok' | 'info'
 
 interface Insight {
-  icon: string;
-  text: string;
-  type: InsightType;
+  icon: string
+  text: string
+  type: InsightType
 }
 
 function buildAIInsights(
@@ -206,37 +222,40 @@ function buildAIInsights(
   medications: Medication[],
   appointments: Appointment[],
 ): Insight[] {
-  const insights: Insight[] = [];
+  const insights: Insight[] = []
 
-  const pending = medications.filter(m => !m.taken_today);
-  const taken = medications.filter(m => m.taken_today);
+  const pending = medications.filter((m) => !m.taken_today)
+  const taken = medications.filter((m) => m.taken_today)
 
   if (pending.length > 0) {
     insights.push({
       icon: '💊',
       text: `${pending.length} medication${pending.length > 1 ? 's' : ''} still due today`,
       type: 'caution',
-    });
+    })
   } else if (taken.length > 0) {
     insights.push({
       icon: '✓',
       text: 'All medications taken — great adherence!',
       type: 'ok',
-    });
+    })
   }
 
   const nextAppt = appointments
-    .filter(a => a.status !== 'completed')
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
+    .filter((a) => a.status !== 'completed')
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
 
   if (nextAppt) {
-    const d = Math.max(0, Math.ceil((new Date(nextAppt.start).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-    const label = d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`;
+    const d = Math.max(
+      0,
+      Math.ceil((new Date(nextAppt.start).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+    )
+    const label = d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`
     insights.push({
       icon: '📅',
       text: `${nextAppt.title ?? nextAppt.kind} ${label}`,
       type: d <= 1 ? 'info' : 'ok',
-    });
+    })
   }
 
   if (patient.risk_level === 'moderate') {
@@ -244,20 +263,20 @@ function buildAIInsights(
       icon: '⚡',
       text: 'Moderate risk — log symptoms daily for safety',
       type: 'caution',
-    });
+    })
   } else if (patient.risk_level === 'low') {
     insights.push({
       icon: '✓',
       text: 'Low risk — recovery on track',
       type: 'ok',
-    });
+    })
   }
 
   insights.push({
     icon: '🏃',
     text: 'Continue 10–15 min assisted walks 3× daily',
     type: 'info',
-  });
+  })
 
-  return insights.slice(0, 4);
+  return insights.slice(0, 4)
 }

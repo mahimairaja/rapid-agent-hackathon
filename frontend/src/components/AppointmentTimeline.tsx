@@ -1,25 +1,25 @@
-import type { Appointment } from '../types';
+import type { Appointment } from '../types'
 
 interface AppointmentTimelineProps {
-  appointments: Appointment[];
+  appointments: Appointment[]
 }
 
 function formatDateShort(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
 function formatTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const d = new Date(iso)
+  return d.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
 const KIND_ICONS: Record<string, string> = {
   physiotherapy: '🏃',
   'nurse-check-in': '👩‍⚕️',
   'surgeon-review': '🩺',
-  'general': '📋',
-};
+  general: '📋',
+}
 
 export function AppointmentTimeline({ appointments }: AppointmentTimelineProps) {
   if (appointments.length === 0) {
@@ -28,19 +28,19 @@ export function AppointmentTimeline({ appointments }: AppointmentTimelineProps) 
         <span className="empty-state-icon">📅</span>
         <p className="empty-state-title">No appointments scheduled</p>
       </div>
-    );
+    )
   }
 
   // Sort by date ascending
   const sorted = [...appointments].sort(
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
-  );
+  )
 
   return (
     <div className="appointment-timeline">
       {sorted.map((appt, idx) => {
-        const isUpcoming = idx === 0;
-        const icon = KIND_ICONS[appt.kind] ?? '📋';
+        const isUpcoming = idx === 0
+        const icon = KIND_ICONS[appt.kind] ?? '📋'
 
         return (
           <div key={appt.id} className="timeline-item">
@@ -75,24 +75,34 @@ export function AppointmentTimeline({ appointments }: AppointmentTimelineProps) 
                     </span>
                   )}
                   {appt.reason && (
-                    <span style={{ marginTop: 2, fontStyle: 'italic' }}>
-                      {appt.reason}
-                    </span>
+                    <span style={{ marginTop: 2, fontStyle: 'italic' }}>{appt.reason}</span>
                   )}
                 </div>
                 {appt.instructions && (
-                  <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--blue-400)', background: 'var(--blue-50)', padding: '5px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--blue-100)' }}>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 11.5,
+                      color: 'var(--blue-400)',
+                      background: 'var(--blue-50)',
+                      padding: '5px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--blue-100)',
+                    }}
+                  >
                     💡 {appt.instructions}
                   </div>
                 )}
                 <div className={`timeline-status-badge ${appt.status}`}>
-                  {appt.status === 'upcoming' ? '● Next Up' : appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
+                  {appt.status === 'upcoming'
+                    ? '● Next Up'
+                    : appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
                 </div>
               </div>
             </div>
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

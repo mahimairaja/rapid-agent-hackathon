@@ -1,25 +1,28 @@
-import { useState } from 'react';
-import { MOCK_RECOVERY_MILESTONES } from '../data/mockData';
+import { useState } from 'react'
+import { MOCK_RECOVERY_MILESTONES } from '../data/mockData'
 
 export function RecoveryPlan() {
-  const [expanded, setExpanded] = useState<string>('ms-1');
+  const [expanded, setExpanded] = useState<string>('ms-1')
 
   const toggle = (id: string) => {
-    setExpanded(prev => (prev === id ? '' : id));
-  };
+    setExpanded((prev) => (prev === id ? '' : id))
+  }
 
   return (
     <div role="list" aria-label="Recovery milestones">
       {MOCK_RECOVERY_MILESTONES.map((milestone, idx) => {
-        const isOpen = expanded === milestone.id;
-        const isCurrent = idx === 0;
+        const isOpen = expanded === milestone.id
+        const isCurrent = idx === 0
 
         return (
           <div
             key={milestone.id}
             className="recovery-milestone"
             role="listitem"
-            style={{ animationDelay: `${idx * 0.06}s`, animation: 'slide-up 0.35s var(--ease-out) both' }}
+            style={{
+              animationDelay: `${idx * 0.06}s`,
+              animation: 'slide-up 0.35s var(--ease-out) both',
+            }}
           >
             <div
               className={`recovery-milestone-header${isOpen ? ' active' : ''}`}
@@ -28,7 +31,7 @@ export function RecoveryPlan() {
               tabIndex={0}
               aria-expanded={isOpen}
               aria-controls={`milestone-body-${milestone.id}`}
-              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && toggle(milestone.id)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggle(milestone.id)}
             >
               <div className="flex items-center gap-3" style={{ flex: 1, minWidth: 0 }}>
                 <span className={`milestone-week-badge${isCurrent ? ' current' : ''}`}>
@@ -36,10 +39,14 @@ export function RecoveryPlan() {
                 </span>
                 <span className="milestone-title">{milestone.title}</span>
                 {isCurrent && (
-                  <span className="badge badge-blue" style={{ fontSize: 9.5 }}>Active</span>
+                  <span className="badge badge-blue" style={{ fontSize: 9.5 }}>
+                    Active
+                  </span>
                 )}
               </div>
-              <span className={`milestone-chevron${isOpen ? ' open' : ''}`} aria-hidden="true">▾</span>
+              <span className={`milestone-chevron${isOpen ? ' open' : ''}`} aria-hidden="true">
+                ▾
+              </span>
             </div>
 
             {isOpen && (
@@ -74,8 +81,8 @@ export function RecoveryPlan() {
               </div>
             )}
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

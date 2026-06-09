@@ -57,6 +57,13 @@ class Config(BaseSettings):
     VOYAGE_MODEL: str = "voyage-3.5"
     VOYAGE_DIM: int = 1024
 
+    # Agent (Google ADK / Gemini). GOOGLE_API_KEY uses Google AI Studio; set
+    # GOOGLE_GENAI_USE_VERTEXAI=true to authenticate via Vertex AI instead.
+    # GEMINI_MODEL is overridable (set to the team's Gemini 3 id when chosen).
+    GOOGLE_API_KEY: SecretStr | None = None
+    GOOGLE_GENAI_USE_VERTEXAI: bool = False
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
     # Auth (JWT)
     JWT_SECRET_KEY: SecretStr = SecretStr(_PLACEHOLDER_JWT_SECRET)
     JWT_ALGORITHM: str = "HS256"

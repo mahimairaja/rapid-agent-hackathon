@@ -1,21 +1,21 @@
-import { useState, useEffect } from 'react';
-import './index.css';
-import './App.css';
+import { useState, useEffect } from 'react'
+import './index.css'
+import './App.css'
 
-import type { AppView, Patient, Medication, Appointment } from './types';
+import type { AppView, Patient, Medication, Appointment } from './types'
 
-import { LoginScreen } from './components/LoginScreen';
-import { Sidebar } from './components/Sidebar';
-import { Header } from './components/Header';
-import { DashboardHero } from './components/DashboardHero';
-import { StatCards } from './components/StatCard';
-import { RecoveryPlan } from './components/RecoveryPlan';
-import { MedicationSchedule } from './components/MedicationSchedule';
-import { AppointmentTimeline } from './components/AppointmentTimeline';
-import { AssistantChat } from './components/AssistantChat';
-import { SymptomCheckInForm } from './components/SymptomCheckIn';
-import { CareTeamPanel } from './components/CareTeamPanel';
-import { LoadingState } from './components/LoadingState';
+import { LoginScreen } from './components/LoginScreen'
+import { Sidebar } from './components/Sidebar'
+import { Header } from './components/Header'
+import { DashboardHero } from './components/DashboardHero'
+import { StatCards } from './components/StatCard'
+import { RecoveryPlan } from './components/RecoveryPlan'
+import { MedicationSchedule } from './components/MedicationSchedule'
+import { AppointmentTimeline } from './components/AppointmentTimeline'
+import { AssistantChat } from './components/AssistantChat'
+import { SymptomCheckInForm } from './components/SymptomCheckIn'
+import { CareTeamPanel } from './components/CareTeamPanel'
+import { LoadingState } from './components/LoadingState'
 
 import {
   getStoredToken,
@@ -23,7 +23,7 @@ import {
   fetchPatient,
   fetchMedications,
   fetchAppointments,
-} from './api/client';
+} from './api/client'
 
 // ── Page metadata ──────────────────────────────────────────────────────────────
 
@@ -32,75 +32,83 @@ const PAGE_META: Record<AppView, { title: string; subtitle: string }> = {
   medications: { title: 'Medication Schedule', subtitle: 'Daily medications and instructions' },
   appointments: { title: 'Appointment Timeline', subtitle: 'Upcoming follow-up appointments' },
   assistant: { title: 'AI Recovery Assistant', subtitle: 'Ask anything about your recovery' },
-  'symptom-check': { title: 'Symptom Check-In', subtitle: 'Monitor and triage how you are feeling' },
-  'care-team': { title: 'Care Team', subtitle: 'Your dedicated recovery team and emergency contacts' },
-};
+  'symptom-check': {
+    title: 'Symptom Check-In',
+    subtitle: 'Monitor and triage how you are feeling',
+  },
+  'care-team': {
+    title: 'Care Team',
+    subtitle: 'Your dedicated recovery team and emergency contacts',
+  },
+}
+
+// Module-level helper so the impure Date.now() call stays out of render.
+function daysUntil(iso: string) {
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+}
 
 // ── Root App ──────────────────────────────────────────────────────────────────
 
 function App() {
-  const [token, setToken] = useState<string | null>(getStoredToken);
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [token, setToken] = useState<string | null>(getStoredToken)
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [patient, setPatient] = useState<Patient | null>(null)
+  const [medications, setMedications] = useState<Medication[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const [activeView, setActiveView] = useState<AppView>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeView, setActiveView] = useState<AppView>('dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Load data when we have a token
   useEffect(() => {
-    if (!token) return;
-    const realToken = token === 'demo' ? null : token;
+    if (!token) return
+    const realToken = token === 'demo' ? null : token
 
     void (async () => {
-      setLoading(true);
-      const { data: p, demo: pd } = await fetchPatient('patient-001', realToken);
-      setPatient(p);
-      setIsDemoMode(prev => prev || pd);
+      setLoading(true)
+      const { data: p, demo: pd } = await fetchPatient('patient-001', realToken)
+      setPatient(p)
+      setIsDemoMode((prev) => prev || pd)
 
       const [{ data: meds, demo: md }, { data: appts, demo: ad }] = await Promise.all([
         fetchMedications(p.id, realToken),
         fetchAppointments(p.id, realToken),
-      ]);
-      setMedications(meds);
-      setAppointments(appts);
-      if (md || ad) setIsDemoMode(true);
-      setLoading(false);
-    })();
-  }, [token]);
+      ])
+      setMedications(meds)
+      setAppointments(appts)
+      if (md || ad) setIsDemoMode(true)
+      setLoading(false)
+    })()
+  }, [token])
 
   const handleLogin = (newToken: string, demo: boolean) => {
-    setToken(newToken);
-    setIsDemoMode(demo);
-  };
+    setToken(newToken)
+    setIsDemoMode(demo)
+  }
 
   const handleLogout = () => {
-    clearStoredToken();
-    setToken(null);
-    setPatient(null);
-    setMedications([]);
-    setAppointments([]);
-    setIsDemoMode(false);
-    setActiveView('dashboard');
-  };
+    clearStoredToken()
+    setToken(null)
+    setPatient(null)
+    setMedications([])
+    setAppointments([])
+    setIsDemoMode(false)
+    setActiveView('dashboard')
+  }
 
   // Derived values
-  const medicationsDue = medications.filter(m => !m.taken_today).length;
-  const completedToday = medications.filter(m => m.taken_today).length;
+  const medicationsDue = medications.filter((m) => !m.taken_today).length
+  const completedToday = medications.filter((m) => m.taken_today).length
   const nextAppointment = appointments
-    .filter(a => a.status !== 'completed')
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
-  const nextAppointmentDays = nextAppointment
-    // eslint-disable-next-line react-hooks/purity
-    ? Math.max(0, Math.ceil((new Date(nextAppointment.start).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 0;
+    .filter((a) => a.status !== 'completed')
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
+  const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : 0
 
   // Not logged in
   if (!token) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return <LoginScreen onLogin={handleLogin} />
   }
 
   // Loading initial data
@@ -108,17 +116,26 @@ function App() {
     return (
       <div className="app-loading-screen">
         <div className="app-loading-logo">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
         </div>
         <LoadingState message="Loading your recovery dashboard…" />
       </div>
-    );
+    )
   }
 
-  const { title, subtitle } = PAGE_META[activeView];
-  const userInitials = `${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase();
+  const { title, subtitle } = PAGE_META[activeView]
+  const userInitials = `${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()
 
   return (
     <div className="app-layout">
@@ -180,7 +197,9 @@ function App() {
               <div className="view-header">
                 <div className="view-header-title">📅 Appointment Timeline</div>
                 <div className="view-header-sub">
-                  {appointments.filter(a => a.status !== 'completed').length} upcoming appointments — next in {nextAppointmentDays} day{nextAppointmentDays !== 1 ? 's' : ''}
+                  {appointments.filter((a) => a.status !== 'completed').length} upcoming
+                  appointments — next in {nextAppointmentDays} day
+                  {nextAppointmentDays !== 1 ? 's' : ''}
                 </div>
               </div>
               <div className="card">
@@ -197,14 +216,12 @@ function App() {
               <div className="view-header">
                 <div className="view-header-title">🤖 AI Recovery Assistant</div>
                 <div className="view-header-sub">
-                  Powered by Gemini · Ask about medications, symptoms, restrictions, or your recovery plan
+                  Powered by Gemini · Ask about medications, symptoms, restrictions, or your
+                  recovery plan
                 </div>
               </div>
               <div className="card" style={{ overflow: 'hidden' }}>
-                <AssistantChat
-                  patientId={patient.id}
-                  token={token === 'demo' ? null : token}
-                />
+                <AssistantChat patientId={patient.id} token={token === 'demo' ? null : token} />
               </div>
             </div>
           )}
@@ -218,7 +235,10 @@ function App() {
                 </div>
               </div>
               <div className="card">
-                <div className="card-accent-bar" style={{ background: 'linear-gradient(90deg, var(--amber-400), var(--red-400))' }} />
+                <div
+                  className="card-accent-bar"
+                  style={{ background: 'linear-gradient(90deg, var(--amber-400), var(--red-400))' }}
+                />
                 <div className="card-body" style={{ paddingTop: 20 }}>
                   <SymptomCheckInForm />
                 </div>
@@ -240,20 +260,20 @@ function App() {
         </main>
       </div>
     </div>
-  );
+  )
 }
 
 // ── Dashboard composite view ───────────────────────────────────────────────────
 
 interface DashboardViewProps {
-  patient: Patient;
-  medications: Medication[];
-  appointments: Appointment[];
-  medicationsDue: number;
-  completedToday: number;
-  nextAppointmentDays: number;
-  token: string | null;
-  onNavigate: (view: AppView) => void;
+  patient: Patient
+  medications: Medication[]
+  appointments: Appointment[]
+  medicationsDue: number
+  completedToday: number
+  nextAppointmentDays: number
+  token: string | null
+  onNavigate: (view: AppView) => void
 }
 
 function DashboardView({
@@ -286,7 +306,6 @@ function DashboardView({
 
       {/* ③ Main grid */}
       <div className="dashboard-grid">
-
         {/* Recovery plan — full width */}
         <div className="col-full">
           <div className="card">
@@ -294,7 +313,9 @@ function DashboardView({
             <div className="card-header" style={{ paddingTop: 18 }}>
               <div>
                 <div className="card-title">🎯 Recovery Plan</div>
-                <div className="card-subtitle">Week-by-week milestones, goals, and restrictions</div>
+                <div className="card-subtitle">
+                  Week-by-week milestones, goals, and restrictions
+                </div>
               </div>
               <span className="badge badge-blue">Week 1 Active</span>
             </div>
@@ -315,9 +336,7 @@ function DashboardView({
                 </div>
               </div>
               {medicationsDue > 0 && (
-                <span className="badge badge-amber">
-                  {medicationsDue} due
-                </span>
+                <span className="badge badge-amber">{medicationsDue} due</span>
               )}
             </div>
             <div className="card-body">
@@ -337,7 +356,7 @@ function DashboardView({
                 </div>
               </div>
               <span className="badge badge-teal">
-                {appointments.filter(a => a.status !== 'completed').length} scheduled
+                {appointments.filter((a) => a.status !== 'completed').length} scheduled
               </span>
             </div>
             <div className="card-body">
@@ -361,10 +380,9 @@ function DashboardView({
             <AssistantChat patientId={patient.id} token={token} />
           </div>
         </div>
-
       </div>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
