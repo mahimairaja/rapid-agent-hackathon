@@ -25,8 +25,16 @@ failure warning signs) used to exercise F5 symptom triage and escalation.
 
 ## Guidelines corpus (trusted knowledge)
 
-Public-domain U.S. federal patient-education sources only. See the table below;
-populated by `scripts/ingest_guidelines.py`. MedlinePlus A.D.A.M. content is
-deliberately NOT ingested because it is licensed/copyrighted.
+Public-domain U.S. federal patient-education sources only, ingested by
+`scripts/ingest_guidelines.py` from `data/guidelines/*.md`. The texts are concise
+patient-education summaries adapted from the public-domain federal materials
+listed below (U.S. government works are public domain). MedlinePlus A.D.A.M.
+content is deliberately NOT ingested because it is licensed/copyrighted.
 
-<!-- guidelines-table: populated in Phase 4 -->
+| source_id | Title | Agency | URL |
+| --- | --- | --- | --- |
+| nhlbi-heart-failure | Living With Heart Failure | NHLBI | https://www.nhlbi.nih.gov/health/heart-failure/living-with |
+| ahrq-going-home | Taking Care of Myself After Leaving the Hospital | AHRQ | https://www.ahrq.gov/patients-consumers/diagnosis-treatment/hospitals-clinics/goinghome/index.html |
+| niddk-type-2-diabetes | Managing Type 2 Diabetes | NIDDK | https://www.niddk.nih.gov/health-information/diabetes/overview/managing-diabetes |
+| nhlbi-copd | Living With COPD | NHLBI | https://www.nhlbi.nih.gov/health/copd/living-with |
+| ahrq-surgery-blood-clots | Preventing Blood Clots After Surgery | AHRQ | https://www.ahrq.gov/patients-consumers/prevention/disease/bloodclots.html |

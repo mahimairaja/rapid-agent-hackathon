@@ -21,23 +21,9 @@ from src.db.mongo import close_db, init_db  # noqa: E402
 from src.models import CarePlanChunk  # noqa: E402
 from src.services.chunking import chunk_text  # noqa: E402
 from src.services.embeddings import embed_texts  # noqa: E402
+from src.util.frontmatter import parse_front_matter  # noqa: E402
 
 DATA_DIR = BACKEND_DIR / "data" / "patients"
-
-
-def _parse_front_matter(raw: str) -> tuple[dict[str, str], str]:
-    """Return (front_matter, body) for a '---' delimited markdown file."""
-    if not raw.startswith("---"):
-        return {}, raw
-    parts = raw.split("---", 2)
-    if len(parts) < 3:
-        return {}, raw
-    meta: dict[str, str] = {}
-    for line in parts[1].strip().splitlines():
-        if ":" in line:
-            key, _, value = line.partition(":")
-            meta[key.strip()] = value.strip()
-    return meta, parts[2].strip()
 
 
 async def load() -> None:
@@ -46,7 +32,7 @@ async def load() -> None:
     files = sorted(DATA_DIR.glob("*.md"))
     plan: list[tuple[str, str, list[str]]] = []  # (filename, patient_id, chunks)
     for path in files:
-        meta, body = _parse_front_matter(path.read_text(encoding="utf-8"))
+        meta, body = parse_front_matter(path.read_text(encoding="utf-8"))
         patient_id = meta.get("patient_id")
         if not patient_id:
             print(f"skip {path.name}: no patient_id in front matter")
