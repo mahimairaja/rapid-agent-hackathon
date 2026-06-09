@@ -1,6 +1,6 @@
-# Backend template
+# Rapid Agent Hackathon Backend
 
-A FastAPI starter with clean layering (API → service → repository → model),
+A FastAPI app with clean layering (API → service → repository → model),
 dependency injection, async SQLModel/PostgreSQL, JWT auth, and an MCP tool
 surface. Ships with a single `User` domain you can copy as the pattern for new
 resources.
@@ -54,16 +54,16 @@ uv run uvicorn src.main:app --reload
 
 ## Auth flow
 
-| Method | Path                     | Access            | MCP tool     |
-| ------ | ------------------------ | ----------------- | ------------ |
-| POST   | `/api/v1/users/register` | public            | -            |
-| POST   | `/api/v1/users/login`    | public            | -            |
-| GET    | `/api/v1/users/me`       | any logged-in     | -            |
-| GET    | `/api/v1/users`          | admin only        | `list_users` |
-| GET    | `/api/v1/users/{id}`     | self or admin     | `get_user`   |
-| PATCH  | `/api/v1/users/{id}`     | self or admin     | -            |
-| DELETE | `/api/v1/users/{id}`     | self or admin     | -            |
-| GET    | `/health`, `/health/detailed` | public       | -            |
+| Method | Path                          | Access        | MCP tool     |
+| ------ | ----------------------------- | ------------- | ------------ |
+| POST   | `/api/v1/users/register`      | public        | -            |
+| POST   | `/api/v1/users/login`         | public        | -            |
+| GET    | `/api/v1/users/me`            | any logged-in | -            |
+| GET    | `/api/v1/users`               | admin only    | `list_users` |
+| GET    | `/api/v1/users/{id}`          | self or admin | `get_user`   |
+| PATCH  | `/api/v1/users/{id}`          | self or admin | -            |
+| DELETE | `/api/v1/users/{id}`          | self or admin | -            |
+| GET    | `/health`, `/health/detailed` | public        | -            |
 
 Access control: a Bearer token is required for everything except register, login,
 and health. Ownership is enforced (you can only read/update/delete your own
