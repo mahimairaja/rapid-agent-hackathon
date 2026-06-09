@@ -23,6 +23,12 @@ export function VoiceConsole() {
   }, [])
 
   const start = async () => {
+    // Stop any existing client first so a double-start cannot leak a mic/socket
+    // or run two concurrent sessions.
+    if (clientRef.current) {
+      await clientRef.current.stop()
+      clientRef.current = null
+    }
     setError('')
     setLog([])
     setLive('')

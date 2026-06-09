@@ -63,11 +63,14 @@ def normalize_event(event: Any) -> dict | None:
         return {"type": "interrupted"}
 
     content = getattr(event, "content", None)
-    parts = getattr(content, "parts", None) or [] if content else []
+    parts = (getattr(content, "parts", None) or []) if content else []
+    # Audio is the primary payload: prefer it over any text part in the same
+    # event so a multi-part event never drops audio in favor of a transcript.
     for part in parts:
         inline = getattr(part, "inline_data", None)
         if inline is not None and getattr(inline, "data", None):
             return {"type": "audio", "data": inline.data}
+    for part in parts:
         text = getattr(part, "text", None)
         if text:
             return {

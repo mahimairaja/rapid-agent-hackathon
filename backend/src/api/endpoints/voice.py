@@ -50,19 +50,38 @@ async def pump_session_to_client(websocket: WebSocket, session: VoiceSession) ->
             await websocket.send_text(json.dumps(frame["text"]))
 
 
+async def run_voice_bridge(websocket: WebSocket, session: VoiceSession) -> None:
+    """Run both pump loops; when one finishes, cancel and await the other.
+
+    ``asyncio.wait`` does not re-raise a finished task's exception, so the done
+    task is inspected and any error is re-raised to the caller (which logs it and
+    sends an error frame). The losing task is cancelled AND awaited so its
+    cleanup runs before the session is torn down.
+    """
+    tasks = {
+        asyncio.create_task(pump_client_to_session(websocket, session)),
+        asyncio.create_task(pump_session_to_client(websocket, session)),
+    }
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+    for task in done:
+        if task.cancelled():
+            continue
+        exc = task.exception()
+        if exc is not None:
+            raise exc
+
+
 @router.websocket("/ws")
 async def voice_ws(websocket: WebSocket) -> None:
     await websocket.accept()
     session = VoiceSession()
     try:
         await session.start()
-        tasks = {
-            asyncio.create_task(pump_client_to_session(websocket, session)),
-            asyncio.create_task(pump_session_to_client(websocket, session)),
-        }
-        _, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        for task in pending:
-            task.cancel()
+        await run_voice_bridge(websocket, session)
     except WebSocketDisconnect:
         logger.info("voice socket disconnected")
     except Exception:
