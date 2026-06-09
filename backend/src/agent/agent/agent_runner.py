@@ -20,12 +20,13 @@ import asyncio
 import logging
 from collections import OrderedDict
 
+from google.adk.events import Event, EventActions
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from src.agent.agent.root_agent import root_agent
-from src.agent.agent.session_state import set_client_time_zone
+from src.agent.agent.session_state import CLIENT_TIME_ZONE, set_client_time_zone
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,18 @@ async def _set_turn_preferences(
         app_name=_APP_NAME, user_id=_USER_ID, session_id=session_id
     )
     if session is not None:
-        set_client_time_zone(session.state, time_zone)
+        state_delta: dict = {}
+        set_client_time_zone(state_delta, time_zone)
+        if state_delta:
+            await _session_service.append_event(
+                session,
+                Event(
+                    author="system",
+                    actions=EventActions(
+                        state_delta={CLIENT_TIME_ZONE: state_delta[CLIENT_TIME_ZONE]}
+                    ),
+                ),
+            )
 
 
 async def run_turn(
