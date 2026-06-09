@@ -57,7 +57,8 @@ RED_FLAG_RULES: tuple[RedFlagRule, ...] = (
             ("pain in my chest",),
             ("pressure in my chest",),
             ("tightness in my chest",),
-            ("crushing",),
+            ("crushing", "pain"),
+            ("crushing", "chest"),
         ),
     ),
     RedFlagRule(
@@ -68,15 +69,20 @@ RED_FLAG_RULES: tuple[RedFlagRule, ...] = (
             f"{_CALL} Getting help fast really matters."
         ),
         triggers=(
-            ("face is drooping",),
-            ("face drooping",),
-            ("drooping",),
+            # Require face/mouth context so "drooping willows" or tired eyelids
+            # do not fire, while real facial droop still does.
+            ("droop", "face"),
+            ("droop", "mouth"),
             ("slurred speech",),
             ("slurring",),
             ("trouble speaking",),
             ("cant speak",),
             ("sudden confusion",),
-            ("stroke",),
+            # Self-reports of a stroke, without matching idioms like
+            # "stroke of luck" / "breaststroke".
+            ("having a stroke",),
+            ("had a stroke",),
+            ("stroke symptoms",),
             ("weak", "one side"),
             ("weakness", "one side"),
             ("numb", "one side"),
@@ -92,6 +98,9 @@ RED_FLAG_RULES: tuple[RedFlagRule, ...] = (
             ("cannot breathe",),
             ("can not breathe",),
             ("trouble breathing",),
+            ("difficulty breathing",),
+            ("difficulty in breathing",),
+            ("labored breathing",),
             ("struggling to breathe",),
             ("hard to breathe",),
             ("gasping",),
@@ -147,13 +156,72 @@ RED_FLAG_RULES: tuple[RedFlagRule, ...] = (
             ("wound", "infected"),
         ),
     ),
+    RedFlagRule(
+        rule_id="loss_of_consciousness",
+        label="fainting or loss of consciousness",
+        message=(
+            f"Fainting or passing out can be a sign of a serious problem. {_CALL}"
+        ),
+        triggers=(
+            ("passed out",),
+            ("passing out",),
+            ("about to pass out",),
+            ("fainted",),
+            ("fainting",),
+            ("blacked out",),
+            ("lost consciousness",),
+            ("unconscious",),
+        ),
+    ),
+    RedFlagRule(
+        rule_id="coughing_blood",
+        label="coughing or vomiting blood",
+        message=(f"Coughing up or vomiting blood can be a medical emergency. {_CALL}"),
+        triggers=(
+            ("coughing up blood",),
+            ("cough up blood",),
+            ("coughing blood",),
+            ("vomiting blood",),
+            ("throwing up blood",),
+            ("blood", "vomit"),
+        ),
+    ),
+    RedFlagRule(
+        rule_id="paralysis",
+        label="sudden weakness or paralysis",
+        message=(
+            "A sudden inability to move or feel part of your body can be a "
+            f"medical emergency. {_CALL}"
+        ),
+        # Require a body part so unrelated phrases ("can't move my appointment")
+        # do not fire.
+        triggers=(
+            ("paralyzed",),
+            ("paralysis",),
+            ("cant move", "arm"),
+            ("cant move", "leg"),
+            ("cant move", "hand"),
+            ("cant move", "face"),
+            ("cant move", "side"),
+            ("cant feel", "arm"),
+            ("cant feel", "leg"),
+            ("cant feel", "side"),
+        ),
+    ),
 )
 
 
 def _normalize(text: str) -> str:
-    """Lowercase, drop apostrophes, and collapse whitespace for matching."""
+    """Lowercase and reduce to alphanumeric words for matching.
+
+    Apostrophes are dropped (so "can't" -> "cant") and every other
+    non-alphanumeric character becomes a space, so hyphenated or punctuated
+    phrasings like "short-of-breath" or "chest,pain" still match the stored
+    phrases.
+    """
     lowered = (text or "").lower().replace("'", "").replace("’", "")
-    return " ".join(lowered.split())
+    cleaned = "".join(ch if ch.isalnum() else " " for ch in lowered)
+    return " ".join(cleaned.split())
 
 
 def classify_symptom(text: str) -> tuple[str, str | None, str | None]:

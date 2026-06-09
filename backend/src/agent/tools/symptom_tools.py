@@ -38,26 +38,40 @@ async def triage_symptom(reported_text: str, *, tool_context: ToolContext) -> di
     if not text:
         return {"status": "empty"}
 
-    try:
-        status, rule_id, message = classify_symptom(text)
-        if status == "red_flag":
+    # Classification is pure and cannot fail, so the red-flag verdict is decided
+    # before any database call.
+    status, rule_id, message = classify_symptom(text)
+
+    if status == "red_flag":
+        # Safety first: the emergency message must reach the patient even if the
+        # escalation write fails, so the write is best-effort and never blocks the
+        # returned guidance. ``escalated`` reports whether the care-team alert was
+        # persisted.
+        escalated = True
+        try:
             await Escalation(
                 patient_id=patient_id,
                 kind="symptom_red_flag",
                 level="urgent",
                 message=f"{text} [{rule_id}]",
             ).insert()
-            return {
-                "status": "red_flag",
-                "rule_id": rule_id,
-                "emergency_message": message,
-            }
+        except Exception:
+            escalated = False
+            logger.error("failed to write red-flag escalation", exc_info=True)
+        return {
+            "status": "red_flag",
+            "rule_id": rule_id,
+            "emergency_message": message,
+            "escalated": escalated,
+        }
+
+    try:
         await Checkin(
             patient_id=patient_id,
             reported_text=text,
             severity="routine",
         ).insert()
-        return {"status": "routine"}
     except Exception:
-        logger.warning("triage_symptom failed", exc_info=True)
+        logger.warning("failed to write routine check-in", exc_info=True)
         return {"status": "error"}
+    return {"status": "routine"}
