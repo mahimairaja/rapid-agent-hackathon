@@ -24,11 +24,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setError('');
     setLoading(true);
     try {
-      // Simulate signup delay, then login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const token = await signUp(email, password, name);
-      setStoredToken(token.access_token);
-      onLogin(token.access_token, false);
+      await signUp(email, password, name);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed. Please try again.');
     } finally {

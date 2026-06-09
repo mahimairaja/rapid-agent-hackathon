@@ -11,7 +11,7 @@ import {
   MOCK_APPOINTMENTS,
 } from '../data/mockData';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
@@ -53,10 +53,10 @@ export function clearStoredToken(): void {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-export async function signUp(email: string, password: string, full_name: string): Promise<AuthToken> {
+export async function signUp(email: string, password: string, name: string): Promise<AuthToken> {
   return request<AuthToken>('/users/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password, name: full_name }),
+    body: JSON.stringify({ email, password, name }),
   });
 }
 
