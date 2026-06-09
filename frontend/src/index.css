@@ -3265,3 +3265,61 @@ input[type='range']::-webkit-slider-thumb:hover {
   outline-offset: 2px;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   AUTH TAB SWITCHER & SIGNUP
+══════════════════════════════════════════════════════════════════════════════ */
+
+.auth-tab-switcher {
+  display: flex;
+  gap: 4px;
+  background: var(--slate-100);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-base);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  letter-spacing: -0.1px;
+}
+
+.auth-tab:hover:not(.active) {
+  color: var(--text-secondary);
+  background: rgb(0 0 0 / 0.04);
+}
+
+.auth-tab.active {
+  background: white;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+/* Signup success banner */
+.signup-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, var(--green-50), #f0fdf7);
+  border: 1.5px solid var(--green-100);
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+  animation: scale-in 0.3s var(--ease-spring);
+}
+
+.signup-success-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  animation: float 2s ease-in-out infinite;
+}

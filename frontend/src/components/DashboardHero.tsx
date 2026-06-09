@@ -33,9 +33,7 @@ function daysUntil(iso: string) {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-CA', { month: 'long', day: 'numeric' });
-}
+
 
 function getInitials(first: string, last: string) {
   return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase();
@@ -48,7 +46,6 @@ export function DashboardHero({ patient, medications, appointments, onNavigate }
   const daysSinceDischarge = patient.discharge_date ? daysSince(patient.discharge_date) : 3;
   const initials = getInitials(patient.first_name, patient.last_name);
 
-  const medicationsDue = medications.filter(m => !m.taken_today).length;
   const medicationsTotal = medications.length;
   const completedToday = medications.filter(m => m.taken_today).length;
 
