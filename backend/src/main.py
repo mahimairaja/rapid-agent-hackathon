@@ -59,10 +59,16 @@ class AppCreator:
         self.app.state.container = self.container
 
         if config.BACKEND_CORS_ORIGINS:
+            allow_origins = [str(origin) for origin in config.BACKEND_CORS_ORIGINS]
+            # A wildcard origin cannot be combined with credentialed CORS (the
+            # browser rejects "*" + Allow-Credentials, and Starlette would echo
+            # any origin back). Auth here is a Bearer header, not cookies, so
+            # credentials are only enabled when origins are explicitly listed.
+            allow_all = allow_origins == ["*"]
             self.app.add_middleware(
                 CORSMiddleware,
-                allow_origins=[str(origin) for origin in config.BACKEND_CORS_ORIGINS],
-                allow_credentials=True,
+                allow_origins=allow_origins,
+                allow_credentials=not allow_all,
                 allow_methods=["*"],
                 allow_headers=["*"],
             )

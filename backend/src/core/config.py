@@ -38,13 +38,12 @@ class Config(BaseSettings):
 
     PROJECT_NAME: str = "Rapid Agent"
 
-    # CORS
+    # CORS. CORS_ORIGINS_STR is a comma-separated allow-list; empty means allow
+    # all ("*"). BACKEND_CORS_ORIGINS is derived from it at load time by
+    # ``derive_cors_origins`` below (it must not be a class-level computed
+    # default, which would capture the literal "" before the env is read).
     CORS_ORIGINS_STR: str | None = ""
-    BACKEND_CORS_ORIGINS: list[str] | None = (
-        [origin.strip() for origin in CORS_ORIGINS_STR.split(",")]
-        if CORS_ORIGINS_STR
-        else ["*"]
-    )
+    BACKEND_CORS_ORIGINS: list[str] | None = None
 
     # MongoDB Atlas. MONGODB_URI is the SRV connection string
     # (mongodb+srv://...). Optional so tests / tooling can import config without
@@ -90,6 +89,21 @@ class Config(BaseSettings):
         if value is None or str(value).strip() == "":
             return "America/New_York"
         return value
+
+    @model_validator(mode="after")
+    def derive_cors_origins(self):
+        """Build the CORS allow-list from the (env-resolved) CORS_ORIGINS_STR.
+
+        An explicit BACKEND_CORS_ORIGINS (set directly via env) wins; otherwise a
+        non-empty CORS_ORIGINS_STR is split into an allow-list, and an empty
+        value falls back to allow-all ("*").
+        """
+        if self.BACKEND_CORS_ORIGINS is None:
+            raw = (self.CORS_ORIGINS_STR or "").strip()
+            self.BACKEND_CORS_ORIGINS = (
+                [o.strip() for o in raw.split(",") if o.strip()] if raw else ["*"]
+            )
+        return self
 
     @model_validator(mode="after")
     def set_debug_default(self):
