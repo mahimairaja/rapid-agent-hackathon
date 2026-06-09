@@ -17,7 +17,7 @@ from src.schemas.users_schemas import (
 )
 from src.services.users_service import UsersService
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users")
 
 
 @inject
@@ -50,6 +50,7 @@ def _require_admin(actor: User) -> None:
     "/register",
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
+    tags=["auth"],
 )
 @inject
 async def register_user(
@@ -59,7 +60,7 @@ async def register_user(
     return await service.register(payload)
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, tags=["auth"])
 @inject
 async def login(
     payload: UserLogin,
@@ -71,7 +72,7 @@ async def login(
 # ---- Protected: require a valid Bearer token -------------------------------
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me", response_model=UserRead, tags=["auth"])
 async def read_me(current_user: CurrentUser):
     return current_user
 
@@ -79,7 +80,7 @@ async def read_me(current_user: CurrentUser):
 @router.get(
     "",
     response_model=list[UserRead],
-    tags=["mcp-tools"],
+    tags=["users", "mcp-tools"],
     operation_id="list_users",
 )
 @inject
@@ -102,7 +103,7 @@ async def list_users(
 @router.get(
     "/{user_id}",
     response_model=UserRead,
-    tags=["mcp-tools"],
+    tags=["users", "mcp-tools"],
     operation_id="get_user",
 )
 @inject
@@ -117,7 +118,7 @@ async def get_user(
     return await service.get_by_id(user_id)
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=UserRead, tags=["users"])
 @inject
 async def update_user(
     user_id: int,
@@ -129,7 +130,7 @@ async def update_user(
     return await service.modify(user_id, payload)
 
 
-@router.delete("/{user_id}")
+@router.delete("/{user_id}", tags=["users"])
 @inject
 async def delete_user(
     user_id: int,
