@@ -12,8 +12,15 @@ import os
 from google.adk.agents import Agent
 from google.adk.models.base_llm import BaseLlm
 
+from src.agent.prompts.appointment_prompt import APPOINTMENT_INSTRUCTION
 from src.agent.prompts.medication_prompt import MEDICATION_INSTRUCTION
 from src.agent.prompts.recognition_prompt import RECOGNITION_INSTRUCTION
+from src.agent.tools.appointment_tools import (
+    book_follow_up_slot,
+    get_follow_up_booking,
+    list_follow_up_slots,
+    reschedule_follow_up,
+)
 from src.agent.tools.guards import verification_gate
 from src.agent.tools.medication_tools import (
     flag_pharmacist,
@@ -51,13 +58,23 @@ def build_recognition_agent(model: BaseLlm | str | None = None) -> Agent:
     return Agent(
         name="recognition_agent",
         model=model or config.GEMINI_MODEL,
-        instruction="\n\n".join([RECOGNITION_INSTRUCTION, MEDICATION_INSTRUCTION]),
+        instruction="\n\n".join(
+            [
+                RECOGNITION_INSTRUCTION,
+                MEDICATION_INSTRUCTION,
+                APPOINTMENT_INSTRUCTION,
+            ]
+        ),
         tools=[
             find_patient,
             get_my_plan,
             get_medications,
             get_next_dose,
             flag_pharmacist,
+            list_follow_up_slots,
+            book_follow_up_slot,
+            get_follow_up_booking,
+            reschedule_follow_up,
         ],
         before_tool_callback=verification_gate,
     )
