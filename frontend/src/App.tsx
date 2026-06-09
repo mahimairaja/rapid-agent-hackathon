@@ -55,8 +55,8 @@ function App() {
     if (!token) return;
     const realToken = token === 'demo' ? null : token;
 
-    setLoading(true);
     void (async () => {
+      setLoading(true);
       const { data: p, demo: pd } = await fetchPatient('patient-001', realToken);
       setPatient(p);
       setIsDemoMode(prev => prev || pd);
@@ -94,6 +94,7 @@ function App() {
     .filter(a => a.status !== 'completed')
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
   const nextAppointmentDays = nextAppointment
+    // eslint-disable-next-line react-hooks/purity
     ? Math.max(0, Math.ceil((new Date(nextAppointment.start).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 

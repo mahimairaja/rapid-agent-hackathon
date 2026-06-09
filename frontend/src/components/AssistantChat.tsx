@@ -21,7 +21,7 @@ function formatTime(d: Date) {
 
 /** Lightweight markdown renderer for assistant bubbles */
 function renderMarkdown(text: string): string {
-  let html = text
+  const html = text
     // Bold
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     // Table rows (naïve)
@@ -33,7 +33,7 @@ function renderMarkdown(text: string): string {
     })
     .replace(/(<tr>[\s\S]*?<\/tr>)+/g, (m) => `<table>${m}</table>`)
     // Bullet lists
-    .replace(/^[•\-]\s(.+)$/gm, '<li>$1</li>')
+    .replace(/^[•-]\s(.+)$/gm, '<li>$1</li>')
     .replace(/(<li>[\s\S]*?<\/li>)+/g, (m) => `<ul>${m}</ul>`)
     // Double newline → paragraph
     .split('\n\n')
