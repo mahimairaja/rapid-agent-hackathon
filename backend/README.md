@@ -1,4 +1,4 @@
-# Rapid Agent Hackathon Backend (Homeward)
+# Rapid Recovery Backend (Homeward)
 
 A FastAPI app with clean layering (API → service → model), dependency injection,
 async MongoDB Atlas via the Beanie ODM, JWT auth, an MCP tool surface, and the

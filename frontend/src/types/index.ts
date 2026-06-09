@@ -191,6 +191,7 @@ export type AppView =
   | 'medications'
   | 'appointments'
   | 'assistant'
+  | 'voice'
   | 'symptom-check'
   | 'care-team'
 
