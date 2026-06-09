@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import type { ChatMessage } from '../types'
 import { getAIResponse } from '../data/mockData'
-import { postChatMessage } from '../api/client'
+import { getClientTimeZone, postAgentChat } from '../api/client'
 
 const SUGGESTED_PROMPTS = [
-  'Can I climb stairs today?',
-  'My pain is 8/10, what do I do?',
+  'My patient code is HW-1001',
+  'What medications do I take today?',
+  'Can you book my follow-up?',
   'When is my next appointment?',
-  'What meds do I take today?',
-  'What symptoms are urgent?',
+  'Can I move my follow-up?',
 ]
+
+type ChatMode = 'ready' | 'backend' | 'fallback'
 
 function generateId() {
   return Math.random().toString(36).slice(2, 9)
@@ -21,7 +23,18 @@ function formatTime(d: Date) {
 
 /** Lightweight markdown renderer for assistant bubbles */
 function renderMarkdown(text: string): string {
-  const html = text
+  const escaped = text.replace(/[&<>"']/g, (char) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }
+    return entities[char]
+  })
+
+  const html = escaped
     // Bold
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     // Table rows (naïve)
@@ -44,23 +57,33 @@ function renderMarkdown(text: string): string {
 }
 
 interface AssistantChatProps {
-  patientId: string
   token: string | null
+  userInitials: string
 }
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'init',
   role: 'assistant',
-  content: `👋 Hi John! I'm **Rapid Agent**, your AI recovery assistant.\n\nI'm here to guide you through your **Total Hip Replacement** recovery — currently **Week 1 post-discharge**.\n\nAsk me about your medications, upcoming appointments, what you can safely do today, or any symptoms you're experiencing.`,
+  content:
+    "Hi, I'm **Homeward**, your recovery assistant. To pull up your discharge plan, tell me your full name and date of birth, or give me your patient code.\n\nAfter that I can help with your medications and follow-up visit.",
   timestamp: new Date(),
 }
 
-export function AssistantChat({ patientId, token }: AssistantChatProps) {
+export function AssistantChat({ token, userInitials }: AssistantChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [chatMode, setChatMode] = useState<ChatMode>('ready')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const statusText =
+    chatMode === 'backend'
+      ? 'Backend connected'
+      : chatMode === 'fallback'
+        ? 'Demo response mode'
+        : 'Ready'
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -83,8 +106,19 @@ export function AssistantChat({ patientId, token }: AssistantChatProps) {
     // Realistic typing delay
     await new Promise((res) => setTimeout(res, 700 + Math.random() * 700))
 
-    const { answer, demo } = await postChatMessage(text, patientId, token)
-    const responseText = demo ? getAIResponse(text) : answer
+    const result = await postAgentChat(
+      {
+        message: text.trim(),
+        session_id: sessionId,
+        time_zone: getClientTimeZone(),
+      },
+      token,
+    )
+    if (result.sessionId) {
+      setSessionId(result.sessionId)
+    }
+    setChatMode(result.demo ? 'fallback' : 'backend')
+    const responseText = result.demo ? getAIResponse(text) : result.reply
 
     const assistantMsg: ChatMessage = {
       id: generateId(),
@@ -113,8 +147,10 @@ export function AssistantChat({ patientId, token }: AssistantChatProps) {
           ⚡
         </div>
         <div>
-          <div className="chat-agent-name">Rapid Agent AI</div>
-          <div className="chat-agent-status">Active · Ready to help</div>
+          <div className="chat-agent-name">Homeward AI</div>
+          <div className={`chat-agent-status${chatMode === 'fallback' ? ' fallback' : ''}`}>
+            {statusText}
+          </div>
         </div>
         <div className="chat-powered-by">Powered by Gemini</div>
       </div>
@@ -129,7 +165,7 @@ export function AssistantChat({ patientId, token }: AssistantChatProps) {
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-message ${msg.role}`}>
             <div className={`chat-avatar ${msg.role}`} aria-hidden="true">
-              {msg.role === 'assistant' ? '⚡' : 'JM'}
+              {msg.role === 'assistant' ? '⚡' : userInitials}
             </div>
             <div className="chat-bubble-wrapper">
               <div

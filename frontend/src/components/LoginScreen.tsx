@@ -573,9 +573,9 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               lineHeight: 1.5,
             }}
           >
-            Demo mode uses <strong>John Matthews</strong>, 64 — Total Hip Replacement patient.
+            Demo dashboard uses <strong>John Matthews</strong>, 64 — Total Hip Replacement patient.
             <br />
-            No backend required.
+            Assistant chat connects to the backend when it is running.
           </p>
 
           <div className="login-disclaimer">

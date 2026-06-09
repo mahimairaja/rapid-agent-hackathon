@@ -50,6 +50,12 @@ export interface Patient {
   state?: string
   phone?: string
   email?: string
+  discharge_reason?: string
+  assigned_clinician?: string
+  follow_up_required?: boolean
+  follow_up_window_start?: string
+  follow_up_window_end?: string
+  follow_up_kind?: string
   // Extended fields for demo
   age?: number
   procedure?: string
@@ -71,6 +77,7 @@ export type MedicationFrequency =
   | 'as-needed'
   | 'bedtime'
   | 'with-meals'
+  | (string & {})
 
 export interface Medication {
   id: string
@@ -81,6 +88,8 @@ export interface Medication {
   frequency?: MedicationFrequency
   purpose?: string
   instructions?: string
+  schedule_times?: string[]
+  cautions?: string[]
   start?: string
   stop?: string
   reason?: string
@@ -103,9 +112,31 @@ export interface Appointment {
   reason?: string
   status: AppointmentStatus
   instructions?: string
+  cal_booking_uid?: string
+  follow_up_window_start?: string
+  follow_up_window_end?: string
+  follow_up_required?: boolean
+  booked_at?: string
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
+
+export interface AgentChatRequest {
+  message: string
+  session_id?: string | null
+  time_zone?: string | null
+}
+
+export interface AgentChatResponse {
+  session_id: string
+  reply: string
+}
+
+export interface AgentChatResult {
+  sessionId: string | null
+  reply: string
+  demo: boolean
+}
 
 export type MessageRole = 'user' | 'assistant'
 

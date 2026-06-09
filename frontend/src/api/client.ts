@@ -1,4 +1,13 @@
-import type { AuthToken, UserMe, Patient, Medication, Appointment } from '../types'
+import type {
+  AgentChatRequest,
+  AgentChatResponse,
+  AgentChatResult,
+  AuthToken,
+  UserMe,
+  Patient,
+  Medication,
+  Appointment,
+} from '../types'
 import { MOCK_PATIENT, MOCK_MEDICATIONS, MOCK_APPOINTMENTS } from '../data/mockData'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
@@ -61,72 +70,47 @@ export async function getMe(token: string): Promise<UserMe> {
   return request<UserMe>('/users/me', {}, token)
 }
 
-// ── Patient data (with mock fallbacks) ───────────────────────────────────────
+// ── Dashboard demo data ──────────────────────────────────────────────────────
 
-export async function fetchPatients(
-  token: string | null,
-): Promise<{ data: Patient[]; demo: boolean }> {
-  try {
-    const data = await request<Patient[]>('/patients', {}, token)
-    return { data, demo: false }
-  } catch {
-    return { data: [MOCK_PATIENT], demo: true }
+interface DashboardData {
+  patient: Patient
+  medications: Medication[]
+  appointments: Appointment[]
+  demo: true
+}
+
+export async function loadDashboardData(): Promise<DashboardData> {
+  return {
+    patient: MOCK_PATIENT,
+    medications: [...MOCK_MEDICATIONS],
+    appointments: [...MOCK_APPOINTMENTS],
+    demo: true,
   }
 }
 
-export async function fetchPatient(
-  id: string,
-  token: string | null,
-): Promise<{ data: Patient; demo: boolean }> {
+export function getClientTimeZone(): string | null {
   try {
-    const data = await request<Patient>(`/patients/${id}`, {}, token)
-    return { data, demo: false }
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null
   } catch {
-    return { data: MOCK_PATIENT, demo: true }
+    return null
   }
 }
 
-export async function fetchMedications(
-  patientId: string,
+export async function postAgentChat(
+  payload: AgentChatRequest,
   token: string | null,
-): Promise<{ data: Medication[]; demo: boolean }> {
+): Promise<AgentChatResult> {
   try {
-    const data = await request<Medication[]>(`/medications?patient_id=${patientId}`, {}, token)
-    return { data, demo: false }
-  } catch {
-    return { data: MOCK_MEDICATIONS, demo: true }
-  }
-}
-
-export async function fetchAppointments(
-  patientId: string,
-  token: string | null,
-): Promise<{ data: Appointment[]; demo: boolean }> {
-  try {
-    const data = await request<Appointment[]>(`/appointments?patient_id=${patientId}`, {}, token)
-    return { data, demo: false }
-  } catch {
-    return { data: MOCK_APPOINTMENTS, demo: true }
-  }
-}
-
-export async function postChatMessage(
-  message: string,
-  patientId: string,
-  token: string | null,
-): Promise<{ answer: string; demo: boolean }> {
-  try {
-    const data = await request<{ answer: string }>(
-      '/rag/query',
+    const data = await request<AgentChatResponse>(
+      '/agent/chat',
       {
         method: 'POST',
-        body: JSON.stringify({ query: message, patient_id: patientId }),
+        body: JSON.stringify(payload),
       },
       token,
     )
-    return { answer: data.answer, demo: false }
+    return { sessionId: data.session_id, reply: data.reply, demo: false }
   } catch {
-    // Simulated AI handled in component via getAIResponse
-    return { answer: '', demo: true }
+    return { sessionId: payload.session_id ?? null, reply: '', demo: true }
   }
 }

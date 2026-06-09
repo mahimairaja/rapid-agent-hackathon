@@ -4038,6 +4038,14 @@ input[type='range']::-webkit-slider-thumb:hover {
   animation: pulse-dot 2s infinite;
 }
 
+.chat-agent-status.fallback {
+  color: var(--amber-300);
+}
+
+.chat-agent-status.fallback::before {
+  background: var(--amber-400);
+}
+
 .chat-powered-by {
   margin-left: auto;
   font-size: 10px;

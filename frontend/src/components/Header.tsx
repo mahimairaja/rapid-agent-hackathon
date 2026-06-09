@@ -53,11 +53,11 @@ export function Header({
         {isDemoMode && (
           <div
             className="demo-badge"
-            title="Using synthetic demo data — no backend required"
+            title="Dashboard panels use synthetic demo data; assistant chat connects to the backend when available"
             role="status"
           >
             <span className="demo-badge-dot" aria-hidden="true" />
-            Demo Mode
+            Demo Data
           </div>
         )}
 

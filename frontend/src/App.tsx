@@ -17,13 +17,7 @@ import { SymptomCheckInForm } from './components/SymptomCheckIn'
 import { CareTeamPanel } from './components/CareTeamPanel'
 import { LoadingState } from './components/LoadingState'
 
-import {
-  getStoredToken,
-  clearStoredToken,
-  fetchPatient,
-  fetchMedications,
-  fetchAppointments,
-} from './api/client'
+import { getStoredToken, clearStoredToken, loadDashboardData } from './api/client'
 
 // ── Page metadata ──────────────────────────────────────────────────────────────
 
@@ -64,21 +58,14 @@ function App() {
   // Load data when we have a token
   useEffect(() => {
     if (!token) return
-    const realToken = token === 'demo' ? null : token
 
     void (async () => {
       setLoading(true)
-      const { data: p, demo: pd } = await fetchPatient('patient-001', realToken)
-      setPatient(p)
-      setIsDemoMode((prev) => prev || pd)
-
-      const [{ data: meds, demo: md }, { data: appts, demo: ad }] = await Promise.all([
-        fetchMedications(p.id, realToken),
-        fetchAppointments(p.id, realToken),
-      ])
-      setMedications(meds)
-      setAppointments(appts)
-      if (md || ad) setIsDemoMode(true)
+      const data = await loadDashboardData()
+      setPatient(data.patient)
+      setMedications(data.medications)
+      setAppointments(data.appointments)
+      setIsDemoMode(data.demo)
       setLoading(false)
     })()
   }, [token])
@@ -221,7 +208,10 @@ function App() {
                 </div>
               </div>
               <div className="card" style={{ overflow: 'hidden' }}>
-                <AssistantChat patientId={patient.id} token={token === 'demo' ? null : token} />
+                <AssistantChat
+                  token={token === 'demo' ? null : token}
+                  userInitials={userInitials}
+                />
               </div>
             </div>
           )}
@@ -377,7 +367,10 @@ function DashboardView({
               </div>
               <span className="badge badge-green live-dot">Online</span>
             </div>
-            <AssistantChat patientId={patient.id} token={token} />
+            <AssistantChat
+              token={token}
+              userInitials={`${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()}
+            />
           </div>
         </div>
       </div>
