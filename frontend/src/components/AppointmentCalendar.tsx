@@ -23,6 +23,7 @@ const EMPTY_STATE_COPY: Record<string, string> = {
   none_required: 'Your plan does not require a follow-up visit. Nothing to book 🎉',
   no_window: 'Your plan has no follow-up window, so there are no slots to offer.',
   scheduler_unavailable: 'The scheduling system is not reachable right now — try again shortly.',
+  already_booked: 'A follow-up was just booked in your conversation — schedule refreshed.',
 }
 
 /**

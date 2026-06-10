@@ -146,6 +146,36 @@ async def test_book_reschedules_when_current_exists(booking_env):
     assert booking_env.rescheduled == [("cal-old", SLOT)]
 
 
+async def test_book_returns_already_booked_when_raced(booking_env, monkeypatch):
+    # A concurrent agent turn books between the first check and the write: the
+    # pre-write re-check must surface already_booked instead of duplicating.
+    raced = SimpleNamespace(
+        cal_booking_uid="cal-raced",
+        kind="Cardiology follow-up",
+        start=NOW + timedelta(days=6),
+        end=None,
+        provider="Dr. Park",
+        location="BMC",
+        status="scheduled",
+    )
+    results = iter([None, raced])
+
+    async def racing_current(patient):
+        return next(results)
+
+    monkeypatch.setattr(agent_module, "_current_follow_up", racing_current)
+    async with await _client(_build_app()) as client:
+        resp = await client.post(
+            "/api/v1/agent/session/sess-1/book",
+            json={"start_iso": "2026-06-15T12:00:00Z", "time_zone": "UTC"},
+        )
+    body = resp.json()
+    assert body["status"] == "already_booked"
+    assert body["booking"]["cal_booking_uid"] == "cal-raced"
+    # Nothing was sent to Cal.com.
+    assert booking_env.booked == [] and booking_env.rescheduled == []
+
+
 async def test_book_rejects_unlisted_slot(booking_env):
     async with await _client(_build_app()) as client:
         resp = await client.post(
