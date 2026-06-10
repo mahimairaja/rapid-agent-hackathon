@@ -60,12 +60,11 @@ function sourceLabel(s: SourceItem): string | null {
   }
 }
 
-const GREETING: ChatMessage = {
-  id: 'greeting',
-  role: 'assistant',
-  content:
-    "👋 Hi, I'm your **Rapid Recovery** assistant. I can talk or chat. To pull up your plan, tell me your **name and date of birth**, or your **patient code** — say it or type it below.",
-  timestamp: new Date(),
+function makeGreeting(userName?: string | null, onboarded?: boolean): ChatMessage {
+  const content = onboarded
+    ? `👋 Welcome back${userName ? `, **${userName}**` : ''} — I'm loading your recovery plan now. Talk or type any time: medications, appointments, symptoms, or anything in your plan.`
+    : "👋 Hi, I'm your **Rapid Recovery** assistant. I can talk or chat. To pull up your plan, tell me your **name and date of birth**, or your **patient code** — say it or type it below."
+  return { id: 'greeting', role: 'assistant', content, timestamp: new Date() }
 }
 
 interface AssistantProps {
@@ -73,10 +72,20 @@ interface AssistantProps {
   // the app (dashboard, medications, appointments) can hydrate from the
   // conversation once the patient is identified.
   onContext?: (ctx: SessionContext) => void
+  // Fired with the live session id, so the app can drive session-scoped
+  // surfaces (the appointments calendar widget).
+  onSession?: (sessionId: string) => void
+  // Onboarded accounts: deterministically identify every new live session
+  // (first connect and reconnects) with this patient code.
+  identifyCode?: string | null
+  // Display name for the personalized greeting.
+  userName?: string | null
 }
 
-export function Assistant({ onContext }: AssistantProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING])
+export function Assistant({ onContext, onSession, identifyCode, userName }: AssistantProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    makeGreeting(userName, Boolean(identifyCode)),
+  ])
   const [liveUser, setLiveUser] = useState('')
   const [liveAssistant, setLiveAssistant] = useState('')
   const [input, setInput] = useState('')
@@ -97,11 +106,16 @@ export function Assistant({ onContext }: AssistantProps) {
   const liveAssistantRef = useRef('')
   const pendingSourcesRef = useRef<SourceItem[]>([])
   const endRef = useRef<HTMLDivElement>(null)
-  // The connection effect runs once; keep the latest onContext reachable from it.
+  // The connection effect runs once; keep the latest props reachable from it.
   const onContextRef = useRef(onContext)
+  const onSessionRef = useRef(onSession)
+  const identifyCodeRef = useRef(identifyCode ?? null)
   useEffect(() => {
     onContextRef.current = onContext
-  }, [onContext])
+    onSessionRef.current = onSession
+    identifyCodeRef.current = identifyCode ?? null
+    clientRef.current?.setIdentifyCode(identifyCode ?? null)
+  }, [onContext, onSession, identifyCode])
 
   const levels = useAudioAnalyser(clientRef, state)
 
@@ -163,6 +177,14 @@ export function Assistant({ onContext }: AssistantProps) {
       },
       onSession: (sid) => {
         sessionIdRef.current = sid
+        if (!cancelled) onSessionRef.current?.(sid)
+      },
+      onIdentifyFailed: () => {
+        if (!cancelled) {
+          setError(
+            "I couldn't load your saved profile automatically — tell me who you are instead.",
+          )
+        }
       },
       onTranscript: (text: string, final: boolean, role: TranscriptRole) => {
         const liveRef = role === 'user' ? liveUserRef : liveAssistantRef
@@ -206,6 +228,7 @@ export function Assistant({ onContext }: AssistantProps) {
         }
       },
     })
+    client.setIdentifyCode(identifyCodeRef.current)
     clientRef.current = client
     void client.connect()
 
@@ -278,7 +301,9 @@ export function Assistant({ onContext }: AssistantProps) {
     // socket opened now would have no owner left to close it.
     if (clientRef.current !== client) return
     await client.connect()
-    if (wasVerified) {
+    // Onboarded accounts re-identify automatically (the client sends the
+    // identify frame on the new session), so only walk-in users get the nudge.
+    if (wasVerified && !identifyCodeRef.current) {
       setMessages((prev) => [
         ...prev,
         {
@@ -293,7 +318,8 @@ export function Assistant({ onContext }: AssistantProps) {
   }
 
   const hasUserTurn = messages.some((m) => m.role === 'user')
-  const chips = hasUserTurn ? FOLLOW_UPS : SUGGESTED_FIRST
+  // Onboarded accounts never need the identification chips.
+  const chips = hasUserTurn || identifyCode ? FOLLOW_UPS : SUGGESTED_FIRST
   const live = state === 'listening' || state === 'speaking'
   const offline = state === 'idle' || state === 'error'
 

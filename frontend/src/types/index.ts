@@ -13,9 +13,70 @@ export interface AuthToken {
 export interface UserMe {
   id: string
   email: string
-  full_name?: string
+  full_name?: string | null
   is_active: boolean
   is_superuser: boolean
+  // Journey onboarding link: present once the account has claimed a profile.
+  patient_code?: string | null
+}
+
+// ── Journey onboarding ────────────────────────────────────────────────────────
+
+export interface Journey {
+  journey_code: string
+  title: string
+  icon: string
+  condition?: string | null
+  clinician?: string | null
+  sample_name: string
+  medication_count: number
+  appointment_kinds: string[]
+}
+
+export interface ClaimCounts {
+  medications: number
+  appointments: number
+  care_plan_chunks: number
+}
+
+export interface ClaimResponse {
+  patient_id: string
+  patient_code: string
+  first_name: string
+  last_name: string
+  journey_code: string
+  counts: ClaimCounts
+}
+
+// ── Session booking (calendar widget) ────────────────────────────────────────
+
+export interface SessionSlot {
+  start_iso: string
+  start_local: string
+  time_zone?: string
+}
+
+export interface SessionBooking {
+  kind?: string
+  start_iso?: string
+  start_local?: string
+  end_iso?: string | null
+  provider?: string | null
+  location?: string | null
+  status?: string
+  cal_booking_uid?: string | null
+}
+
+export interface SessionSlotsResponse {
+  status: string
+  window?: { start_iso: string; end_iso: string } | null
+  current_booking?: SessionBooking | null
+  slots: SessionSlot[]
+}
+
+export interface SessionBookResponse {
+  status: string
+  booking?: SessionBooking | null
 }
 
 // ── Patient ───────────────────────────────────────────────────────────────────

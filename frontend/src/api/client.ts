@@ -1,8 +1,12 @@
 import type {
   AuthToken,
+  ClaimResponse,
+  Journey,
   PatientDashboardRequest,
   PatientDashboardResponse,
+  SessionBookResponse,
   SessionContext,
+  SessionSlotsResponse,
   UserMe,
   Patient,
   Medication,
@@ -83,9 +87,11 @@ export function clearStoredRole(): void {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export async function signUp(email: string, password: string, name: string): Promise<AuthToken> {
+  // The API field is full_name; sending it under any other key silently drops
+  // the name, and the journey gallery pre-fills from it.
   return request<AuthToken>('/users/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, full_name: name }),
   })
 }
 
@@ -183,6 +189,53 @@ export function getClientTimeZone(): string | null {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || null
   } catch {
     return null
+  }
+}
+
+// ── Journey onboarding ────────────────────────────────────────────────────────
+
+export async function getJourneys(): Promise<Journey[]> {
+  return request<Journey[]>('/onboarding/journeys')
+}
+
+export async function claimJourney(
+  payload: { journey_code: string; display_name: string; birth_year?: number | null },
+  token: string,
+): Promise<ClaimResponse> {
+  return request<ClaimResponse>(
+    '/onboarding/claim',
+    { method: 'POST', body: JSON.stringify(payload) },
+    token,
+  )
+}
+
+// ── Session booking (calendar widget) ────────────────────────────────────────
+
+export async function getSessionSlots(
+  sessionId: string,
+  timeZone: string | null,
+): Promise<SessionSlotsResponse> {
+  const qs = timeZone ? `?time_zone=${encodeURIComponent(timeZone)}` : ''
+  try {
+    return await request<SessionSlotsResponse>(
+      `/agent/session/${encodeURIComponent(sessionId)}/slots${qs}`,
+    )
+  } catch {
+    return { status: 'scheduler_unavailable', slots: [] }
+  }
+}
+
+export async function postSessionBook(
+  sessionId: string,
+  payload: { start_iso: string; time_zone?: string | null },
+): Promise<SessionBookResponse> {
+  try {
+    return await request<SessionBookResponse>(
+      `/agent/session/${encodeURIComponent(sessionId)}/book`,
+      { method: 'POST', body: JSON.stringify(payload) },
+    )
+  } catch {
+    return { status: 'scheduler_unavailable' }
   }
 }
 
