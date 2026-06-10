@@ -42,8 +42,14 @@ USER appuser
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
+# Default to a single worker: agent and voice sessions live in an in-process
+# InMemorySessionService, so the chat session id and the voice grounding-context
+# endpoint only resolve when every request hits the same process. Multiple
+# workers split that state and the grounding panel would intermittently read a
+# worker that never saw the session. Run one instance for the demo; scaling out
+# requires a shared session store first.
 CMD exec gunicorn -k uvicorn.workers.UvicornWorker src.main:app \
     --bind "0.0.0.0:${PORT:-8080}" \
-    --workers "${WEB_CONCURRENCY:-2}" \
+    --workers "${WEB_CONCURRENCY:-1}" \
     --timeout 0 \
     --access-logfile - --error-logfile -

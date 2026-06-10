@@ -1,17 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import type { ChatMessage } from '../types'
 import { getAIResponse } from '../data/mockData'
-import { getClientTimeZone, postAgentChat } from '../api/client'
+import { postAgentChat, getClientTimeZone } from '../api/client'
 
 const SUGGESTED_PROMPTS = [
-  'My patient code is HW-1001',
-  'What medications do I take today?',
-  'Can you book my follow-up?',
+  'Can I climb stairs today?',
+  'My pain is 8/10, what should I do?',
   'When is my next appointment?',
-  'Can I move my follow-up?',
+  'What medications do I take today?',
+  'What symptoms are urgent?',
 ]
-
-type ChatMode = 'ready' | 'backend' | 'fallback'
 
 function generateId() {
   return Math.random().toString(36).slice(2, 9)
@@ -21,34 +19,24 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
-/** Lightweight markdown renderer for assistant bubbles */
-function renderMarkdown(text: string): string {
-  const escaped = text.replace(/[&<>"']/g, (char) => {
-    const entities: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-    }
-    return entities[char]
-  })
-
-  const html = escaped
-    // Bold
+/** Very simple markdown-like renderer for chat bubbles. */
+function renderMarkdown(text: string) {
+  // Bold **text**
+  const html = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Table rows (naïve)
-    .replace(/\|(.+)\|/g, (_m, inner: string) => {
+    // Tables: a naive row-by-row pass
+    .replace(/\|(.+)\|/g, (_m, inner) => {
       const cells = inner.split('|').map((c: string) => c.trim())
-      const isRule = cells.every((c: string) => /^[-:]+$/.test(c) || c === '')
-      if (isRule) return ''
+      const isHeader = cells.every((c: string) => c.startsWith('-') || c === '')
+      if (isHeader) return ''
       return `<tr>${cells.map((c: string) => `<td>${c}</td>`).join('')}</tr>`
     })
-    .replace(/(<tr>[\s\S]*?<\/tr>)+/g, (m) => `<table>${m}</table>`)
-    // Bullet lists
-    .replace(/^[-•]\s(.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)+/g, (m) => `<ul>${m}</ul>`)
-    // Double newline → paragraph
+    // Wrap consecutive <tr> in a table
+    .replace(/(<tr>.*?<\/tr>)+/gs, (match) => `<table>${match}</table>`)
+    // Lists: lines starting with "- " or "1. "
+    .replace(/^[•-] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    // Paragraphs (double newline)
     .split('\n\n')
     .map((para) => (para.startsWith('<') ? para : `<p>${para.replace(/\n/g, '<br/>')}</p>`))
     .join('')
@@ -66,8 +54,7 @@ interface AssistantChatProps {
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'init',
   role: 'assistant',
-  content:
-    "Hi, I'm **Homeward**, your recovery assistant. To pull up your discharge plan, tell me your full name and date of birth, or give me your patient code.\n\nAfter that I can help with your medications and follow-up visit.",
+  content: `👋 Hi John! I'm your **Rapid Agent** recovery assistant.\n\nI'm here to help you through your **Total Hip Replacement** recovery — Week 1 post-discharge.\n\nAsk me about your medications, next appointment, what you can or can't do today, or what symptoms to watch for.`,
   timestamp: new Date(),
 }
 
@@ -81,16 +68,8 @@ export function AssistantChat({
   const [input, setInput] = useState(initialInput ?? '')
   const [isTyping, setIsTyping] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [chatMode, setChatMode] = useState<ChatMode>('ready')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const statusText =
-    chatMode === 'backend'
-      ? 'Backend connected'
-      : chatMode === 'fallback'
-        ? 'Demo response mode'
-        : 'Ready'
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -110,9 +89,10 @@ export function AssistantChat({
     setInput('')
     setIsTyping(true)
 
-    // Realistic typing delay
-    await new Promise((res) => setTimeout(res, 700 + Math.random() * 700))
+    // Simulate typing delay
+    await new Promise((res) => setTimeout(res, 800 + Math.random() * 600))
 
+    // Try real API first, fall back to local simulation
     const result = await postAgentChat(
       {
         message: text.trim(),
@@ -121,10 +101,11 @@ export function AssistantChat({
       },
       token,
     )
+
     if (result.sessionId) {
       setSessionId(result.sessionId)
     }
-    setChatMode(result.demo ? 'fallback' : 'backend')
+
     const responseText = result.demo ? getAIResponse(text) : result.reply
 
     const assistantMsg: ChatMessage = {
@@ -149,33 +130,14 @@ export function AssistantChat({
 
   return (
     <div className="chat-container">
-      {/* Premium AI agent header */}
-      <div className="chat-header-banner" role="banner">
-        <div className="chat-agent-avatar" aria-hidden="true">
-          ⚡
-        </div>
-        <div>
-          <div className="chat-agent-name">Homeward AI</div>
-          <div className={`chat-agent-status${chatMode === 'fallback' ? ' fallback' : ''}`}>
-            {statusText}
-          </div>
-        </div>
-        <div className="chat-powered-by">Powered by Gemini</div>
-      </div>
-
       {/* Messages */}
-      <div
-        className="chat-messages"
-        id="chat-messages"
-        aria-live="polite"
-        aria-label="Chat conversation"
-      >
+      <div className="chat-messages" id="chat-messages">
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-message ${msg.role}`}>
-            <div className={`chat-avatar ${msg.role}`} aria-hidden="true">
-              {msg.role === 'assistant' ? '⚡' : userInitials}
+            <div className={`chat-avatar ${msg.role}`}>
+              {msg.role === 'assistant' ? '🤖' : userInitials}
             </div>
-            <div className="chat-bubble-wrapper">
+            <div>
               <div
                 className={`chat-bubble${msg.role === 'assistant' ? ' chat-bubble-md' : ''}`}
                 dangerouslySetInnerHTML={
@@ -184,24 +146,16 @@ export function AssistantChat({
               >
                 {msg.role === 'user' ? msg.content : undefined}
               </div>
-              <div className="chat-time" aria-label={`Sent at ${formatTime(msg.timestamp)}`}>
-                {formatTime(msg.timestamp)}
-              </div>
+              <div className="chat-time">{formatTime(msg.timestamp)}</div>
             </div>
           </div>
         ))}
 
         {isTyping && (
-          <div className="chat-message assistant" aria-label="AI is typing">
-            <div className="chat-avatar assistant" aria-hidden="true">
-              ⚡
-            </div>
-            <div className="chat-bubble-wrapper">
-              <div
-                className="typing-indicator-bubble"
-                role="status"
-                aria-label="AI is typing a response"
-              >
+          <div className="chat-message assistant">
+            <div className="chat-avatar assistant">🤖</div>
+            <div className="chat-bubble" style={{ padding: 0 }}>
+              <div className="typing-indicator">
                 <div className="typing-dot" />
                 <div className="typing-dot" />
                 <div className="typing-dot" />
@@ -213,10 +167,7 @@ export function AssistantChat({
       </div>
 
       {/* Suggested prompts */}
-      <div className="suggestions-label" aria-label="Suggested questions">
-        Try asking
-      </div>
-      <div className="chat-suggestions" role="group" aria-label="Suggested questions">
+      <div className="chat-suggestions">
         {SUGGESTED_PROMPTS.map((prompt) => (
           <button
             key={prompt}
@@ -224,7 +175,6 @@ export function AssistantChat({
             onClick={() => void sendMessage(prompt)}
             disabled={isTyping}
             type="button"
-            aria-label={`Ask: ${prompt}`}
           >
             {prompt}
           </button>
@@ -244,7 +194,6 @@ export function AssistantChat({
           onKeyDown={handleKeyDown}
           disabled={isTyping}
           autoComplete="off"
-          aria-label="Type your message"
         />
         <button
           type="button"
@@ -252,18 +201,16 @@ export function AssistantChat({
           onClick={() => void sendMessage(input)}
           disabled={!input.trim() || isTyping}
           aria-label="Send message"
-          id="chat-send-btn"
         >
           <svg
-            width="15"
-            height="15"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            aria-hidden="true"
           >
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />

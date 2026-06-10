@@ -16,7 +16,12 @@ from src.api.endpoints.voice import (
     pump_session_to_client,
     run_voice_bridge,
 )
-from src.voice.session import VoiceSession, encode_for_client, normalize_event
+from src.voice.session import (
+    VoiceSession,
+    encode_for_client,
+    normalize_event,
+    source_items_for,
+)
 
 
 def _audio_event(data: bytes):
@@ -29,12 +34,40 @@ def _audio_event(data: bytes):
     )
 
 
-def _text_event(text: str, partial: bool):
-    part = SimpleNamespace(inline_data=None, text=text)
+def _text_event(text: str, partial: bool, thought: bool = False):
+    part = SimpleNamespace(inline_data=None, text=text, thought=thought)
     return SimpleNamespace(
         interrupted=False,
         content=SimpleNamespace(parts=[part]),
         partial=partial,
+        turn_complete=False,
+    )
+
+
+def _function_response_event(name: str, response):
+    fr = SimpleNamespace(name=name, response=response)
+    part = SimpleNamespace(inline_data=None, text=None, function_response=fr)
+    return SimpleNamespace(
+        interrupted=False,
+        content=SimpleNamespace(parts=[part]),
+        partial=False,
+        turn_complete=False,
+    )
+
+
+def _transcription_event(*, output=None, input=None):
+    def _tr(value):
+        if value is None:
+            return None
+        text, finished = value
+        return SimpleNamespace(text=text, finished=finished)
+
+    return SimpleNamespace(
+        interrupted=False,
+        output_transcription=_tr(output),
+        input_transcription=_tr(input),
+        content=None,
+        partial=False,
         turn_complete=False,
     )
 
@@ -46,9 +79,10 @@ def test_normalize_audio_event():
     assert normalize_event(_audio_event(b"pcm")) == {"type": "audio", "data": b"pcm"}
 
 
-def test_normalize_final_transcript():
+def test_normalize_text_part_is_assistant_transcript():
     assert normalize_event(_text_event("hello", partial=False)) == {
         "type": "transcript",
+        "role": "assistant",
         "text": "hello",
         "final": True,
     }
@@ -57,6 +91,24 @@ def test_normalize_final_transcript():
 def test_normalize_partial_transcript():
     out = normalize_event(_text_event("hel", partial=True))
     assert out["type"] == "transcript" and out["final"] is False
+
+
+def test_normalize_output_transcription_is_assistant():
+    assert normalize_event(_transcription_event(output=("the answer", True))) == {
+        "type": "transcript",
+        "role": "assistant",
+        "text": "the answer",
+        "final": True,
+    }
+
+
+def test_normalize_input_transcription_is_user():
+    assert normalize_event(_transcription_event(input=("my name is", False))) == {
+        "type": "transcript",
+        "role": "user",
+        "text": "my name is",
+        "final": False,
+    }
 
 
 def test_normalize_interrupted_wins():
@@ -77,6 +129,105 @@ def test_normalize_skips_empty():
         interrupted=False, content=None, partial=False, turn_complete=False
     )
     assert normalize_event(ev) is None
+
+
+def test_normalize_skips_thought_text():
+    # The model's private reasoning must not reach the transcript.
+    assert (
+        normalize_event(_text_event("thinking...", partial=False, thought=True)) is None
+    )
+
+
+# -- source_items_for (per-tool grounding mapping) ------------------------------
+
+
+def test_sources_find_patient_signals_identity():
+    assert source_items_for("find_patient", {"status": "found"}) == [
+        {"type": "identity", "tool": "find_patient"}
+    ]
+    assert source_items_for("find_patient", {"status": "not_found"}) == []
+
+
+def test_sources_recovery_question_maps_each_chunk():
+    response = {
+        "status": "ok",
+        "context": [
+            {"text": "Walk daily.", "source_file": "plan.md", "chunk_index": 2},
+            {"text": "", "source_file": "plan.md", "chunk_index": 3},
+        ],
+    }
+    items = source_items_for("answer_recovery_question", response)
+    assert items == [
+        {
+            "type": "care_plan",
+            "source_file": "plan.md",
+            "chunk_index": 2,
+            "snippet": "Walk daily.",
+            "tool": "answer_recovery_question",
+        }
+    ]
+
+
+def test_sources_get_medications_lists_named_meds():
+    response = {"status": "ok", "medications": [{"name": "Aspirin"}, {"name": ""}]}
+    items = source_items_for("get_medications", response)
+    assert items == [
+        {"type": "medication", "name": "Aspirin", "tool": "get_medications"}
+    ]
+
+
+def test_sources_get_next_dose_maps_medication():
+    assert source_items_for("get_next_dose", {"status": "ok", "name": "Lasix"}) == [
+        {"type": "medication", "name": "Lasix", "tool": "get_next_dose"}
+    ]
+    assert source_items_for("get_next_dose", {"status": "not_found"}) == []
+
+
+def test_sources_plan_and_appointment_and_symptom():
+    assert source_items_for("get_my_plan", {"status": "ok"}) == [
+        {"type": "plan", "tool": "get_my_plan"}
+    ]
+    booking = {
+        "status": "ok",
+        "booking": {"kind": "Follow-up", "start_iso": "2026-06-20T15:00:00Z"},
+    }
+    assert source_items_for("get_follow_up_booking", booking) == [
+        {
+            "type": "appointment",
+            "kind": "Follow-up",
+            "start_iso": "2026-06-20T15:00:00Z",
+            "tool": "get_follow_up_booking",
+        }
+    ]
+    symptom = {"status": "red_flag", "rule_id": "chest_pain"}
+    assert source_items_for("triage_symptom", symptom) == [
+        {
+            "type": "symptom",
+            "rule_id": "chest_pain",
+            "status": "red_flag",
+            "tool": "triage_symptom",
+        }
+    ]
+
+
+def test_sources_routine_symptom_is_not_a_source():
+    # A routine check-in has no rule and must not render as a flagged source.
+    assert source_items_for("triage_symptom", {"status": "routine"}) == []
+
+
+def test_sources_ignores_non_dict_response():
+    assert source_items_for("find_patient", None) == []
+    assert source_items_for("unknown_tool", {"status": "ok"}) == []
+
+
+def test_normalize_emits_sources_frame():
+    ev = _function_response_event(
+        "get_medications", {"status": "ok", "medications": [{"name": "Aspirin"}]}
+    )
+    assert normalize_event(ev) == {
+        "type": "sources",
+        "items": [{"type": "medication", "name": "Aspirin", "tool": "get_medications"}],
+    }
 
 
 # -- encode_for_client ----------------------------------------------------------
@@ -181,6 +332,22 @@ async def test_voice_session_close_is_idempotent(monkeypatch):
     await session.close()
     await session.close()
     assert calls == [1]
+
+
+async def test_voice_session_close_deletes_session(monkeypatch):
+    # close() must drop the live session from the store so it cannot leak the
+    # verified patient id/name for the life of the process.
+    deleted = []
+
+    class _FakeService:
+        async def delete_session(self, **kwargs):
+            deleted.append(kwargs)
+
+    session = VoiceSession(runner=object(), session_service=_FakeService())
+    session.session_id = "sess-x"
+    monkeypatch.setattr(session._queue, "close", lambda: None)
+    await session.close()
+    assert len(deleted) == 1 and deleted[0]["session_id"] == "sess-x"
 
 
 # -- run_voice_bridge teardown --------------------------------------------------

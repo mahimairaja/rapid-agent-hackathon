@@ -1,20 +1,41 @@
 import { getVoiceWsUrl } from '../api/client'
+import type { SourceItem } from '../types'
 
-export type VoiceState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error'
+export type VoiceState = 'idle' | 'connecting' | 'connected' | 'listening' | 'speaking' | 'error'
+
+export type TranscriptRole = 'user' | 'assistant'
 
 export interface VoiceHandlers {
   onState?: (state: VoiceState) => void
-  onTranscript?: (text: string, final: boolean) => void
+  onTranscript?: (text: string, final: boolean, role: TranscriptRole) => void
   onError?: (message: string) => void
+  onSession?: (sessionId: string) => void
+  onSources?: (items: SourceItem[]) => void
+  onTurnComplete?: () => void
+  onInterrupted?: () => void
 }
 
 const INPUT_RATE = 16000
 const OUTPUT_RATE = 24000
 
+interface ControlFrame {
+  type: string
+  text?: string
+  final?: boolean
+  role?: TranscriptRole
+  session_id?: string
+  items?: SourceItem[]
+}
+
 /**
- * Manages a voice turn: mic capture (AudioWorklet -> 16 kHz PCM16 frames over a
- * WebSocket) and playback of the 24 kHz PCM16 response with barge-in (on an
- * `interrupted` control message the queued playback is flushed immediately).
+ * One Gemini Live session driving both chat and voice over a single WebSocket.
+ *
+ * The socket is opened by `connect()` so typed text works without a microphone;
+ * `startMic()`/`stopMic()` add or remove live audio capture without dropping the
+ * session. Spoken replies play through a gain node (so `setMuted` silences audio
+ * while the transcript keeps flowing), and barge-in flushes playback on an
+ * `interrupted` control frame. Input/output `AnalyserNode`s are exposed for the
+ * waveform visualizer.
  */
 export class VoiceClient {
   private handlers: VoiceHandlers
@@ -23,19 +44,56 @@ export class VoiceClient {
   private micStream: MediaStream | null = null
   private source: MediaStreamAudioSourceNode | null = null
   private worklet: AudioWorkletNode | null = null
-  private sink: GainNode | null = null
+  private micSink: GainNode | null = null
+  private playbackGain: GainNode | null = null
   private playHead = 0
   private scheduled: AudioBufferSourceNode[] = []
+  private micActive = false
+  private muted = false
+
+  // Exposed for the visualizer (read-only use).
+  inputAnalyser: AnalyserNode | null = null
+  outputAnalyser: AnalyserNode | null = null
 
   constructor(handlers: VoiceHandlers = {}) {
     this.handlers = handlers
   }
 
-  async start(): Promise<void> {
+  /** Open the audio graph and the WebSocket. No microphone is requested. */
+  async connect(): Promise<void> {
+    if (this.ws) return
     this.setState('connecting')
     try {
       this.ctx = new AudioContext()
-      // Served from /public so the module URL is stable in dev and production.
+      this.playbackGain = this.ctx.createGain()
+      this.playbackGain.gain.value = this.muted ? 0 : 1
+      this.outputAnalyser = this.ctx.createAnalyser()
+      this.outputAnalyser.fftSize = 256
+      // Playback chain: sources -> gain -> (analyser tap) -> destination.
+      this.playbackGain.connect(this.outputAnalyser)
+      this.playbackGain.connect(this.ctx.destination)
+
+      this.ws = new WebSocket(getVoiceWsUrl())
+      this.ws.binaryType = 'arraybuffer'
+      this.ws.onopen = () => this.setState(this.micActive ? 'listening' : 'connected')
+      this.ws.onmessage = (event) => this.onMessage(event)
+      this.ws.onerror = () => {
+        this.handlers.onError?.('Voice connection error.')
+        this.setState('error')
+      }
+      this.ws.onclose = () => this.setState('idle')
+    } catch (err) {
+      this.handlers.onError?.(err instanceof Error ? err.message : 'Could not connect.')
+      this.setState('error')
+      await this.disconnect()
+    }
+  }
+
+  /** Begin microphone capture, streaming 16 kHz PCM16 frames to the session. */
+  async startMic(): Promise<void> {
+    if (this.micActive || !this.ctx) return
+    try {
+      await this.ctx.resume()
       await this.ctx.audioWorklet.addModule(
         `${import.meta.env.BASE_URL}worklets/capture-processor.js`,
       )
@@ -51,48 +109,105 @@ export class VoiceClient {
           this.ws.send(event.data as ArrayBuffer)
         }
       }
+      this.inputAnalyser = this.ctx.createAnalyser()
+      this.inputAnalyser.fftSize = 256
+      this.source.connect(this.inputAnalyser)
       // A muted sink keeps the capture graph pulling without monitoring the mic.
-      this.sink = this.ctx.createGain()
-      this.sink.gain.value = 0
+      this.micSink = this.ctx.createGain()
+      this.micSink.gain.value = 0
       this.source.connect(this.worklet)
-      this.worklet.connect(this.sink)
-      this.sink.connect(this.ctx.destination)
-
-      this.ws = new WebSocket(getVoiceWsUrl())
-      this.ws.binaryType = 'arraybuffer'
-      this.ws.onopen = () => this.setState('listening')
-      this.ws.onmessage = (event) => this.onMessage(event)
-      this.ws.onerror = () => {
-        this.handlers.onError?.('Voice connection error.')
-        this.setState('error')
-      }
-      this.ws.onclose = () => this.setState('idle')
+      this.worklet.connect(this.micSink)
+      this.micSink.connect(this.ctx.destination)
+      this.micActive = true
+      this.setState('listening')
     } catch (err) {
-      this.handlers.onError?.(err instanceof Error ? err.message : 'Could not start voice.')
-      this.setState('error')
-      await this.stop()
+      this.handlers.onError?.(
+        err instanceof Error ? err.message : 'Could not access the microphone.',
+      )
+      this.stopMic()
     }
+  }
+
+  /** Stop microphone capture but keep the session open for typed turns. */
+  stopMic(): void {
+    try {
+      this.worklet?.disconnect()
+      this.source?.disconnect()
+      this.micSink?.disconnect()
+      this.inputAnalyser?.disconnect()
+    } catch {
+      /* ignore */
+    }
+    this.micStream?.getTracks().forEach((track) => track.stop())
+    this.micStream = null
+    this.worklet = null
+    this.source = null
+    this.micSink = null
+    this.inputAnalyser = null
+    this.micActive = false
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.setState('connected')
+    }
+  }
+
+  isMicActive(): boolean {
+    return this.micActive
+  }
+
+  /** Send a typed message into the same live session. */
+  sendText(text: string): void {
+    const trimmed = text.trim()
+    if (!trimmed || !this.ws || this.ws.readyState !== WebSocket.OPEN) return
+    void this.ctx?.resume()
+    this.ws.send(JSON.stringify({ type: 'text', text: trimmed }))
+  }
+
+  /** Hide spoken audio (keep the transcript) or restore it. */
+  setMuted(muted: boolean): void {
+    this.muted = muted
+    if (this.playbackGain) this.playbackGain.gain.value = muted ? 0 : 1
+    if (muted) this.flushPlayback()
+  }
+
+  isMuted(): boolean {
+    return this.muted
   }
 
   private onMessage(event: MessageEvent): void {
     if (typeof event.data === 'string') {
+      let msg: ControlFrame
       try {
-        const msg = JSON.parse(event.data) as {
-          type: string
-          text?: string
-          final?: boolean
-        }
-        if (msg.type === 'transcript' && msg.text) {
-          this.handlers.onTranscript?.(msg.text, Boolean(msg.final))
-        } else if (msg.type === 'interrupted') {
-          this.flushPlayback()
-        } else if (msg.type === 'turn_complete') {
-          this.setState('listening')
-        } else if (msg.type === 'error') {
-          this.handlers.onError?.('The assistant had a problem. Please try again.')
-        }
+        msg = JSON.parse(event.data) as ControlFrame
       } catch {
-        /* ignore malformed control frame */
+        return
+      }
+      switch (msg.type) {
+        case 'session':
+          if (msg.session_id) this.handlers.onSession?.(msg.session_id)
+          break
+        case 'transcript':
+          if (msg.text) {
+            this.handlers.onTranscript?.(
+              msg.text,
+              Boolean(msg.final),
+              msg.role === 'user' ? 'user' : 'assistant',
+            )
+          }
+          break
+        case 'sources':
+          if (msg.items?.length) this.handlers.onSources?.(msg.items)
+          break
+        case 'interrupted':
+          this.flushPlayback()
+          this.handlers.onInterrupted?.()
+          break
+        case 'turn_complete':
+          this.handlers.onTurnComplete?.()
+          this.setState(this.micActive ? 'listening' : 'connected')
+          break
+        case 'error':
+          this.handlers.onError?.('The assistant had a problem. Please try again.')
+          break
       }
       return
     }
@@ -100,7 +215,11 @@ export class VoiceClient {
   }
 
   private enqueueAudio(buffer: ArrayBuffer): void {
-    if (!this.ctx) return
+    if (!this.ctx || !this.playbackGain) return
+    // While muted, drop spoken audio entirely: no playback, no "speaking" state,
+    // and playHead does not advance, so unmuting resumes cleanly. The transcript
+    // keeps flowing independently.
+    if (this.muted) return
     this.setState('speaking')
     const pcm = new Int16Array(buffer)
     const samples = new Float32Array(pcm.length)
@@ -109,13 +228,16 @@ export class VoiceClient {
     audioBuffer.copyToChannel(samples, 0)
     const node = this.ctx.createBufferSource()
     node.buffer = audioBuffer
-    node.connect(this.ctx.destination)
+    node.connect(this.playbackGain)
     const startAt = Math.max(this.ctx.currentTime, this.playHead)
     node.start(startAt)
     this.playHead = startAt + audioBuffer.duration
     this.scheduled.push(node)
     node.onended = () => {
       this.scheduled = this.scheduled.filter((n) => n !== node)
+      if (this.scheduled.length === 0) {
+        this.setState(this.micActive ? 'listening' : 'connected')
+      }
     }
   }
 
@@ -129,11 +251,12 @@ export class VoiceClient {
     }
     this.scheduled = []
     this.playHead = this.ctx ? this.ctx.currentTime : 0
-    this.setState('listening')
   }
 
-  async stop(): Promise<void> {
+  /** Full teardown: microphone, socket, and audio context. */
+  async disconnect(): Promise<void> {
     this.flushPlayback()
+    this.stopMic()
     try {
       this.ws?.close()
     } catch {
@@ -141,14 +264,13 @@ export class VoiceClient {
     }
     this.ws = null
     try {
-      this.worklet?.disconnect()
-      this.source?.disconnect()
-      this.sink?.disconnect()
+      this.playbackGain?.disconnect()
+      this.outputAnalyser?.disconnect()
     } catch {
       /* ignore */
     }
-    this.micStream?.getTracks().forEach((track) => track.stop())
-    this.micStream = null
+    this.playbackGain = null
+    this.outputAnalyser = null
     if (this.ctx) {
       try {
         await this.ctx.close()

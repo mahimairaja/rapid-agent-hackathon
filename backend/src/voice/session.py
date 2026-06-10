@@ -21,6 +21,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from src.agent.agent.root_agent import build_recognition_agent
+from src.agent.agent.session_state import verified_patient_id
 from src.core.config import config
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,9 @@ logger = logging.getLogger(__name__)
 _APP_NAME = "homeward_voice"
 _USER_ID = "patient"
 _INPUT_MIME = f"audio/pcm;rate={config.VOICE_INPUT_SAMPLE_RATE}"
+# How much of a care-plan chunk to ship in a source chip; the grounding panel
+# holds the full chunk text (from the context endpoint) for highlighting.
+_SOURCE_SNIPPET_CHARS = 240
 
 # The voice agent is the same agent (tools, gate, prompts) on the Live model, so
 # voice inherits every feature. Built once; run_live opens a session per call.
@@ -52,15 +56,121 @@ def _run_config() -> RunConfig:
     return RunConfig(**kwargs)
 
 
+def source_items_for(name: str, response: Any) -> list[dict]:
+    """Map one tool's function-response to grounding source descriptors.
+
+    Pure helper so each tool's mapping can be unit-tested without a model. The
+    frontend matches these against the grounding panel: medication by name,
+    appointment by kind/start, care-plan by (source_file, chunk_index). An
+    ``identity`` item signals the frontend to load the session context.
+    """
+    if not isinstance(response, dict):
+        return []
+    status = response.get("status")
+
+    if name == "find_patient":
+        if status in {"found", "already_verified"}:
+            return [{"type": "identity", "tool": name}]
+        return []
+
+    if name == "answer_recovery_question" and status == "ok":
+        return [
+            {
+                "type": "care_plan",
+                "source_file": chunk.get("source_file", ""),
+                "chunk_index": chunk.get("chunk_index", 0),
+                "snippet": (chunk.get("text", "") or "")[:_SOURCE_SNIPPET_CHARS],
+                "tool": name,
+            }
+            for chunk in (response.get("context") or [])
+            if chunk.get("text")
+        ]
+
+    if name == "get_my_plan" and status == "ok":
+        return [{"type": "plan", "tool": name}]
+
+    if name == "get_medications" and status == "ok":
+        return [
+            {"type": "medication", "name": med.get("name", ""), "tool": name}
+            for med in (response.get("medications") or [])
+            if med.get("name")
+        ]
+
+    if name == "get_next_dose" and status in {"ok", "as_needed"}:
+        med_name = response.get("name")
+        return (
+            [{"type": "medication", "name": med_name, "tool": name}] if med_name else []
+        )
+
+    if name in {
+        "get_follow_up_booking",
+        "list_follow_up_slots",
+        "book_follow_up_slot",
+        "reschedule_follow_up",
+    }:
+        booking = response.get("booking") or response.get("current_booking")
+        if isinstance(booking, dict) and booking.get("start_iso"):
+            return [
+                {
+                    "type": "appointment",
+                    "kind": booking.get("kind", ""),
+                    "start_iso": booking.get("start_iso", ""),
+                    "tool": name,
+                }
+            ]
+        return []
+
+    if name == "triage_symptom" and status == "red_flag":
+        # Only a red-flag triage is a grounding source worth surfacing; a routine
+        # check-in carries no rule and must not render as a flagged source.
+        return [
+            {
+                "type": "symptom",
+                "rule_id": response.get("rule_id"),
+                "status": status,
+                "tool": name,
+            }
+        ]
+
+    return []
+
+
+def _transcript_frame(transcription: Any, role: str) -> dict | None:
+    """Frame an ADK ``types.Transcription`` (text + finished), or None if empty."""
+    text = getattr(transcription, "text", None)
+    if not text:
+        return None
+    return {
+        "type": "transcript",
+        "role": role,
+        "text": text,
+        "final": bool(getattr(transcription, "finished", False)),
+    }
+
+
 def normalize_event(event: Any) -> dict | None:
     """Map an ADK live event to a small client-facing event, or None to skip.
 
     Shapes: ``{"type": "audio", "data": bytes}``,
-    ``{"type": "transcript", "text": str, "final": bool}``,
+    ``{"type": "sources", "items": [...]}``,
+    ``{"type": "transcript", "role": str, "text": str, "final": bool}``,
     ``{"type": "interrupted"}``, ``{"type": "turn_complete"}``.
     """
     if getattr(event, "interrupted", False):
         return {"type": "interrupted"}
+
+    # Native-audio transcripts arrive in dedicated fields (one per event),
+    # separate from content.parts: output is the model speaking, input is the
+    # patient. This is the reliable user/assistant distinction for the unified
+    # transcript.
+    out_frame = _transcript_frame(
+        getattr(event, "output_transcription", None), "assistant"
+    )
+    if out_frame is not None:
+        return out_frame
+    in_frame = _transcript_frame(getattr(event, "input_transcription", None), "user")
+    if in_frame is not None:
+        return in_frame
 
     content = getattr(event, "content", None)
     parts = (getattr(content, "parts", None) or []) if content else []
@@ -70,11 +180,34 @@ def normalize_event(event: Any) -> dict | None:
         inline = getattr(part, "inline_data", None)
         if inline is not None and getattr(inline, "data", None):
             return {"type": "audio", "data": inline.data}
+
+    # Tool results carry grounding sources. Function-response parts arrive in
+    # their own events (separate from audio/text), so emitting a sources frame
+    # here never drops a spoken reply.
+    sources: list[dict] = []
     for part in parts:
+        fr = getattr(part, "function_response", None)
+        if fr is not None:
+            sources.extend(
+                source_items_for(
+                    getattr(fr, "name", "") or "", getattr(fr, "response", None)
+                )
+            )
+    if sources:
+        return {"type": "sources", "items": sources}
+
+    for part in parts:
+        # Skip the model's private reasoning ("thought") parts so only spoken
+        # content reaches the transcript.
+        if getattr(part, "thought", False):
+            continue
         text = getattr(part, "text", None)
         if text:
+            # Model text output (e.g. text-mode); the patient's typed turns are
+            # echoed client-side, so any content-part text here is the assistant.
             return {
                 "type": "transcript",
+                "role": "assistant",
                 "text": text,
                 "final": not getattr(event, "partial", False),
             }
@@ -82,6 +215,26 @@ def normalize_event(event: Any) -> dict | None:
     if getattr(event, "turn_complete", False):
         return {"type": "turn_complete"}
     return None
+
+
+async def verified_patient_id_for(session_id: str) -> str | None:
+    """The verified patient id for a live voice session, or None.
+
+    Reads the live session service's state (the unified conversation IS the live
+    session). Returns None for an unknown, expired, or not-yet-verified session.
+    """
+    try:
+        session = await _session_service.get_session(
+            app_name=_APP_NAME, user_id=_USER_ID, session_id=session_id
+        )
+    except Exception:
+        # Fail closed (no data) but surface the error: a real session-store
+        # regression must not look like a merely-unverified session.
+        logger.warning("session lookup failed for %s", session_id, exc_info=True)
+        return None
+    if session is None:
+        return None
+    return verified_patient_id(session.state)
 
 
 def encode_for_client(norm: dict) -> dict:
@@ -104,11 +257,15 @@ class VoiceSession:
         self._queue = LiveRequestQueue()
         self._live: Any = None
         self._closed = False
+        # Server-minted live session id, set on start(). The bridge sends it to
+        # the client so it can query the grounding context for this session.
+        self.session_id: str | None = None
 
     async def start(self) -> "VoiceSession":
         session = await self._service.create_session(
             app_name=_APP_NAME, user_id=_USER_ID, state={}
         )
+        self.session_id = session.id
         self._live = self._runner.run_live(
             session=session,
             live_request_queue=self._queue,
@@ -136,3 +293,20 @@ class VoiceSession:
         if not self._closed:
             self._closed = True
             self._queue.close()
+            # Drop the live session from the in-memory store so it does not leak
+            # (and retain the verified patient id/name) for the life of the
+            # process. The grounding context is only queried while the socket is
+            # open, so deleting on close is safe.
+            if self.session_id:
+                try:
+                    await self._service.delete_session(
+                        app_name=_APP_NAME,
+                        user_id=_USER_ID,
+                        session_id=self.session_id,
+                    )
+                except Exception:
+                    logger.debug(
+                        "voice session %s already gone on close",
+                        self.session_id,
+                        exc_info=True,
+                    )
