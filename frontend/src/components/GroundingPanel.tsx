@@ -1,9 +1,12 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { SessionContext, SourceItem } from '../types'
 
 interface GroundingPanelProps {
   context: SessionContext | null
   highlights: SourceItem[]
+  // Bumped on every sources frame: replays the pulse animation (highlighted
+  // items are keyed by it) and triggers the scroll-to-highlight.
+  highlightTick: number
   loading: boolean
 }
 
@@ -14,12 +17,62 @@ function timeKey(iso?: string): number | null {
 }
 
 /**
+ * Render a care-plan chunk's markdown as safe HTML. The chunk text is
+ * HTML-escaped FIRST, then only our own tags are introduced (headings, lists,
+ * bold, paragraphs) — same approach as the chat bubble renderer.
+ */
+function renderCarePlanMarkdown(text: string): string {
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  const blocks = escaped.split(/\n{2,}/)
+  const html = blocks
+    .map((block) => {
+      const lines = block.split('\n').filter((l) => l.trim() !== '')
+      if (lines.length === 0) return ''
+      // A block of list items becomes one list; stray text lines stay inline.
+      if (lines.every((l) => l.trim().startsWith('- '))) {
+        const items = lines.map((l) => `<li>${l.trim().slice(2)}</li>`).join('')
+        return `<ul>${items}</ul>`
+      }
+      return lines
+        .map((line) => {
+          const trimmed = line.trim()
+          if (trimmed.startsWith('### ')) return `<h6>${trimmed.slice(4)}</h6>`
+          if (trimmed.startsWith('## ')) return `<h5>${trimmed.slice(3)}</h5>`
+          if (trimmed.startsWith('# ')) return `<h4>${trimmed.slice(2)}</h4>`
+          if (trimmed.startsWith('- ')) return `<ul><li>${trimmed.slice(2)}</li></ul>`
+          return `<p>${trimmed}</p>`
+        })
+        .join('')
+    })
+    .join('')
+
+  return html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+}
+
+/**
  * "What I know about you" — the verified patient's plan, medications,
  * appointments, and care-plan chunks for the live session. On each `sources`
  * frame it highlights the exact items an answer was grounded in, so the demo
  * shows where each reply comes from.
  */
-export function GroundingPanel({ context, highlights, loading }: GroundingPanelProps) {
+export function GroundingPanel({
+  context,
+  highlights,
+  highlightTick,
+  loading,
+}: GroundingPanelProps) {
+  const panelRef = useRef<HTMLElement | null>(null)
+
+  // Bring the cited item into view each time a new sources frame lands, so
+  // the grounding is visible even when the panel is scrolled elsewhere.
+  useEffect(() => {
+    if (highlightTick === 0) return
+    panelRef.current
+      ?.querySelector('.is-highlighted')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [highlightTick])
+
   const highlight = useMemo(() => {
     const medNames = new Set<string>()
     const apptTimes = new Set<number>()
@@ -67,14 +120,22 @@ export function GroundingPanel({ context, highlights, loading }: GroundingPanelP
     return t !== null && highlight.apptTimes.has(t)
   }
 
+  // Highlighted items carry the tick in their key, so each new sources frame
+  // remounts them and the pulse animation replays.
+  const hlKey = (base: string, isHighlighted: boolean) =>
+    isHighlighted ? `${base}-h${highlightTick}` : base
+
   return (
-    <aside className="grounding-panel" aria-label="What I know about you">
+    <aside className="grounding-panel" aria-label="What I know about you" ref={panelRef}>
       <div className="grounding-header">
         <span className="grounding-title">What I know about you</span>
         <span className="badge badge-green">Verified</span>
       </div>
 
-      <section className={`grounding-card${highlight.plan ? ' is-highlighted' : ''}`}>
+      <section
+        key={hlKey('patient-card', highlight.plan)}
+        className={`grounding-card${highlight.plan ? ' is-highlighted' : ''}`}
+      >
         <div className="grounding-patient-name">
           {p.first_name} {p.last_name}
         </div>
@@ -85,57 +146,60 @@ export function GroundingPanel({ context, highlights, loading }: GroundingPanelP
       {meds.length > 0 && (
         <section className="grounding-section">
           <div className="grounding-section-title">💊 Medications</div>
-          {meds.map((m) => (
-            <div
-              key={m.id}
-              className={`grounding-item${
-                highlight.medNames.has((m.name || '').toLowerCase()) ? ' is-highlighted' : ''
-              }`}
-            >
-              <span className="grounding-item-name">{m.name}</span>
-              {m.dosage && <span className="grounding-item-sub">{m.dosage}</span>}
-            </div>
-          ))}
+          {meds.map((m) => {
+            const isHl = highlight.medNames.has((m.name || '').toLowerCase())
+            return (
+              <div
+                key={hlKey(m.id, isHl)}
+                className={`grounding-item${isHl ? ' is-highlighted' : ''}`}
+              >
+                <span className="grounding-item-name">{m.name}</span>
+                {m.dosage && <span className="grounding-item-sub">{m.dosage}</span>}
+              </div>
+            )
+          })}
         </section>
       )}
 
       {appts.length > 0 && (
         <section className="grounding-section">
           <div className="grounding-section-title">📅 Appointments</div>
-          {appts.map((a) => (
-            <div
-              key={a.id}
-              className={`grounding-item${apptHighlighted(a.start) ? ' is-highlighted' : ''}`}
-            >
-              <span className="grounding-item-name">{a.kind}</span>
-              <span className="grounding-item-sub">
-                {new Date(a.start).toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-          ))}
+          {appts.map((a) => {
+            const isHl = apptHighlighted(a.start)
+            return (
+              <div
+                key={hlKey(a.id, isHl)}
+                className={`grounding-item${isHl ? ' is-highlighted' : ''}`}
+              >
+                <span className="grounding-item-name">{a.kind}</span>
+                <span className="grounding-item-sub">
+                  {new Date(a.start).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            )
+          })}
         </section>
       )}
 
       {chunks.length > 0 && (
         <section className="grounding-section">
           <div className="grounding-section-title">📋 Care plan</div>
-          {chunks.map((c) => (
-            <div
-              key={`${c.source_file}#${c.chunk_index}`}
-              className={`grounding-chunk${
-                highlight.planChunks.has(`${c.source_file}#${c.chunk_index}`)
-                  ? ' is-highlighted'
-                  : ''
-              }`}
-            >
-              {c.text}
-            </div>
-          ))}
+          {chunks.map((c) => {
+            const id = `${c.source_file}#${c.chunk_index}`
+            const isHl = highlight.planChunks.has(id)
+            return (
+              <div
+                key={hlKey(id, isHl)}
+                className={`grounding-chunk grounding-chunk-md${isHl ? ' is-highlighted' : ''}`}
+                dangerouslySetInnerHTML={{ __html: renderCarePlanMarkdown(c.text) }}
+              />
+            )
+          })}
         </section>
       )}
     </aside>

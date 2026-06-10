@@ -1,4 +1,5 @@
 import type { Patient, Medication, Appointment } from '../types'
+import { dailyActionForCondition } from '../data/recoveryPlans'
 
 interface DashboardHeroProps {
   patient: Patient
@@ -282,7 +283,7 @@ function buildAIInsights(
 
   insights.push({
     icon: '🏃',
-    text: 'Continue 10–15 min assisted walks 3× daily',
+    text: dailyActionForCondition(patient.discharge_reason),
     type: 'info',
   })
 

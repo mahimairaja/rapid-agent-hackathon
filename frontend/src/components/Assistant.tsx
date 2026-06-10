@@ -96,6 +96,9 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
   const [context, setContext] = useState<SessionContext | null>(null)
   const [contextLoading, setContextLoading] = useState(false)
   const [highlights, setHighlights] = useState<SourceItem[]>([])
+  // Bumped on every sources frame so the panel replays its pulse animation
+  // even when the same item is cited twice in a row.
+  const [highlightTick, setHighlightTick] = useState(0)
 
   const clientRef = useRef<VoiceClient | null>(null)
   const sessionIdRef = useRef<string | null>(null)
@@ -222,6 +225,7 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
       onSources: (items: SourceItem[]) => {
         if (cancelled) return
         setHighlights(items)
+        setHighlightTick((t) => t + 1)
         pendingSourcesRef.current = items.filter((i) => i.type !== 'identity')
         if (items.some((i) => i.type === 'identity' || i.type === 'appointment')) {
           void loadContext()
@@ -473,7 +477,12 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
         </div>
       </div>
 
-      <GroundingPanel context={context} highlights={highlights} loading={contextLoading} />
+      <GroundingPanel
+        context={context}
+        highlights={highlights}
+        highlightTick={highlightTick}
+        loading={contextLoading}
+      />
     </div>
   )
 }
