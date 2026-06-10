@@ -283,6 +283,67 @@ async def test_pump_client_forwards_audio_and_text_then_stops():
     assert session.texts == ["hi"]
 
 
+class _IdentifyWS(_FakeIncomingWS):
+    def __init__(self, messages):
+        super().__init__(messages)
+        self.sent = []
+
+    async def send_text(self, text):
+        self.sent.append(json.loads(text))
+
+
+class _IdentifySession(_RecordingSession):
+    def __init__(self, name):
+        super().__init__()
+        self.name = name
+        self.codes = []
+
+    async def identify(self, patient_code):
+        self.codes.append(patient_code)
+        return self.name
+
+
+async def test_pump_client_identify_success_emits_identity_source():
+    ws = _IdentifyWS(
+        [
+            {
+                "type": "websocket.receive",
+                "text": json.dumps({"type": "identify", "patient_code": "HW-7K3F"}),
+            },
+            {"type": "websocket.disconnect"},
+        ]
+    )
+    session = _IdentifySession(name="Asha Rao")
+    await pump_client_to_session(ws, session)
+    assert session.codes == ["HW-7K3F"]
+    assert ws.sent == [
+        {
+            "type": "sources",
+            "items": [{"type": "identity", "tool": "identify", "name": "Asha Rao"}],
+        }
+    ]
+    # The live model is told about the verification (its context predates the
+    # state write) so it greets instead of re-asking for identity.
+    assert len(session.texts) == 1
+    assert "Asha Rao" in session.texts[0]
+    assert "Never ask them to identify" in session.texts[0]
+
+
+async def test_pump_client_identify_failure_emits_identify_failed():
+    ws = _IdentifyWS(
+        [
+            {
+                "type": "websocket.receive",
+                "text": json.dumps({"type": "identify", "patient_code": "HW-NOPE"}),
+            },
+            {"type": "websocket.disconnect"},
+        ]
+    )
+    session = _IdentifySession(name=None)
+    await pump_client_to_session(ws, session)
+    assert ws.sent == [{"type": "identify_failed"}]
+
+
 # -- pump_session_to_client -----------------------------------------------------
 
 
@@ -332,6 +393,64 @@ async def test_voice_session_close_is_idempotent(monkeypatch):
     await session.close()
     await session.close()
     assert calls == [1]
+
+
+async def test_voice_session_identify_writes_state_delta(monkeypatch):
+    from src.agent.agent.session_state import (
+        PATIENT_ID,
+        PATIENT_NAME,
+        PATIENT_VERIFIED,
+    )
+    from src.models import Patient
+
+    appended = []
+
+    class _FakeService:
+        async def get_session(self, **kwargs):
+            return SimpleNamespace(id="sess-1", state={})
+
+        async def append_event(self, session, event):
+            appended.append(event)
+
+    async def fake_find_one(*args, **kwargs):
+        return SimpleNamespace(patient_id="pid-9", first_name="Asha", last_name="Rao")
+
+    monkeypatch.setattr(Patient, "find_one", fake_find_one)
+    session = VoiceSession(runner=object(), session_service=_FakeService())
+    session.session_id = "sess-1"
+    # The object run_live holds; the gate reads ITS state, not the store's.
+    session._session = SimpleNamespace(state={})
+
+    name = await session.identify("hw-7k3f")
+
+    assert name == "Asha Rao"
+    assert len(appended) == 1
+    delta = appended[0].actions.state_delta
+    assert delta[PATIENT_VERIFIED] is True
+    assert delta[PATIENT_ID] == "pid-9"
+    assert delta[PATIENT_NAME] == "Asha Rao"
+    # The live session object is updated too, so gated tools pass immediately.
+    assert session._session.state[PATIENT_VERIFIED] is True
+    assert session._session.state[PATIENT_ID] == "pid-9"
+
+
+async def test_voice_session_identify_unknown_code_returns_none(monkeypatch):
+    from src.models import Patient
+
+    class _FakeService:
+        async def get_session(self, **kwargs):  # pragma: no cover - not reached
+            return SimpleNamespace(id="sess-1", state={})
+
+        async def append_event(self, session, event):  # pragma: no cover
+            raise AssertionError("must not append for unknown code")
+
+    async def fake_find_one(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(Patient, "find_one", fake_find_one)
+    session = VoiceSession(runner=object(), session_service=_FakeService())
+    session.session_id = "sess-1"
+    assert await session.identify("HW-NOPE") is None
 
 
 async def test_voice_session_close_deletes_session(monkeypatch):

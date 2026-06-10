@@ -13,5 +13,11 @@ class User(TimestampedDocument):
     is_active: bool = True
     is_superuser: bool = False
 
+    # Journey onboarding: the account's personal patient profile, cloned from a
+    # sample journey. Set once by POST /onboarding/claim; the patient_code is
+    # what the frontend uses to identify the live session deterministically.
+    patient_id: str | None = None
+    patient_code: str | None = None
+
     class Settings:
         name = "users"

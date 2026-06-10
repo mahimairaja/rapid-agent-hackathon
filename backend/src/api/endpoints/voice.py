@@ -20,7 +20,7 @@ router = APIRouter(prefix="/voice", tags=["voice"])
 
 
 async def pump_client_to_session(websocket: WebSocket, session: VoiceSession) -> None:
-    """Forward inbound audio frames (and optional text control) to the session."""
+    """Forward inbound audio frames (and control frames) to the session."""
     while True:
         message = await websocket.receive()
         if message.get("type") == "websocket.disconnect":
@@ -38,6 +38,39 @@ async def pump_client_to_session(websocket: WebSocket, session: VoiceSession) ->
             continue
         if payload.get("type") == "text" and payload.get("text"):
             session.send_text(payload["text"])
+        elif payload.get("type") == "identify" and payload.get("patient_code"):
+            # Deterministic identification for onboarded accounts: no LLM round
+            # trip for the verification itself. Success reuses the identity
+            # source frame, so the frontend's grounding/hydration pipeline
+            # fires unchanged.
+            name = await session.identify(payload["patient_code"])
+            if name is not None:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "sources",
+                            "items": [
+                                {
+                                    "type": "identity",
+                                    "tool": "identify",
+                                    "name": name,
+                                }
+                            ],
+                        }
+                    )
+                )
+                # The live model's context predates the state write, so tell it
+                # the patient is verified; otherwise it still asks who they are.
+                # Its reply doubles as a personal greeting after onboarding.
+                session.send_text(
+                    f"[system note, not spoken by the patient] {name} has just "
+                    "been verified automatically through their saved patient "
+                    "code; their discharge plan is available through your "
+                    f"tools. Greet {name} by name in one short sentence and "
+                    "offer to help. Never ask them to identify themselves."
+                )
+            else:
+                await websocket.send_text(json.dumps({"type": "identify_failed"}))
 
 
 async def pump_session_to_client(websocket: WebSocket, session: VoiceSession) -> None:

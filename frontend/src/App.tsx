@@ -2,9 +2,18 @@ import { useState, useEffect } from 'react'
 import './index.css'
 import './App.css'
 
-import type { AppView, Patient, Medication, Appointment, SessionContext } from './types'
+import type {
+  AppView,
+  ClaimResponse,
+  Patient,
+  Medication,
+  Appointment,
+  SessionContext,
+} from './types'
 
 import { LoginScreen } from './components/LoginScreen'
+import { JourneyOnboarding } from './components/JourneyOnboarding'
+import { AppointmentCalendar } from './components/AppointmentCalendar'
 import { Sidebar } from './components/Sidebar'
 import { Header } from './components/Header'
 import { DashboardHero } from './components/DashboardHero'
@@ -22,6 +31,8 @@ import {
   getStoredToken,
   clearStoredToken,
   clearStoredPatientCode,
+  getMe,
+  getSessionContext,
   loadDashboardData,
   getStoredRole,
   setStoredRole,
@@ -72,6 +83,14 @@ function App() {
   const [activeView, setActiveView] = useState<AppView>('assistant')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Journey onboarding: the account's linked patient code (drives deterministic
+  // session identification), the display name for greetings, the live session
+  // id (drives the calendar widget), and which token's /users/me has resolved.
+  const [identifyCode, setIdentifyCode] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [checkedToken, setCheckedToken] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+
   // The demo entry point shows mock data immediately; a signed-in patient
   // starts empty and hydrates through the assistant.
   useEffect(() => {
@@ -92,6 +111,34 @@ function App() {
       cancelled = true
     }
   }, [token])
+
+  // Signed-in patients: look up the account's journey link. A linked account
+  // skips the gallery and auto-identifies; an unlinked (or unreadable) account
+  // sees the gallery, and claiming is idempotent so a stale read is harmless.
+  useEffect(() => {
+    if (!token || token === 'demo' || role !== 'patient') return
+    let cancelled = false
+    void (async () => {
+      try {
+        const me = await getMe(token)
+        if (!cancelled) {
+          setIdentifyCode(me.patient_code ?? null)
+          setUserName(me.full_name ?? null)
+        }
+      } catch {
+        if (!cancelled) setIdentifyCode(null)
+      } finally {
+        if (!cancelled) setCheckedToken(token)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [token, role])
+
+  // True once the current token's account link has been resolved (demo and
+  // logged-out states need no check).
+  const accountChecked = !token || token === 'demo' || role !== 'patient' || checkedToken === token
 
   const handleLogin = (
     newToken: string,
@@ -114,7 +161,25 @@ function App() {
     setMedications([])
     setAppointments([])
     setIsDemoMode(false)
+    setIdentifyCode(null)
+    setUserName(null)
+    setCheckedToken(null)
+    setSessionId(null)
     setActiveView('assistant')
+  }
+
+  // First-time onboarding finished: remember the profile and enter the app.
+  // The Assistant mounts with this identify code and verifies the session.
+  const handleClaimComplete = (claim: ClaimResponse) => {
+    setIdentifyCode(claim.patient_code)
+    setUserName(`${claim.first_name} ${claim.last_name}`.trim())
+  }
+
+  // After the calendar books a follow-up, refetch the session context so the
+  // timeline, dashboard, and grounding panel agree with the new booking.
+  const handleCalendarBooked = () => {
+    if (!sessionId) return
+    void getSessionContext(sessionId).then(handleSessionContext)
   }
 
   // Deep-link from dashboard / appointment shortcuts into the unified Assistant.
@@ -155,6 +220,27 @@ function App() {
 
   if (role === 'professional') {
     return <ProfessionalApp onLogout={handleLogout} />
+  }
+
+  // Signed-in patients: wait for the account check, then route first-timers
+  // through the journey gallery. Returning users land straight in the app and
+  // auto-identify. Demo mode skips all of this.
+  if (token !== 'demo' && !accountChecked) {
+    return (
+      <div className="app-loading-screen">
+        <LoadingState message="Checking your profile…" />
+      </div>
+    )
+  }
+  if (token !== 'demo' && !identifyCode) {
+    return (
+      <JourneyOnboarding
+        token={token}
+        initialName={userName ?? ''}
+        onComplete={handleClaimComplete}
+        onLogout={handleLogout}
+      />
+    )
   }
 
   // Loading initial demo data. A signed-in patient renders the shell right
@@ -255,7 +341,8 @@ function App() {
           )}
           {activeView === 'appointments' && patient && (
             <div>
-              <div className="view-header">
+              <AppointmentCalendar sessionId={sessionId} onBooked={handleCalendarBooked} />
+              <div className="view-header" style={{ marginTop: 22 }}>
                 <div className="view-header-title">📅 Appointment Timeline</div>
                 <div className="view-header-sub">
                   {nextAppointment
@@ -302,7 +389,12 @@ function App() {
                 discharge plan.
               </div>
             </div>
-            <Assistant onContext={handleSessionContext} />
+            <Assistant
+              onContext={handleSessionContext}
+              onSession={setSessionId}
+              identifyCode={token === 'demo' ? null : identifyCode}
+              userName={userName}
+            />
           </div>
 
           {activeView === 'symptom-check' && (

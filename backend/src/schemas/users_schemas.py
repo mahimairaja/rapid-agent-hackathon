@@ -35,6 +35,9 @@ class UserRead(BaseModel):
     full_name: str | None = None
     is_active: bool
     is_superuser: bool
+    # Journey onboarding link: lets the frontend skip the gallery and identify
+    # the live session for a returning onboarded user.
+    patient_code: str | None = None
     created_at: datetime
     updated_at: datetime
 

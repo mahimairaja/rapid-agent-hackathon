@@ -13,6 +13,7 @@ export interface VoiceHandlers {
   onSources?: (items: SourceItem[]) => void
   onTurnComplete?: () => void
   onInterrupted?: () => void
+  onIdentifyFailed?: () => void
 }
 
 const INPUT_RATE = 16000
@@ -50,6 +51,10 @@ export class VoiceClient {
   private scheduled: AudioBufferSourceNode[] = []
   private micActive = false
   private muted = false
+  // Onboarded accounts: sent as a deterministic identify frame as soon as each
+  // new session opens (first connect AND reconnects), so the session is
+  // verified without a chat round trip.
+  private identifyCode: string | null = null
 
   // Exposed for the visualizer (read-only use).
   inputAnalyser: AnalyserNode | null = null
@@ -57,6 +62,10 @@ export class VoiceClient {
 
   constructor(handlers: VoiceHandlers = {}) {
     this.handlers = handlers
+  }
+
+  setIdentifyCode(code: string | null): void {
+    this.identifyCode = code
   }
 
   /** Open the audio graph and the WebSocket. No microphone is requested. */
@@ -183,7 +192,17 @@ export class VoiceClient {
       }
       switch (msg.type) {
         case 'session':
-          if (msg.session_id) this.handlers.onSession?.(msg.session_id)
+          if (msg.session_id) {
+            // Identify before surfacing the session id, so the verified state
+            // is already being written when context fetches start.
+            if (this.identifyCode && this.ws?.readyState === WebSocket.OPEN) {
+              this.ws.send(JSON.stringify({ type: 'identify', patient_code: this.identifyCode }))
+            }
+            this.handlers.onSession?.(msg.session_id)
+          }
+          break
+        case 'identify_failed':
+          this.handlers.onIdentifyFailed?.()
           break
         case 'transcript':
           if (msg.text) {
