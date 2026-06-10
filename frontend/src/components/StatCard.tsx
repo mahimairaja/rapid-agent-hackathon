@@ -5,6 +5,7 @@ interface StatCardsProps {
   patient: Patient
   medicationsDue: number
   nextAppointmentDays: number
+  nextAppointmentKind?: string | null
   completedToday: number
 }
 
@@ -13,16 +14,14 @@ export function StatCards({
   patient,
   medicationsDue,
   nextAppointmentDays,
+  nextAppointmentKind,
   completedToday,
 }: StatCardsProps) {
+  // Default the stage like the hero/sidebar do, so an onboarded profile
+  // (which has no recovery_stage) reads Week 1 everywhere, not 40% here.
+  const stage = patient.recovery_stage ?? 'week-1'
   const recoveryPercent =
-    patient.recovery_stage === 'week-1'
-      ? 8
-      : patient.recovery_stage === 'week-2'
-        ? 18
-        : patient.recovery_stage === 'week-3'
-          ? 28
-          : 40
+    stage === 'week-1' ? 8 : stage === 'week-2' ? 18 : stage === 'week-3' ? 28 : 40
 
   return (
     <div className="stat-cards">
@@ -49,7 +48,7 @@ export function StatCards({
               : `${nextAppointmentDays}d`}
         </div>
         <div className="stat-card-label">Next Appointment</div>
-        <div className="stat-card-trend neutral">Physiotherapy follow-up</div>
+        <div className="stat-card-trend neutral">{nextAppointmentKind ?? 'None scheduled yet'}</div>
       </div>
 
       <div className="stat-card">
@@ -62,7 +61,11 @@ export function StatCards({
       <div className="stat-card">
         <div className="stat-card-icon red">⚠️</div>
         <div className="stat-card-value">
-          {patient.risk_level === 'moderate' ? 'Mod.' : (patient.risk_level ?? 'Low')}
+          {/* Default matches the sidebar/hero ('moderate'), so the cards never
+              disagree with the rest of the shell. */}
+          {(patient.risk_level ?? 'moderate') === 'moderate'
+            ? 'Mod.'
+            : (patient.risk_level ?? 'moderate')}
         </div>
         <div className="stat-card-label">Risk Level</div>
         <div className="stat-card-trend neutral">Monitored daily</div>

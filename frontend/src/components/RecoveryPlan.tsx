@@ -1,8 +1,15 @@
 import { useState } from 'react'
-import { MOCK_RECOVERY_MILESTONES } from '../data/mockData'
+import { milestonesForCondition } from '../data/recoveryPlans'
 
-export function RecoveryPlan() {
+interface RecoveryPlanProps {
+  // The patient's discharge reason selects condition-specific milestones; the
+  // demo-mode mock (hip replacement) is the fallback.
+  condition?: string | null
+}
+
+export function RecoveryPlan({ condition }: RecoveryPlanProps) {
   const [expanded, setExpanded] = useState<string>('ms-1')
+  const milestones = milestonesForCondition(condition)
 
   const toggle = (id: string) => {
     setExpanded((prev) => (prev === id ? '' : id))
@@ -10,7 +17,7 @@ export function RecoveryPlan() {
 
   return (
     <div role="list" aria-label="Recovery milestones">
-      {MOCK_RECOVERY_MILESTONES.map((milestone, idx) => {
+      {milestones.map((milestone, idx) => {
         const isOpen = expanded === milestone.id
         const isCurrent = idx === 0
 

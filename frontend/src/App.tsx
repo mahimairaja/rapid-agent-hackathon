@@ -496,6 +496,10 @@ function DashboardView({
   onAssistantPrompt,
   onNavigate,
 }: DashboardViewProps) {
+  const nextUpcoming = appointments
+    .filter((a) => a.status !== 'completed')
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
+
   return (
     <div>
       {/* ① Hero — the 5-second wow */}
@@ -512,6 +516,7 @@ function DashboardView({
         patient={patient}
         medicationsDue={medicationsDue}
         nextAppointmentDays={nextAppointmentDays}
+        nextAppointmentKind={nextUpcoming?.kind ?? null}
         completedToday={completedToday}
         hasMedicationAdherence={hasMedicationAdherence}
       />
@@ -532,7 +537,7 @@ function DashboardView({
               <span className="badge badge-blue">Week 1 Active</span>
             </div>
             <div className="card-body">
-              <RecoveryPlan />
+              <RecoveryPlan condition={patient.discharge_reason} />
             </div>
           </div>
         </div>
