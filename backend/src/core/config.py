@@ -66,10 +66,11 @@ class Config(BaseSettings):
     # Voice (F6). GEMINI_LIVE_MODEL must be a Gemini Live model that advertises
     # bidiGenerateContent; the voice agent reuses the same tools/prompts as the
     # text agent but with this model. Availability shifts: gemini-2.0-flash-live
-    # and the gemini-2.5 native-audio models (incl. the "-latest" alias) close
+    # and the gemini-2.5 native-audio models (incl. the "-latest" alias) can close
     # the live socket with APIError 1008/1011 on this key, so the default is the
-    # gemini-3.1 live model, which connects and streams audio + transcription.
-    # Confirm the exact id against availability at deploy time.
+    # gemini-3.1 live model, which connects and streams audio + transcription. If
+    # it is unavailable on your key, list models with client.models.list() (filter
+    # supported_actions for bidiGenerateContent) and set another id.
     GEMINI_LIVE_MODEL: str = "gemini-3.1-flash-live-preview"
     VOICE_INPUT_SAMPLE_RATE: int = 16000
     VOICE_OUTPUT_SAMPLE_RATE: int = 24000
