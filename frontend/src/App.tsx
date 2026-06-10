@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import './index.css'
 import './App.css'
 
-import type { AppView, Patient, Medication, Appointment } from './types'
+import type { AppView, Patient, Medication, Appointment, SessionContext } from './types'
 
 import { LoginScreen } from './components/LoginScreen'
 import { Sidebar } from './components/Sidebar'
@@ -12,23 +12,17 @@ import { StatCards } from './components/StatCard'
 import { RecoveryPlan } from './components/RecoveryPlan'
 import { MedicationSchedule } from './components/MedicationSchedule'
 import { AppointmentTimeline } from './components/AppointmentTimeline'
-import { AssistantChat } from './components/AssistantChat'
 import { Assistant } from './components/Assistant'
 import { SymptomCheckInForm } from './components/SymptomCheckIn'
 import { CareTeamPanel } from './components/CareTeamPanel'
 import { LoadingState } from './components/LoadingState'
-import { PatientCodeGate } from './components/PatientCodeGate'
 import { ProfessionalApp } from './components/ProfessionalApp'
 
 import {
   getStoredToken,
   clearStoredToken,
   clearStoredPatientCode,
-  fetchPatientDashboard,
-  getClientTimeZone,
-  getStoredPatientCode,
   loadDashboardData,
-  setStoredPatientCode,
   getStoredRole,
   setStoredRole,
   clearStoredRole,
@@ -63,91 +57,41 @@ function daysUntil(iso: string) {
 
 function App() {
   const [token, setToken] = useState<string | null>(getStoredToken)
-  const [patientCode, setPatientCode] = useState<string | null>(getStoredPatientCode)
   const [role, setRole] = useState<'patient' | 'professional' | null>(getStoredRole)
   const [isDemoMode, setIsDemoMode] = useState(false)
 
+  // Patient data hydrates from the conversation: once the assistant verifies
+  // who the patient is (name + DOB or patient code), the live session's context
+  // fills the dashboard, medications, and appointments. There is no patient
+  // code gate; accounts are not linked to patient records.
   const [patient, setPatient] = useState<Patient | null>(null)
   const [medications, setMedications] = useState<Medication[]>([])
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(false)
-  const [dashboardError, setDashboardError] = useState('')
-  const [refreshKey, setRefreshKey] = useState(0)
 
   const [activeView, setActiveView] = useState<AppView>('assistant')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  // The patient code whose data is already on screen. Used to tell an initial
-  // load (show the full-screen loader) from a background refresh (e.g. after a
-  // chat turn), which must not toggle screen-level loading or it would unmount
-  // and remount the AssistantChat, wiping the live conversation and session id.
-  const loadedCodeRef = useRef<string | null>(null)
 
-  // Load data when we have a token
+  // The demo entry point shows mock data immediately; a signed-in patient
+  // starts empty and hydrates through the assistant.
   useEffect(() => {
-    if (!token) return
+    if (token !== 'demo') return
     let cancelled = false
-
     void (async () => {
-      if (token === 'demo') {
-        setLoading(true)
-        const data = await loadDashboardData()
-        if (!cancelled) {
-          setPatient(data.patient)
-          setMedications(data.medications)
-          setAppointments(data.appointments)
-          setIsDemoMode(data.demo)
-          setDashboardError('')
-          setLoading(false)
-        }
-        return
-      }
-
-      if (!patientCode) {
-        setPatient(null)
-        setMedications([])
-        setAppointments([])
-        setIsDemoMode(false)
+      setLoading(true)
+      const data = await loadDashboardData()
+      if (!cancelled) {
+        setPatient(data.patient)
+        setMedications(data.medications)
+        setAppointments(data.appointments)
+        setIsDemoMode(data.demo)
         setLoading(false)
-        return
-      }
-
-      // First load for this code blocks the screen; a same-code refresh (chat
-      // turn) fetches in the background so the dashboard and chat stay mounted.
-      const isInitialLoad = loadedCodeRef.current !== patientCode
-      if (isInitialLoad) setLoading(true)
-      setDashboardError('')
-      try {
-        const data = await fetchPatientDashboard(
-          { patient_code: patientCode, time_zone: getClientTimeZone() },
-          token,
-        )
-        if (!cancelled) {
-          loadedCodeRef.current = patientCode
-          setPatient(data.patient)
-          setMedications(data.medications)
-          setAppointments(data.appointments)
-          setIsDemoMode(data.demo)
-        }
-      } catch (err) {
-        // Only fall back to the code gate when the very first load fails. A
-        // failed background refresh keeps the current dashboard in place.
-        if (!cancelled && isInitialLoad) {
-          setPatient(null)
-          setMedications([])
-          setAppointments([])
-          setDashboardError(err instanceof Error ? err.message : 'Could not load this patient.')
-        }
-      } finally {
-        if (!cancelled && isInitialLoad) {
-          setLoading(false)
-        }
       }
     })()
-
     return () => {
       cancelled = true
     }
-  }, [patientCode, refreshKey, token])
+  }, [token])
 
   const handleLogin = (
     newToken: string,
@@ -160,48 +104,17 @@ function App() {
     setStoredRole(userRole)
   }
 
-  const handleDemoAccess = () => {
-    clearStoredToken()
-    setToken('demo')
-    setIsDemoMode(true)
-    clearStoredPatientCode()
-    setPatientCode(null)
-    setRole('patient')
-    setStoredRole('patient')
-  }
-
-  const handlePatientCodeSubmit = (newPatientCode: string) => {
-    const normalized = newPatientCode.trim().toUpperCase()
-    setStoredPatientCode(normalized)
-    setPatientCode(normalized)
-    setRefreshKey((prev) => prev + 1)
-  }
-
-  const handleChangePatient = () => {
-    clearStoredPatientCode()
-    loadedCodeRef.current = null
-    setPatientCode(null)
-    setPatient(null)
-    setMedications([])
-    setAppointments([])
-    setDashboardError('')
-    setActiveView('dashboard')
-  }
-
   const handleLogout = () => {
     clearStoredToken()
     clearStoredPatientCode()
     clearStoredRole()
-    loadedCodeRef.current = null
     setToken(null)
-    setPatientCode(null)
     setRole(null)
     setPatient(null)
     setMedications([])
     setAppointments([])
     setIsDemoMode(false)
-    setActiveView('dashboard')
-    setDashboardError('')
+    setActiveView('assistant')
   }
 
   // Deep-link from dashboard / appointment shortcuts into the unified Assistant.
@@ -211,9 +124,14 @@ function App() {
     setActiveView('assistant')
   }
 
-  const handleAssistantTurnComplete = () => {
-    if (token && token !== 'demo' && patientCode) {
-      setRefreshKey((prev) => prev + 1)
+  // Conversational onboarding: once the assistant verifies the patient, its
+  // session context hydrates every tab (dashboard, medications, appointments).
+  const handleSessionContext = (ctx: SessionContext) => {
+    if (ctx.verified && ctx.patient) {
+      setPatient(ctx.patient)
+      setMedications(ctx.medications ?? [])
+      setAppointments(ctx.appointments ?? [])
+      setIsDemoMode(false)
     }
   }
 
@@ -239,21 +157,9 @@ function App() {
     return <ProfessionalApp onLogout={handleLogout} />
   }
 
-  if (token !== 'demo' && (!patientCode || dashboardError)) {
-    return (
-      <PatientCodeGate
-        error={dashboardError}
-        initialCode={patientCode}
-        loading={loading}
-        onDemoAccess={handleDemoAccess}
-        onLogout={handleLogout}
-        onSubmit={handlePatientCodeSubmit}
-      />
-    )
-  }
-
-  // Loading initial data
-  if (loading || !patient) {
+  // Loading initial demo data. A signed-in patient renders the shell right
+  // away and lands in the assistant, which identifies them conversationally.
+  if (token === 'demo' && (loading || !patient)) {
     return (
       <div className="app-loading-screen">
         <div className="app-loading-logo">
@@ -276,7 +182,9 @@ function App() {
   }
 
   const { title, subtitle } = PAGE_META[activeView]
-  const userInitials = `${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()
+  const userInitials = patient
+    ? `${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()
+    : 'ME'
 
   return (
     <div className="app-layout">
@@ -286,9 +194,9 @@ function App() {
         onNavigate={setActiveView}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        patientName={`${patient.first_name} ${patient.last_name}`}
-        riskLevel={patient.risk_level ?? 'moderate'}
-        recoveryStage={patient.recovery_stage ?? 'week-1'}
+        patientName={patient ? `${patient.first_name} ${patient.last_name}` : ''}
+        riskLevel={patient?.risk_level ?? 'moderate'}
+        recoveryStage={patient?.recovery_stage ?? 'week-1'}
       />
 
       {/* Main content */}
@@ -299,29 +207,31 @@ function App() {
           isDemoMode={isDemoMode}
           onMenuClick={() => setSidebarOpen(true)}
           onLogout={handleLogout}
-          onChangePatient={token === 'demo' ? undefined : handleChangePatient}
-          patientCode={token === 'demo' ? null : patientCode}
           userInitials={userInitials}
         />
 
         <main className="page-body">
-          {activeView === 'dashboard' && (
-            <DashboardView
-              patient={patient}
-              medications={medications}
-              appointments={appointments}
-              medicationsDue={medicationsDue}
-              completedToday={completedToday}
-              hasMedicationAdherence={hasMedicationAdherence}
-              nextAppointmentDays={nextAppointmentDays}
-              onAssistantPrompt={handleAssistantPrompt}
-              onAssistantTurnComplete={handleAssistantTurnComplete}
-              token={token === 'demo' ? null : token}
-              onNavigate={setActiveView}
-            />
-          )}
+          {activeView === 'dashboard' &&
+            (patient ? (
+              <DashboardView
+                patient={patient}
+                medications={medications}
+                appointments={appointments}
+                medicationsDue={medicationsDue}
+                completedToday={completedToday}
+                hasMedicationAdherence={hasMedicationAdherence}
+                nextAppointmentDays={nextAppointmentDays}
+                onAssistantPrompt={handleAssistantPrompt}
+                onNavigate={setActiveView}
+              />
+            ) : (
+              <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+            ))}
 
-          {activeView === 'medications' && (
+          {activeView === 'medications' && !patient && (
+            <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+          )}
+          {activeView === 'medications' && patient && (
             <div>
               <div className="view-header">
                 <div className="view-header-title">💊 Medication Schedule</div>
@@ -340,14 +250,18 @@ function App() {
             </div>
           )}
 
-          {activeView === 'appointments' && (
+          {activeView === 'appointments' && !patient && (
+            <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+          )}
+          {activeView === 'appointments' && patient && (
             <div>
               <div className="view-header">
                 <div className="view-header-title">📅 Appointment Timeline</div>
                 <div className="view-header-sub">
-                  {appointments.filter((a) => a.status !== 'completed').length} upcoming
-                  appointments — next in {nextAppointmentDays} day
-                  {nextAppointmentDays !== 1 ? 's' : ''}
+                  {nextAppointment
+                    ? `${appointments.filter((a) => a.status !== 'completed').length} upcoming
+                       appointments — next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`
+                    : 'No upcoming appointments — ask the assistant to book your follow-up'}
                 </div>
               </div>
               <div className="card">
@@ -388,7 +302,7 @@ function App() {
                 discharge plan.
               </div>
             </div>
-            <Assistant />
+            <Assistant onContext={handleSessionContext} />
           </div>
 
           {activeView === 'symptom-check' && (
@@ -411,7 +325,10 @@ function App() {
             </div>
           )}
 
-          {activeView === 'care-team' && (
+          {activeView === 'care-team' && !patient && (
+            <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+          )}
+          {activeView === 'care-team' && patient && (
             <div>
               <div className="view-header">
                 <div className="view-header-title">👥 Your Care Team</div>
@@ -428,6 +345,40 @@ function App() {
   )
 }
 
+// ── Pre-identification callout ─────────────────────────────────────────────────
+
+// Shown on data tabs before the assistant has identified the patient. The
+// conversation is the onboarding: no patient code form, just point them at it.
+function IdentifyCallout({ onOpenAssistant }: { onOpenAssistant: () => void }) {
+  return (
+    <div className="card">
+      <div
+        className="card-body"
+        style={{ textAlign: 'center', padding: '56px 24px', maxWidth: 520, margin: '0 auto' }}
+      >
+        <div style={{ fontSize: 44, marginBottom: 14 }} aria-hidden="true">
+          👋
+        </div>
+        <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)' }}>
+          Let's find your recovery plan
+        </h3>
+        <p style={{ color: 'var(--text-muted)', margin: '0 0 22px', lineHeight: 1.6 }}>
+          Tell your assistant who you are — just say or type your name and date of birth, or your
+          patient code — and your dashboard, medications, and appointments will load automatically.
+        </p>
+        <button
+          type="button"
+          className="login-submit-btn"
+          style={{ width: 'auto', padding: '12px 28px', margin: '0 auto' }}
+          onClick={onOpenAssistant}
+        >
+          Talk to your assistant
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Dashboard composite view ───────────────────────────────────────────────────
 
 interface DashboardViewProps {
@@ -439,8 +390,6 @@ interface DashboardViewProps {
   hasMedicationAdherence: boolean
   nextAppointmentDays: number
   onAssistantPrompt: (prompt: string) => void
-  onAssistantTurnComplete: () => void
-  token: string | null
   onNavigate: (view: AppView) => void
 }
 
@@ -453,8 +402,6 @@ function DashboardView({
   hasMedicationAdherence,
   nextAppointmentDays,
   onAssistantPrompt,
-  onAssistantTurnComplete,
-  token,
   onNavigate,
 }: DashboardViewProps) {
   return (
@@ -527,7 +474,9 @@ function DashboardView({
               <div>
                 <div className="card-title">📅 Upcoming Appointments</div>
                 <div className="card-subtitle">
-                  Next in {nextAppointmentDays} day{nextAppointmentDays !== 1 ? 's' : ''}
+                  {appointments.some((a) => a.status !== 'completed')
+                    ? `Next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`
+                    : 'None scheduled yet'}
                 </div>
               </div>
               <span className="badge badge-teal">
@@ -551,26 +500,8 @@ function DashboardView({
           </div>
         </div>
 
-        {/* AI Chat — full width, central hero feature */}
-        <div className="col-full">
-          <div className="card" style={{ overflow: 'hidden' }}>
-            <div className="card-header" style={{ paddingBottom: 0 }}>
-              <div>
-                <div className="card-title">🤖 AI Recovery Assistant</div>
-                <div className="card-subtitle">
-                  Ask about medications, symptoms, restrictions, or what's safe to do today
-                </div>
-              </div>
-              <span className="badge badge-green live-dot">Online</span>
-            </div>
-            <AssistantChat
-              initialInput={null}
-              onTurnComplete={onAssistantTurnComplete}
-              token={token}
-              userInitials={`${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()}
-            />
-          </div>
-        </div>
+        {/* The conversation lives in the unified Assistant tab (voice + chat on
+            one live session); the hero's "Ask AI Assistant" button leads there. */}
       </div>
     </div>
   )

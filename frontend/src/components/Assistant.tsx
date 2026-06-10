@@ -68,7 +68,14 @@ const GREETING: ChatMessage = {
   timestamp: new Date(),
 }
 
-export function Assistant() {
+interface AssistantProps {
+  // Fired whenever the live session's grounding context loads, so the rest of
+  // the app (dashboard, medications, appointments) can hydrate from the
+  // conversation once the patient is identified.
+  onContext?: (ctx: SessionContext) => void
+}
+
+export function Assistant({ onContext }: AssistantProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING])
   const [liveUser, setLiveUser] = useState('')
   const [liveAssistant, setLiveAssistant] = useState('')
@@ -83,10 +90,18 @@ export function Assistant() {
 
   const clientRef = useRef<VoiceClient | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+  // Monotonic id for context fetches: only the latest in-flight request may
+  // commit, so a slow older response can never overwrite newer data.
+  const loadSeqRef = useRef(0)
   const liveUserRef = useRef('')
   const liveAssistantRef = useRef('')
   const pendingSourcesRef = useRef<SourceItem[]>([])
   const endRef = useRef<HTMLDivElement>(null)
+  // The connection effect runs once; keep the latest onContext reachable from it.
+  const onContextRef = useRef(onContext)
+  useEffect(() => {
+    onContextRef.current = onContext
+  }, [onContext])
 
   const levels = useAudioAnalyser(clientRef, state)
 
@@ -113,14 +128,30 @@ export function Assistant() {
       ])
     }
 
-    const loadContext = async () => {
+    const loadContext = async (attempt = 0): Promise<void> => {
       const sid = sessionIdRef.current
       if (!sid) return
+      const seq = ++loadSeqRef.current
       setContextLoading(true)
       const ctx = await getSessionContext(sid)
-      if (cancelled) return
-      setContext(ctx)
+      // Drop stale responses: only the latest request may commit, so a slow
+      // pre-booking snapshot cannot roll back a fresher one.
+      if (cancelled || seq !== loadSeqRef.current) return
       setContextLoading(false)
+      if (ctx.verified) {
+        setContext(ctx)
+        onContextRef.current?.(ctx)
+        return
+      }
+      // loadContext only runs after an identity/appointment source, so an
+      // unverified answer here is a transient failure (network blip, write not
+      // yet visible). Keep an already-verified panel and retry once.
+      setContext((prev) => (prev?.verified ? prev : ctx))
+      if (attempt === 0) {
+        setTimeout(() => {
+          if (!cancelled) void loadContext(1)
+        }, 1500)
+      }
     }
 
     const client = new VoiceClient({
@@ -223,20 +254,68 @@ export function Assistant() {
     }
   }
 
+  // The live session can drop (idle timeout, network). Reconnecting opens a
+  // fresh session under the same transcript; a previously identified patient
+  // is nudged to re-identify since identity lives in the session.
+  const reconnect = async () => {
+    const client = clientRef.current
+    if (!client) return
+    const wasVerified = Boolean(context?.verified)
+    setError('')
+    setMicActive(false)
+    // Identity lives in the session and the old session is gone, so clear all
+    // session-scoped state first: the dead session id (a stray context fetch
+    // must not resurrect the old patient), in-flight fetches, and the panel.
+    sessionIdRef.current = null
+    loadSeqRef.current++
+    pendingSourcesRef.current = []
+    setHighlights([])
+    setContext(null)
+    // Full teardown then a fresh connect: the transcript lives in this
+    // component, so only the underlying conversation session is replaced.
+    await client.disconnect()
+    // The component may have unmounted (logout, role switch) while waiting; a
+    // socket opened now would have no owner left to close it.
+    if (clientRef.current !== client) return
+    await client.connect()
+    if (wasVerified) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          role: 'assistant',
+          content:
+            "We got disconnected for a moment, so I started a fresh session. Remind me who you are — your **name and date of birth**, or your **patient code** — and I'll pick right back up.",
+          timestamp: new Date(),
+        },
+      ])
+    }
+  }
+
   const hasUserTurn = messages.some((m) => m.role === 'user')
   const chips = hasUserTurn ? FOLLOW_UPS : SUGGESTED_FIRST
   const live = state === 'listening' || state === 'speaking'
+  const offline = state === 'idle' || state === 'error'
 
   return (
     <div className="assistant-shell">
       <div className="assistant-main card">
         <div className="assistant-statusbar">
-          <span className={`badge ${live ? 'badge-green live-dot' : 'badge-blue'}`}>
-            {live ? 'Live' : 'Ready'}
+          <span
+            className={`badge ${
+              live ? 'badge-green live-dot' : offline ? 'badge-amber' : 'badge-blue'
+            }`}
+          >
+            {live ? 'Live' : offline ? 'Offline' : 'Ready'}
           </span>
           <span className="assistant-status-label" aria-live="polite">
             {STATE_LABEL[state]}
           </span>
+          {offline && (
+            <button type="button" className="suggestion-chip" onClick={() => void reconnect()}>
+              ↻ Reconnect
+            </button>
+          )}
         </div>
 
         <div className="assistant-transcript" aria-label="Conversation">

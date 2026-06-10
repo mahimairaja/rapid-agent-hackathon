@@ -205,23 +205,36 @@ export function Sidebar({
           ))}
         </nav>
 
-        {/* Patient info */}
-        <div className="sidebar-patient">
-          <div className="sidebar-patient-avatar" aria-hidden="true">
-            {patientName
-              .split(' ')
-              .map((w) => w[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)}
+        {/* Patient info. Hidden until the assistant has identified the patient
+            (conversational onboarding), when the name becomes available. */}
+        {patientName ? (
+          <div className="sidebar-patient">
+            <div className="sidebar-patient-avatar" aria-hidden="true">
+              {patientName
+                .split(' ')
+                .map((w) => w[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2)}
+            </div>
+            <div className="sidebar-patient-name">{patientName}</div>
+            <div className="sidebar-patient-sub">
+              {STAGE_LABELS[recoveryStage] ?? recoveryStage}
+            </div>
+            <div className={`sidebar-risk-badge ${riskLevel}`}>
+              <span className="sidebar-risk-dot" />
+              {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} Risk
+            </div>
           </div>
-          <div className="sidebar-patient-name">{patientName}</div>
-          <div className="sidebar-patient-sub">{STAGE_LABELS[recoveryStage] ?? recoveryStage}</div>
-          <div className={`sidebar-risk-badge ${riskLevel}`}>
-            <span className="sidebar-risk-dot" />
-            {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} Risk
+        ) : (
+          <div className="sidebar-patient">
+            <div className="sidebar-patient-avatar" aria-hidden="true">
+              👋
+            </div>
+            <div className="sidebar-patient-name">Welcome</div>
+            <div className="sidebar-patient-sub">Say hi to load your plan</div>
           </div>
-        </div>
+        )}
       </aside>
     </>
   )
