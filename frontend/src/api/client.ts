@@ -1,7 +1,4 @@
 import type {
-  AgentChatRequest,
-  AgentChatResponse,
-  AgentChatResult,
   AuthToken,
   PatientDashboardRequest,
   PatientDashboardResponse,
@@ -63,14 +60,8 @@ export function clearStoredToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-export function getStoredPatientCode(): string | null {
-  return localStorage.getItem(PATIENT_CODE_KEY)
-}
-
-export function setStoredPatientCode(patientCode: string): void {
-  localStorage.setItem(PATIENT_CODE_KEY, patientCode)
-}
-
+// The patient-code gate is gone (identification is conversational); the key is
+// only cleared so a pre-migration build's stored code does not linger.
 export function clearStoredPatientCode(): void {
   localStorage.removeItem(PATIENT_CODE_KEY)
 }
@@ -205,25 +196,6 @@ export async function getSessionContext(sessionId: string): Promise<SessionConte
     return await request<SessionContext>(`/agent/session/${encodeURIComponent(sessionId)}/context`)
   } catch {
     return { verified: false }
-  }
-}
-
-export async function postAgentChat(
-  payload: AgentChatRequest,
-  token: string | null,
-): Promise<AgentChatResult> {
-  try {
-    const data = await request<AgentChatResponse>(
-      '/agent/chat',
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      },
-      token,
-    )
-    return { sessionId: data.session_id, reply: data.reply, demo: false }
-  } catch {
-    return { sessionId: payload.session_id ?? null, reply: '', demo: true }
   }
 }
 

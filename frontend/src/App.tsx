@@ -258,9 +258,10 @@ function App() {
               <div className="view-header">
                 <div className="view-header-title">📅 Appointment Timeline</div>
                 <div className="view-header-sub">
-                  {appointments.filter((a) => a.status !== 'completed').length} upcoming
-                  appointments — next in {nextAppointmentDays} day
-                  {nextAppointmentDays !== 1 ? 's' : ''}
+                  {nextAppointment
+                    ? `${appointments.filter((a) => a.status !== 'completed').length} upcoming
+                       appointments — next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`
+                    : 'No upcoming appointments — ask the assistant to book your follow-up'}
                 </div>
               </div>
               <div className="card">
@@ -473,7 +474,9 @@ function DashboardView({
               <div>
                 <div className="card-title">📅 Upcoming Appointments</div>
                 <div className="card-subtitle">
-                  Next in {nextAppointmentDays} day{nextAppointmentDays !== 1 ? 's' : ''}
+                  {appointments.some((a) => a.status !== 'completed')
+                    ? `Next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`
+                    : 'None scheduled yet'}
                 </div>
               </div>
               <span className="badge badge-teal">

@@ -90,6 +90,9 @@ export function Assistant({ onContext }: AssistantProps) {
 
   const clientRef = useRef<VoiceClient | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+  // Monotonic id for context fetches: only the latest in-flight request may
+  // commit, so a slow older response can never overwrite newer data.
+  const loadSeqRef = useRef(0)
   const liveUserRef = useRef('')
   const liveAssistantRef = useRef('')
   const pendingSourcesRef = useRef<SourceItem[]>([])
@@ -125,15 +128,30 @@ export function Assistant({ onContext }: AssistantProps) {
       ])
     }
 
-    const loadContext = async () => {
+    const loadContext = async (attempt = 0): Promise<void> => {
       const sid = sessionIdRef.current
       if (!sid) return
+      const seq = ++loadSeqRef.current
       setContextLoading(true)
       const ctx = await getSessionContext(sid)
-      if (cancelled) return
-      setContext(ctx)
+      // Drop stale responses: only the latest request may commit, so a slow
+      // pre-booking snapshot cannot roll back a fresher one.
+      if (cancelled || seq !== loadSeqRef.current) return
       setContextLoading(false)
-      onContextRef.current?.(ctx)
+      if (ctx.verified) {
+        setContext(ctx)
+        onContextRef.current?.(ctx)
+        return
+      }
+      // loadContext only runs after an identity/appointment source, so an
+      // unverified answer here is a transient failure (network blip, write not
+      // yet visible). Keep an already-verified panel and retry once.
+      setContext((prev) => (prev?.verified ? prev : ctx))
+      if (attempt === 0) {
+        setTimeout(() => {
+          if (!cancelled) void loadContext(1)
+        }, 1500)
+      }
     }
 
     const client = new VoiceClient({
@@ -242,13 +260,25 @@ export function Assistant({ onContext }: AssistantProps) {
   const reconnect = async () => {
     const client = clientRef.current
     if (!client) return
+    const wasVerified = Boolean(context?.verified)
     setError('')
     setMicActive(false)
+    // Identity lives in the session and the old session is gone, so clear all
+    // session-scoped state first: the dead session id (a stray context fetch
+    // must not resurrect the old patient), in-flight fetches, and the panel.
+    sessionIdRef.current = null
+    loadSeqRef.current++
+    pendingSourcesRef.current = []
+    setHighlights([])
+    setContext(null)
     // Full teardown then a fresh connect: the transcript lives in this
     // component, so only the underlying conversation session is replaced.
     await client.disconnect()
+    // The component may have unmounted (logout, role switch) while waiting; a
+    // socket opened now would have no owner left to close it.
+    if (clientRef.current !== client) return
     await client.connect()
-    if (context?.verified) {
+    if (wasVerified) {
       setMessages((prev) => [
         ...prev,
         {
