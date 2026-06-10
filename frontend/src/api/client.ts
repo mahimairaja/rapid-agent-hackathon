@@ -27,6 +27,15 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -42,7 +51,7 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail ?? `HTTP ${res.status}`)
+    throw new ApiError((err as { detail?: string }).detail ?? `HTTP ${res.status}`, res.status)
   }
   return res.json() as Promise<T>
 }

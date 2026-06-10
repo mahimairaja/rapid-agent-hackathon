@@ -4979,3 +4979,137 @@ input[type='range']::-webkit-slider-thumb:hover {
 .grounding-chunk-md strong {
   color: var(--text-primary);
 }
+
+/* ── Fullscreen voice overlay ───────────────────────────────────────────────── */
+
+.voice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  background: rgba(10, 22, 44, 0.92);
+  backdrop-filter: blur(10px);
+  animation: fade-in 0.25s ease both;
+}
+
+.voice-overlay-state {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.voice-orb {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #60a5fa 0%, #2563eb 45%, #0d9488 100%);
+  box-shadow:
+    0 0 60px rgba(37, 99, 235, 0.55),
+    0 0 140px rgba(13, 148, 136, 0.35);
+  transition:
+    transform 90ms linear,
+    box-shadow 0.4s ease;
+  animation: orb-breathe 3.2s ease-in-out infinite;
+}
+
+.voice-orb.speaking {
+  box-shadow:
+    0 0 80px rgba(45, 212, 191, 0.65),
+    0 0 180px rgba(37, 99, 235, 0.4);
+}
+
+@keyframes orb-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
+.voice-overlay-caption {
+  max-width: 560px;
+  min-height: 48px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 0 24px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.voice-overlay-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.voice-overlay-btn {
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-base);
+}
+
+.voice-overlay-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.voice-overlay-btn.end {
+  border-color: rgba(248, 113, 113, 0.6);
+  background: rgba(248, 113, 113, 0.18);
+}
+
+.voice-overlay-btn.active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* The bar visualizer doubles as the re-expand control while the mic is on. */
+.voice-expand {
+  display: flex;
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Source chips are interactive: clicking re-pulses the cited panel item. */
+.source-chip {
+  cursor: pointer;
+  transition: all var(--t-base);
+}
+
+.source-chip:hover {
+  background: var(--blue-100, #dbeafe);
+  transform: translateY(-1px);
+}
+
+/* Gentle entrance for the major screens. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.journey-screen,
+.app-layout {
+  animation: fade-in 0.3s ease both;
+}

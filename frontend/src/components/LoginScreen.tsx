@@ -26,11 +26,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setLoading(true)
     try {
       await signUp(email, password, name)
+      // Sign the new account straight in: no bounce back to the login tab
+      // with credentials the user typed seconds ago.
+      const token = await login(email, password)
+      setStoredToken(token.access_token)
+      onLogin(token.access_token, false, 'patient')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed. Please try again.')
+      setActiveTab('login')
     } finally {
       setLoading(false)
-      setActiveTab('login')
     }
   }
 

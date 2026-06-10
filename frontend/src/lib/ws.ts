@@ -55,6 +55,10 @@ export class VoiceClient {
   // new session opens (first connect AND reconnects), so the session is
   // verified without a chat round trip.
   private identifyCode: string | null = null
+  // Messages typed while the socket is closed or still connecting. Flushed
+  // after each new session opens (post-identify), so nothing typed during a
+  // reconnect is silently dropped.
+  private pendingTexts: string[] = []
 
   // Exposed for the visualizer (read-only use).
   inputAnalyser: AnalyserNode | null = null
@@ -163,10 +167,18 @@ export class VoiceClient {
     return this.micActive
   }
 
-  /** Send a typed message into the same live session. */
+  /** Send a typed message into the same live session.
+
+   *  A message sent while the socket is closed or connecting is queued and
+   *  delivered once the next session opens (the caller is responsible for
+   *  triggering the reconnect). */
   sendText(text: string): void {
     const trimmed = text.trim()
-    if (!trimmed || !this.ws || this.ws.readyState !== WebSocket.OPEN) return
+    if (!trimmed) return
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.pendingTexts.push(trimmed)
+      return
+    }
     void this.ctx?.resume()
     this.ws.send(JSON.stringify({ type: 'text', text: trimmed }))
   }
@@ -197,6 +209,14 @@ export class VoiceClient {
             // is already being written when context fetches start.
             if (this.identifyCode && this.ws?.readyState === WebSocket.OPEN) {
               this.ws.send(JSON.stringify({ type: 'identify', patient_code: this.identifyCode }))
+            }
+            // Deliver anything typed while disconnected, after identify so the
+            // verification gate is already satisfied for onboarded accounts.
+            if (this.ws?.readyState === WebSocket.OPEN && this.pendingTexts.length) {
+              for (const text of this.pendingTexts) {
+                this.ws.send(JSON.stringify({ type: 'text', text }))
+              }
+              this.pendingTexts = []
             }
             this.handlers.onSession?.(msg.session_id)
           }
