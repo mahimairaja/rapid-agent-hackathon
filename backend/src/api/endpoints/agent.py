@@ -197,6 +197,17 @@ async def session_book(
     if selected is None:
         return SessionBookResponse(status="unavailable")
 
+    # Re-check right before the write (same as the F4 booking tool): a
+    # concurrent agent turn could have booked the follow-up between the first
+    # check and here, and a fresh booking must not duplicate it.
+    if current is None:
+        current = await _current_follow_up(patient)
+        if current is not None:
+            return SessionBookResponse(
+                status="already_booked",
+                booking=_booking_payload(current, zone),
+            )
+
     try:
         client = get_calcom_client()
         if current is not None and current.cal_booking_uid:
