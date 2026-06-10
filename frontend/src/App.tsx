@@ -378,18 +378,18 @@ function App() {
             </div>
           )}
 
-          {activeView === 'assistant' && (
-            <div>
-              <div className="view-header">
-                <div className="view-header-title">🤖 Recovery Assistant</div>
-                <div className="view-header-sub">
-                  Talk or type in one place. Powered by Gemini Live, with answers grounded in your
-                  own discharge plan.
-                </div>
+          {/* Kept mounted (hidden when inactive) so switching tabs never tears
+              down the live Gemini session or loses the conversation. */}
+          <div style={{ display: activeView === 'assistant' ? 'block' : 'none' }}>
+            <div className="view-header">
+              <div className="view-header-title">🤖 Recovery Assistant</div>
+              <div className="view-header-sub">
+                Talk or type in one place. Powered by Gemini Live, with answers grounded in your own
+                discharge plan.
               </div>
-              <Assistant />
             </div>
-          )}
+            <Assistant />
+          </div>
 
           {activeView === 'symptom-check' && (
             <div>

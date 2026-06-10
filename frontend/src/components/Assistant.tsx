@@ -95,9 +95,13 @@ export function Assistant() {
   }, [messages, liveUser, liveAssistant])
 
   useEffect(() => {
+    // Guards async callbacks from a disconnected client (StrictMode double-mount
+    // or a fast remount) from writing into the live component's state.
+    let cancelled = false
+
     const commit = (role: 'user' | 'assistant', content: string) => {
       const text = content.trim()
-      if (!text) return
+      if (cancelled || !text) return
       const sources =
         role === 'assistant' && pendingSourcesRef.current.length
           ? pendingSourcesRef.current
@@ -114,35 +118,33 @@ export function Assistant() {
       if (!sid) return
       setContextLoading(true)
       const ctx = await getSessionContext(sid)
+      if (cancelled) return
       setContext(ctx)
       setContextLoading(false)
     }
 
     const client = new VoiceClient({
-      onState: setState,
-      onError: (msg) => setError(msg),
+      onState: (s) => {
+        if (!cancelled) setState(s)
+      },
+      onError: (msg) => {
+        if (!cancelled) setError(msg)
+      },
       onSession: (sid) => {
         sessionIdRef.current = sid
       },
       onTranscript: (text: string, final: boolean, role: TranscriptRole) => {
-        if (role === 'user') {
-          liveUserRef.current += text
-          if (final) {
-            commit('user', liveUserRef.current)
-            liveUserRef.current = ''
-            setLiveUser('')
-          } else {
-            setLiveUser(liveUserRef.current)
-          }
+        const liveRef = role === 'user' ? liveUserRef : liveAssistantRef
+        const setLive = role === 'user' ? setLiveUser : setLiveAssistant
+        if (final) {
+          // The final frame carries the full utterance, so replace (don't append)
+          // the accumulated deltas; fall back to the buffer if it is empty.
+          commit(role, text || liveRef.current)
+          liveRef.current = ''
+          if (!cancelled) setLive('')
         } else {
-          liveAssistantRef.current += text
-          if (final) {
-            commit('assistant', liveAssistantRef.current)
-            liveAssistantRef.current = ''
-            setLiveAssistant('')
-          } else {
-            setLiveAssistant(liveAssistantRef.current)
-          }
+          liveRef.current += text
+          if (!cancelled) setLive(liveRef.current)
         }
       },
       onTurnComplete: () => {
@@ -150,15 +152,22 @@ export function Assistant() {
         if (liveUserRef.current.trim()) {
           commit('user', liveUserRef.current)
           liveUserRef.current = ''
-          setLiveUser('')
+          if (!cancelled) setLiveUser('')
         }
         if (liveAssistantRef.current.trim()) {
           commit('assistant', liveAssistantRef.current)
           liveAssistantRef.current = ''
-          setLiveAssistant('')
+          if (!cancelled) setLiveAssistant('')
         }
       },
+      onInterrupted: () => {
+        // Barge-in cut the assistant mid-reply: discard the stranded partial so
+        // it does not bleed into the next turn's bubble.
+        liveAssistantRef.current = ''
+        if (!cancelled) setLiveAssistant('')
+      },
       onSources: (items: SourceItem[]) => {
+        if (cancelled) return
         setHighlights(items)
         pendingSourcesRef.current = items.filter((i) => i.type !== 'identity')
         if (items.some((i) => i.type === 'identity' || i.type === 'appointment')) {
@@ -170,6 +179,7 @@ export function Assistant() {
     void client.connect()
 
     return () => {
+      cancelled = true
       void client.disconnect()
       clientRef.current = null
     }

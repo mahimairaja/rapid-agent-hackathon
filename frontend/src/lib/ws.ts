@@ -12,6 +12,7 @@ export interface VoiceHandlers {
   onSession?: (sessionId: string) => void
   onSources?: (items: SourceItem[]) => void
   onTurnComplete?: () => void
+  onInterrupted?: () => void
 }
 
 const INPUT_RATE = 16000
@@ -198,6 +199,7 @@ export class VoiceClient {
           break
         case 'interrupted':
           this.flushPlayback()
+          this.handlers.onInterrupted?.()
           break
         case 'turn_complete':
           this.handlers.onTurnComplete?.()
@@ -214,6 +216,10 @@ export class VoiceClient {
 
   private enqueueAudio(buffer: ArrayBuffer): void {
     if (!this.ctx || !this.playbackGain) return
+    // While muted, drop spoken audio entirely: no playback, no "speaking" state,
+    // and playHead does not advance, so unmuting resumes cleanly. The transcript
+    // keeps flowing independently.
+    if (this.muted) return
     this.setState('speaking')
     const pcm = new Int16Array(buffer)
     const samples = new Float32Array(pcm.length)

@@ -120,7 +120,9 @@ def source_items_for(name: str, response: Any) -> list[dict]:
             ]
         return []
 
-    if name == "triage_symptom" and status in {"red_flag", "routine"}:
+    if name == "triage_symptom" and status == "red_flag":
+        # Only a red-flag triage is a grounding source worth surfacing; a routine
+        # check-in carries no rule and must not render as a flagged source.
         return [
             {
                 "type": "symptom",
@@ -226,7 +228,9 @@ async def verified_patient_id_for(session_id: str) -> str | None:
             app_name=_APP_NAME, user_id=_USER_ID, session_id=session_id
         )
     except Exception:
-        logger.debug("session lookup failed for %s", session_id, exc_info=True)
+        # Fail closed (no data) but surface the error: a real session-store
+        # regression must not look like a merely-unverified session.
+        logger.warning("session lookup failed for %s", session_id, exc_info=True)
         return None
     if session is None:
         return None
@@ -289,3 +293,20 @@ class VoiceSession:
         if not self._closed:
             self._closed = True
             self._queue.close()
+            # Drop the live session from the in-memory store so it does not leak
+            # (and retain the verified patient id/name) for the life of the
+            # process. The grounding context is only queried while the socket is
+            # open, so deleting on close is safe.
+            if self.session_id:
+                try:
+                    await self._service.delete_session(
+                        app_name=_APP_NAME,
+                        user_id=_USER_ID,
+                        session_id=self.session_id,
+                    )
+                except Exception:
+                    logger.debug(
+                        "voice session %s already gone on close",
+                        self.session_id,
+                        exc_info=True,
+                    )

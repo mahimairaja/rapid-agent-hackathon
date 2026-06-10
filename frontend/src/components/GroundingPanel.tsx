@@ -23,22 +23,23 @@ export function GroundingPanel({ context, highlights, loading }: GroundingPanelP
   const highlight = useMemo(() => {
     const medNames = new Set<string>()
     const apptTimes = new Set<number>()
-    const apptKinds = new Set<string>()
     const planChunks = new Set<string>()
     let plan = false
     for (const s of highlights) {
       if (s.type === 'medication' && s.name) medNames.add(s.name.toLowerCase())
+      // Match an appointment by its exact start instant only. The backend always
+      // emits start_iso, and kind (e.g. "Follow-up") is not unique per visit, so
+      // matching on kind would wrongly highlight every same-kind appointment.
       if (s.type === 'appointment') {
         const t = timeKey(s.start_iso)
         if (t !== null) apptTimes.add(t)
-        if (s.kind) apptKinds.add(s.kind.toLowerCase())
       }
       if (s.type === 'care_plan' && s.source_file !== undefined) {
         planChunks.add(`${s.source_file}#${s.chunk_index}`)
       }
       if (s.type === 'plan' || s.type === 'identity') plan = true
     }
-    return { medNames, apptTimes, apptKinds, planChunks, plan }
+    return { medNames, apptTimes, planChunks, plan }
   }, [highlights])
 
   if (!context?.verified || !context.patient) {
@@ -61,12 +62,9 @@ export function GroundingPanel({ context, highlights, loading }: GroundingPanelP
   const appts = context.appointments ?? []
   const chunks = context.care_plan?.chunks ?? []
 
-  const apptHighlighted = (kind: string, start: string) => {
+  const apptHighlighted = (start: string) => {
     const t = timeKey(start)
-    return (
-      (t !== null && highlight.apptTimes.has(t)) ||
-      highlight.apptKinds.has((kind || '').toLowerCase())
-    )
+    return t !== null && highlight.apptTimes.has(t)
   }
 
   return (
@@ -107,9 +105,7 @@ export function GroundingPanel({ context, highlights, loading }: GroundingPanelP
           {appts.map((a) => (
             <div
               key={a.id}
-              className={`grounding-item${
-                apptHighlighted(a.kind, a.start) ? ' is-highlighted' : ''
-              }`}
+              className={`grounding-item${apptHighlighted(a.start) ? ' is-highlighted' : ''}`}
             >
               <span className="grounding-item-name">{a.kind}</span>
               <span className="grounding-item-sub">

@@ -210,6 +210,11 @@ def test_sources_plan_and_appointment_and_symptom():
     ]
 
 
+def test_sources_routine_symptom_is_not_a_source():
+    # A routine check-in has no rule and must not render as a flagged source.
+    assert source_items_for("triage_symptom", {"status": "routine"}) == []
+
+
 def test_sources_ignores_non_dict_response():
     assert source_items_for("find_patient", None) == []
     assert source_items_for("unknown_tool", {"status": "ok"}) == []
@@ -327,6 +332,22 @@ async def test_voice_session_close_is_idempotent(monkeypatch):
     await session.close()
     await session.close()
     assert calls == [1]
+
+
+async def test_voice_session_close_deletes_session(monkeypatch):
+    # close() must drop the live session from the store so it cannot leak the
+    # verified patient id/name for the life of the process.
+    deleted = []
+
+    class _FakeService:
+        async def delete_session(self, **kwargs):
+            deleted.append(kwargs)
+
+    session = VoiceSession(runner=object(), session_service=_FakeService())
+    session.session_id = "sess-x"
+    monkeypatch.setattr(session._queue, "close", lambda: None)
+    await session.close()
+    assert len(deleted) == 1 and deleted[0]["session_id"] == "sess-x"
 
 
 # -- run_voice_bridge teardown --------------------------------------------------
