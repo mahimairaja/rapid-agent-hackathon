@@ -26,6 +26,7 @@ from src.agent.agent.session_state import (
     PATIENT_ID,
     PATIENT_NAME,
     PATIENT_VERIFIED,
+    set_verified,
     verified_patient_id,
 )
 from src.core.config import config
@@ -263,6 +264,10 @@ class VoiceSession:
         self._queue = LiveRequestQueue()
         self._live: Any = None
         self._closed = False
+        # The session object handed to run_live. The service may store a copy,
+        # so deterministic identity writes must update THIS object too (the
+        # verification gate reads the live invocation's state, not the store).
+        self._session: Any = None
         # Server-minted live session id, set on start(). The bridge sends it to
         # the client so it can query the grounding context for this session.
         self.session_id: str | None = None
@@ -271,6 +276,7 @@ class VoiceSession:
         session = await self._service.create_session(
             app_name=_APP_NAME, user_id=_USER_ID, state={}
         )
+        self._session = session
         self.session_id = session.id
         self._live = self._runner.run_live(
             session=session,
@@ -313,6 +319,13 @@ class VoiceSession:
             if session is None:
                 return None
             name = f"{patient.first_name} {patient.last_name}".strip()
+            # The live invocation reads state from the session object passed to
+            # run_live; the service store backs the context endpoint. Both must
+            # see the identity, and the store may hold a separate copy.
+            if self._session is not None:
+                set_verified(
+                    self._session.state, patient_id=patient.patient_id, name=name
+                )
             await self._service.append_event(
                 session,
                 Event(

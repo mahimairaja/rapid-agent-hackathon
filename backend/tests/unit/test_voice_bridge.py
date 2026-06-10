@@ -322,6 +322,11 @@ async def test_pump_client_identify_success_emits_identity_source():
             "items": [{"type": "identity", "tool": "identify", "name": "Asha Rao"}],
         }
     ]
+    # The live model is told about the verification (its context predates the
+    # state write) so it greets instead of re-asking for identity.
+    assert len(session.texts) == 1
+    assert "Asha Rao" in session.texts[0]
+    assert "Never ask them to identify" in session.texts[0]
 
 
 async def test_pump_client_identify_failure_emits_identify_failed():
@@ -413,6 +418,8 @@ async def test_voice_session_identify_writes_state_delta(monkeypatch):
     monkeypatch.setattr(Patient, "find_one", fake_find_one)
     session = VoiceSession(runner=object(), session_service=_FakeService())
     session.session_id = "sess-1"
+    # The object run_live holds; the gate reads ITS state, not the store's.
+    session._session = SimpleNamespace(state={})
 
     name = await session.identify("hw-7k3f")
 
@@ -422,6 +429,9 @@ async def test_voice_session_identify_writes_state_delta(monkeypatch):
     assert delta[PATIENT_VERIFIED] is True
     assert delta[PATIENT_ID] == "pid-9"
     assert delta[PATIENT_NAME] == "Asha Rao"
+    # The live session object is updated too, so gated tools pass immediately.
+    assert session._session.state[PATIENT_VERIFIED] is True
+    assert session._session.state[PATIENT_ID] == "pid-9"
 
 
 async def test_voice_session_identify_unknown_code_returns_none(monkeypatch):
