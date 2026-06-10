@@ -5346,3 +5346,192 @@ input[type='range']::-webkit-slider-thumb:hover {
   color: var(--text-muted);
   font-size: 12.5px;
 }
+
+/* ── Join wizard (typeform-style signup) ───────────────────────────────── */
+.join-wizard {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+}
+
+.join-wizard-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+}
+
+.join-back {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.join-progress {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.join-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--blue-500), var(--teal-400));
+  transition: width 0.3s ease;
+}
+
+.join-step-count {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.join-step {
+  flex: 1;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  animation: join-step-in 0.35s ease;
+}
+
+@keyframes join-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.join-question {
+  font-size: clamp(26px, 4vw, 38px);
+  letter-spacing: -0.8px;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.join-input {
+  width: min(440px, 100%);
+  border: none;
+  border-bottom: 2px solid var(--border-strong);
+  background: transparent;
+  font-size: 22px;
+  padding: 10px 4px;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+  color: var(--text-primary);
+}
+
+.join-input:focus {
+  border-color: var(--blue-500);
+}
+
+.join-journeys {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.join-journey-card {
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.join-journey-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.join-journey-card.selected {
+  outline: 3px solid var(--blue-400);
+  outline-offset: 1px;
+}
+
+.join-journey-meta {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.join-next {
+  padding: 12px 38px;
+  font-size: 16px;
+  border-radius: 999px;
+}
+
+.join-link {
+  background: none;
+  border: none;
+  color: var(--blue-500);
+  cursor: pointer;
+  font-size: 13.5px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.join-hint,
+.join-enter-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.join-loading {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.join-error {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  color: var(--red-600);
+  background: rgb(239 68 68 / 0.08);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13.5px;
+}
+
+.join-build {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .join-step,
+  .landing {
+    animation: none !important;
+  }
+  .join-journey-card,
+  .landing-journey-card,
+  .join-progress-fill {
+    transition: none !important;
+  }
+}
