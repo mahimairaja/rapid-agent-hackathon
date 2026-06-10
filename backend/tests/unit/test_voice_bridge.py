@@ -16,7 +16,12 @@ from src.api.endpoints.voice import (
     pump_session_to_client,
     run_voice_bridge,
 )
-from src.voice.session import VoiceSession, encode_for_client, normalize_event
+from src.voice.session import (
+    VoiceSession,
+    encode_for_client,
+    normalize_event,
+    source_items_for,
+)
 
 
 def _audio_event(data: bytes):
@@ -29,12 +34,23 @@ def _audio_event(data: bytes):
     )
 
 
-def _text_event(text: str, partial: bool):
-    part = SimpleNamespace(inline_data=None, text=text)
+def _text_event(text: str, partial: bool, thought: bool = False):
+    part = SimpleNamespace(inline_data=None, text=text, thought=thought)
     return SimpleNamespace(
         interrupted=False,
         content=SimpleNamespace(parts=[part]),
         partial=partial,
+        turn_complete=False,
+    )
+
+
+def _function_response_event(name: str, response):
+    fr = SimpleNamespace(name=name, response=response)
+    part = SimpleNamespace(inline_data=None, text=None, function_response=fr)
+    return SimpleNamespace(
+        interrupted=False,
+        content=SimpleNamespace(parts=[part]),
+        partial=False,
         turn_complete=False,
     )
 
@@ -77,6 +93,100 @@ def test_normalize_skips_empty():
         interrupted=False, content=None, partial=False, turn_complete=False
     )
     assert normalize_event(ev) is None
+
+
+def test_normalize_skips_thought_text():
+    # The model's private reasoning must not reach the transcript.
+    assert (
+        normalize_event(_text_event("thinking...", partial=False, thought=True)) is None
+    )
+
+
+# -- source_items_for (per-tool grounding mapping) ------------------------------
+
+
+def test_sources_find_patient_signals_identity():
+    assert source_items_for("find_patient", {"status": "found"}) == [
+        {"type": "identity", "tool": "find_patient"}
+    ]
+    assert source_items_for("find_patient", {"status": "not_found"}) == []
+
+
+def test_sources_recovery_question_maps_each_chunk():
+    response = {
+        "status": "ok",
+        "context": [
+            {"text": "Walk daily.", "source_file": "plan.md", "chunk_index": 2},
+            {"text": "", "source_file": "plan.md", "chunk_index": 3},
+        ],
+    }
+    items = source_items_for("answer_recovery_question", response)
+    assert items == [
+        {
+            "type": "care_plan",
+            "source_file": "plan.md",
+            "chunk_index": 2,
+            "snippet": "Walk daily.",
+            "tool": "answer_recovery_question",
+        }
+    ]
+
+
+def test_sources_get_medications_lists_named_meds():
+    response = {"status": "ok", "medications": [{"name": "Aspirin"}, {"name": ""}]}
+    items = source_items_for("get_medications", response)
+    assert items == [
+        {"type": "medication", "name": "Aspirin", "tool": "get_medications"}
+    ]
+
+
+def test_sources_get_next_dose_maps_medication():
+    assert source_items_for("get_next_dose", {"status": "ok", "name": "Lasix"}) == [
+        {"type": "medication", "name": "Lasix", "tool": "get_next_dose"}
+    ]
+    assert source_items_for("get_next_dose", {"status": "not_found"}) == []
+
+
+def test_sources_plan_and_appointment_and_symptom():
+    assert source_items_for("get_my_plan", {"status": "ok"}) == [
+        {"type": "plan", "tool": "get_my_plan"}
+    ]
+    booking = {
+        "status": "ok",
+        "booking": {"kind": "Follow-up", "start_iso": "2026-06-20T15:00:00Z"},
+    }
+    assert source_items_for("get_follow_up_booking", booking) == [
+        {
+            "type": "appointment",
+            "kind": "Follow-up",
+            "start_iso": "2026-06-20T15:00:00Z",
+            "tool": "get_follow_up_booking",
+        }
+    ]
+    symptom = {"status": "red_flag", "rule_id": "chest_pain"}
+    assert source_items_for("triage_symptom", symptom) == [
+        {
+            "type": "symptom",
+            "rule_id": "chest_pain",
+            "status": "red_flag",
+            "tool": "triage_symptom",
+        }
+    ]
+
+
+def test_sources_ignores_non_dict_response():
+    assert source_items_for("find_patient", None) == []
+    assert source_items_for("unknown_tool", {"status": "ok"}) == []
+
+
+def test_normalize_emits_sources_frame():
+    ev = _function_response_event(
+        "get_medications", {"status": "ok", "medications": [{"name": "Aspirin"}]}
+    )
+    assert normalize_event(ev) == {
+        "type": "sources",
+        "items": [{"type": "medication", "name": "Aspirin", "tool": "get_medications"}],
+    }
 
 
 # -- encode_for_client ----------------------------------------------------------

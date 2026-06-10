@@ -81,6 +81,11 @@ async def voice_ws(websocket: WebSocket) -> None:
     session = VoiceSession()
     try:
         await session.start()
+        # First frame: tell the client which live session this is, so it can
+        # query the grounding context (/agent/session/{id}/context) for it.
+        await websocket.send_text(
+            json.dumps({"type": "session", "session_id": session.session_id})
+        )
         await run_voice_bridge(websocket, session)
     except WebSocketDisconnect:
         logger.info("voice socket disconnected")
