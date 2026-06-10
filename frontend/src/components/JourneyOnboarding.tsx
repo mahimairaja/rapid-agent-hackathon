@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { ClaimResponse, Journey } from '../types'
 import { claimJourney, getJourneys } from '../api/client'
+import { JOURNEY_IMAGES } from '../data/journeyImages'
+import { buildStagesFromClaim, playStages, type BuildStage } from '../lib/journeyBuild'
+import { JourneyBuildStages } from './JourneyBuildStages'
 
 interface JourneyOnboardingProps {
   token: string
@@ -8,8 +11,6 @@ interface JourneyOnboardingProps {
   onComplete: (claim: ClaimResponse) => void
   onLogout: () => void
 }
-
-type BuildStage = { icon: string; label: string }
 
 /**
  * First-login onboarding: a Hugging Face-style gallery of sample recovery
@@ -72,23 +73,9 @@ export function JourneyOnboarding({
         token,
       )
       // Stage the build sequence from the real counts, then hand off.
-      const built: BuildStage[] = [
-        { icon: '👤', label: `Creating ${claim.first_name}'s profile` },
-        { icon: '💊', label: `Copying ${claim.counts.medications} medications` },
-        { icon: '📅', label: `Scheduling ${claim.counts.appointments} appointments` },
-        {
-          icon: '📚',
-          label: `Ingesting your care plan — ${claim.counts.care_plan_chunks} knowledge chunk${
-            claim.counts.care_plan_chunks === 1 ? '' : 's'
-          } indexed`,
-        },
-        { icon: '✅', label: 'Your personal knowledge base is ready' },
-      ]
+      const built = buildStagesFromClaim(claim)
       setStages(built)
-      built.forEach((_, i) => {
-        setTimeout(() => setStageIndex(i + 1), 450 * (i + 1))
-      })
-      setTimeout(() => onComplete(claim), 450 * built.length + 500)
+      playStages(built.length, setStageIndex, () => onComplete(claim))
     } catch (err) {
       setClaiming(null)
       setClaimError(
@@ -100,18 +87,7 @@ export function JourneyOnboarding({
   if (stages.length > 0) {
     return (
       <div className="journey-screen">
-        <div className="journey-build card">
-          <div className="journey-build-title">Building your knowledge base</div>
-          {stages.map((stage, i) => (
-            <div
-              key={stage.label}
-              className={`journey-build-stage${i < stageIndex ? ' done' : ''}`}
-            >
-              <span className="journey-build-icon">{i < stageIndex ? stage.icon : '○'}</span>
-              <span>{stage.label}</span>
-            </div>
-          ))}
-        </div>
+        <JourneyBuildStages stages={stages} stageIndex={stageIndex} />
       </div>
     )
   }
@@ -168,8 +144,18 @@ export function JourneyOnboarding({
             onClick={() => void pick(journey)}
             disabled={claiming !== null}
           >
-            <div className="journey-card-icon" aria-hidden="true">
-              {journey.icon}
+            <div className="journey-card-media" aria-hidden="true">
+              <span className="journey-card-icon">{journey.icon}</span>
+              {JOURNEY_IMAGES[journey.journey_code] && (
+                <img
+                  src={JOURNEY_IMAGES[journey.journey_code]}
+                  alt=""
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+              )}
             </div>
             <div className="journey-card-title">{journey.title}</div>
             <div className="journey-card-condition">{journey.condition}</div>

@@ -12,6 +12,8 @@ import type {
 } from './types'
 
 import { LoginScreen } from './components/LoginScreen'
+import { LandingPage } from './components/LandingPage'
+import { JoinWizard } from './components/JoinWizard'
 import { JourneyOnboarding } from './components/JourneyOnboarding'
 import { AppointmentCalendar } from './components/AppointmentCalendar'
 import { Sidebar } from './components/Sidebar'
@@ -30,6 +32,7 @@ import { ProfessionalApp } from './components/ProfessionalApp'
 import {
   ApiError,
   getStoredToken,
+  setStoredToken,
   clearStoredToken,
   clearStoredPatientCode,
   getMe,
@@ -83,6 +86,11 @@ function App() {
 
   const [activeView, setActiveView] = useState<AppView>('assistant')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Pre-auth routing: landing is the front door; "Join" opens the wizard,
+  // optionally preselecting the journey card clicked on the landing page.
+  const [authView, setAuthView] = useState<'landing' | 'login' | 'join'>('landing')
+  const [joinPreselect, setJoinPreselect] = useState<string | null>(null)
 
   // Journey onboarding: the account's linked patient code (drives deterministic
   // session identification), the display name for greetings, the live session
@@ -179,6 +187,8 @@ function App() {
     setCheckedToken(null)
     setSessionId(null)
     setActiveView('assistant')
+    setAuthView('landing')
+    setJoinPreselect(null)
   }
 
   // First-time onboarding finished: remember the profile and enter the app.
@@ -186,6 +196,17 @@ function App() {
   const handleClaimComplete = (claim: ClaimResponse) => {
     setIdentifyCode(claim.patient_code)
     setUserName(`${claim.first_name} ${claim.last_name}`.trim())
+  }
+
+  // Join wizard finished: it already created the account, logged in, and
+  // claimed the journey. Persist the session and enter the app as a patient.
+  const handleJoinComplete = (newToken: string, claim: ClaimResponse) => {
+    setStoredToken(newToken)
+    setStoredRole('patient')
+    setIsDemoMode(false)
+    setToken(newToken)
+    setRole('patient')
+    handleClaimComplete(claim)
   }
 
   // After the calendar books a follow-up, refetch the session context so the
@@ -233,9 +254,31 @@ function App() {
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
   const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : 0
 
-  // Not logged in
+  // Not logged in: landing page first; corner "Log in" opens the classic
+  // screen, "Join" opens the typeform wizard.
   if (!token || !role) {
-    return <LoginScreen onLogin={handleLogin} />
+    if (authView === 'login') {
+      return <LoginScreen onLogin={handleLogin} onBack={() => setAuthView('landing')} />
+    }
+    if (authView === 'join') {
+      return (
+        <JoinWizard
+          preselectedJourney={joinPreselect}
+          onComplete={handleJoinComplete}
+          onBack={() => setAuthView('landing')}
+          onLoginInstead={() => setAuthView('login')}
+        />
+      )
+    }
+    return (
+      <LandingPage
+        onJoin={(code) => {
+          setJoinPreselect(code ?? null)
+          setAuthView('join')
+        }}
+        onLogin={() => setAuthView('login')}
+      />
+    )
   }
 
   if (role === 'professional') {

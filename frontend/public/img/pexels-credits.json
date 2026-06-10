@@ -1,0 +1,27 @@
+{
+  "hero.jpg": {
+    "photographer": "Kampus Production",
+    "photographer_url": "https://www.pexels.com/@kampus",
+    "pexels_url": "https://www.pexels.com/photo/a-woman-in-yellow-cardigan-talking-to-the-man-while-reading-a-book-7551618/"
+  },
+  "journey-heart.jpg": {
+    "photographer": "Radik 2707",
+    "photographer_url": "https://www.pexels.com/@radik-2707-170977881",
+    "pexels_url": "https://www.pexels.com/photo/elderly-man-and-woman-walking-on-path-12013184/"
+  },
+  "journey-knee.jpg": {
+    "photographer": "Funkcinės Terapijos Centras",
+    "photographer_url": "https://www.pexels.com/@funkcines-terapijos-centras-927573878",
+    "pexels_url": "https://www.pexels.com/photo/physiotherapist-massaging-knee-and-leg-20860603/"
+  },
+  "journey-diabetes.jpg": {
+    "photographer": "i-SENS, USA",
+    "photographer_url": "https://www.pexels.com/@i-sens-usa-578245562",
+    "pexels_url": "https://www.pexels.com/photo/man-hands-holding-glucose-meter-16984203/"
+  },
+  "journey-copd.jpg": {
+    "photographer": "Vlada Karpovich",
+    "photographer_url": "https://www.pexels.com/@vlada-karpovich",
+    "pexels_url": "https://www.pexels.com/photo/woman-stretching-her-arms-8940020/"
+  }
+}
