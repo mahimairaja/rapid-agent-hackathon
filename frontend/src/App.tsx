@@ -28,6 +28,7 @@ import { LoadingState } from './components/LoadingState'
 import { ProfessionalApp } from './components/ProfessionalApp'
 
 import {
+  ApiError,
   getStoredToken,
   clearStoredToken,
   clearStoredPatientCode,
@@ -90,6 +91,8 @@ function App() {
   const [userName, setUserName] = useState<string | null>(null)
   const [checkedToken, setCheckedToken] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  // A symptom report handed from the check-in form into the live assistant.
+  const [pendingReport, setPendingReport] = useState<string | null>(null)
 
   // The demo entry point shows mock data immediately; a signed-in patient
   // starts empty and hydrates through the assistant.
@@ -125,8 +128,18 @@ function App() {
           setIdentifyCode(me.patient_code ?? null)
           setUserName(me.full_name ?? null)
         }
-      } catch {
-        if (!cancelled) setIdentifyCode(null)
+      } catch (err) {
+        if (cancelled) return
+        // An expired or revoked token cannot claim or identify anything:
+        // return to the login screen instead of a gallery that cannot work.
+        if (err instanceof ApiError && err.status === 401) {
+          clearStoredToken()
+          clearStoredRole()
+          setToken(null)
+          setRole(null)
+          return
+        }
+        setIdentifyCode(null)
       } finally {
         if (!cancelled) setCheckedToken(token)
       }
@@ -186,6 +199,13 @@ function App() {
   // The Assistant runs its own live conversation, so the prompt text is not
   // pre-filled; the shortcut just brings the patient to the right place.
   const handleAssistantPrompt = () => {
+    setActiveView('assistant')
+  }
+
+  // The symptom check-in form submits into the live conversation: the agent
+  // runs the real triage (check-in or red-flag escalation) and replies there.
+  const handleSymptomReport = (text: string) => {
+    setPendingReport(text)
     setActiveView('assistant')
   }
 
@@ -394,6 +414,8 @@ function App() {
               onSession={setSessionId}
               identifyCode={token === 'demo' ? null : identifyCode}
               userName={userName}
+              outboundText={pendingReport}
+              onOutboundConsumed={() => setPendingReport(null)}
             />
           </div>
 
@@ -411,7 +433,7 @@ function App() {
                   style={{ background: 'linear-gradient(90deg, var(--amber-400), var(--red-400))' }}
                 />
                 <div className="card-body" style={{ paddingTop: 20 }}>
-                  <SymptomCheckInForm />
+                  <SymptomCheckInForm onSubmitReport={handleSymptomReport} />
                 </div>
               </div>
             </div>

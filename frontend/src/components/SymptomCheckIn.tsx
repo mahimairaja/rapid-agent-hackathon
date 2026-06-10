@@ -74,7 +74,26 @@ function assessTriage(s: SymptomCheckIn): TriageResult {
   }
 }
 
-export function SymptomCheckInForm() {
+function composeReport(s: SymptomCheckIn): string {
+  const symptoms: string[] = []
+  if (s.fever) symptoms.push('a fever')
+  if (s.swelling) symptoms.push('swelling')
+  if (s.shortness_of_breath) symptoms.push('shortness of breath')
+  if (s.wound_discharge) symptoms.push('discharge from my wound')
+  if (s.calf_swelling) symptoms.push('calf pain and swelling')
+  const parts = [`my pain level is ${s.pain_level}/10`]
+  if (symptoms.length) parts.push(`I have ${symptoms.join(', ')}`)
+  if (s.notes.trim()) parts.push(s.notes.trim())
+  return `Symptom check-in: ${parts.join('. ')}.`
+}
+
+interface SymptomCheckInFormProps {
+  // When provided, submissions go to the live assistant (real triage,
+  // check-in/escalation records) instead of the local mock assessment.
+  onSubmitReport?: (text: string) => void
+}
+
+export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) {
   const [form, setForm] = useState<SymptomCheckIn>(INITIAL_STATE)
   const [result, setResult] = useState<TriageResult | null>(null)
 
@@ -86,6 +105,11 @@ export function SymptomCheckInForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (onSubmitReport) {
+      onSubmitReport(composeReport(form))
+      setForm(INITIAL_STATE)
+      return
+    }
     setResult(assessTriage(form))
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
   }
@@ -198,7 +222,7 @@ export function SymptomCheckInForm() {
           className="btn btn-primary"
           style={{ flex: 1 }}
         >
-          Assess Symptoms
+          {onSubmitReport ? 'Send to my care assistant' : 'Assess Symptoms'}
         </button>
         {result && (
           <button type="button" className="btn btn-outline" onClick={handleReset}>

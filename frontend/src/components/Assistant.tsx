@@ -80,9 +80,20 @@ interface AssistantProps {
   identifyCode?: string | null
   // Display name for the personalized greeting.
   userName?: string | null
+  // A message handed in from elsewhere in the app (e.g. the symptom check-in
+  // form) to send into the live conversation; consumed exactly once.
+  outboundText?: string | null
+  onOutboundConsumed?: () => void
 }
 
-export function Assistant({ onContext, onSession, identifyCode, userName }: AssistantProps) {
+export function Assistant({
+  onContext,
+  onSession,
+  identifyCode,
+  userName,
+  outboundText,
+  onOutboundConsumed,
+}: AssistantProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     makeGreeting(userName, Boolean(identifyCode)),
   ])
@@ -93,6 +104,12 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
   const [error, setError] = useState('')
   const [micActive, setMicActive] = useState(false)
   const [muted, setMuted] = useState(false)
+  // True between sending a message and the first sign of a reply, so the
+  // transcript shows typing dots instead of dead air.
+  const [awaitingReply, setAwaitingReply] = useState(false)
+  // Fullscreen voice view: opens with the mic, can be minimized while the
+  // conversation keeps running in the bar.
+  const [voiceFocus, setVoiceFocus] = useState(false)
   const [context, setContext] = useState<SessionContext | null>(null)
   const [contextLoading, setContextLoading] = useState(false)
   const [highlights, setHighlights] = useState<SourceItem[]>([])
@@ -109,6 +126,7 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
   const liveAssistantRef = useRef('')
   const pendingSourcesRef = useRef<SourceItem[]>([])
   const endRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   // The connection effect runs once; keep the latest props reachable from it.
   const onContextRef = useRef(onContext)
   const onSessionRef = useRef(onSession)
@@ -124,7 +142,7 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, liveUser, liveAssistant])
+  }, [messages, liveUser, liveAssistant, awaitingReply])
 
   useEffect(() => {
     // Guards async callbacks from a disconnected client (StrictMode double-mount
@@ -176,7 +194,10 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
         if (!cancelled) setState(s)
       },
       onError: (msg) => {
-        if (!cancelled) setError(msg)
+        if (!cancelled) {
+          setError(msg)
+          setAwaitingReply(false)
+        }
       },
       onSession: (sid) => {
         sessionIdRef.current = sid
@@ -190,6 +211,7 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
         }
       },
       onTranscript: (text: string, final: boolean, role: TranscriptRole) => {
+        if (role === 'assistant' && !cancelled) setAwaitingReply(false)
         const liveRef = role === 'user' ? liveUserRef : liveAssistantRef
         const setLive = role === 'user' ? setLiveUser : setLiveAssistant
         if (final) {
@@ -204,6 +226,7 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
         }
       },
       onTurnComplete: () => {
+        if (!cancelled) setAwaitingReply(false)
         // Safety net: commit any partials still buffered if no final arrived.
         if (liveUserRef.current.trim()) {
           commit('user', liveUserRef.current)
@@ -250,8 +273,16 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
       ...prev,
       { id: generateId(), role: 'user', content: t, timestamp: new Date() },
     ])
+    // The client queues text typed while disconnected; kick off the reconnect
+    // so the queued message is delivered on the fresh session instead of
+    // silently going nowhere.
     clientRef.current?.sendText(t)
+    if (state === 'idle' || state === 'error') {
+      void reconnect()
+    }
+    setAwaitingReply(true)
     setInput('')
+    inputRef.current?.focus()
   }
 
   const toggleMic = async () => {
@@ -260,10 +291,18 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
     setError('')
     if (client.isMicActive()) {
       client.stopMic()
+      setVoiceFocus(false)
     } else {
       await client.startMic()
+      if (client.isMicActive()) setVoiceFocus(true)
     }
     setMicActive(client.isMicActive())
+  }
+
+  const endVoice = () => {
+    clientRef.current?.stopMic()
+    setMicActive(false)
+    setVoiceFocus(false)
   }
 
   const toggleMute = () => {
@@ -321,11 +360,38 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
     }
   }
 
+  // Deliver a message handed in from another tab (symptom check-in) exactly
+  // once; the conversation surface stays the single place answers appear.
+  useEffect(() => {
+    if (!outboundText) return
+    void (async () => {
+      send(outboundText)
+      onOutboundConsumed?.()
+    })()
+    // send/onOutboundConsumed are recreated per render but stable per consume
+    // cycle; keying on the text keeps this to one delivery per message.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outboundText])
+
   const hasUserTurn = messages.some((m) => m.role === 'user')
   // Onboarded accounts never need the identification chips.
   const chips = hasUserTurn || identifyCode ? FOLLOW_UPS : SUGGESTED_FIRST
   const live = state === 'listening' || state === 'speaking'
   const offline = state === 'idle' || state === 'error'
+
+  // Drives the voice-overlay orb: one smoothed loudness value from the bars.
+  const orbLevel = levels.reduce((a, b) => a + b, 0) / (levels.length || 1)
+  const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
+  const voiceCaption = (liveAssistant || liveUser || lastAssistant?.content || '').replace(
+    /\*\*/g,
+    '',
+  )
+
+  // Cite-on-click: clicking a source chip re-pulses the matching panel item.
+  const focusSource = (s: SourceItem) => {
+    setHighlights([s])
+    setHighlightTick((t) => t + 1)
+  }
 
   return (
     <div className="assistant-shell">
@@ -368,9 +434,15 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
                     {msg.sources.map((s, i) => {
                       const label = sourceLabel(s)
                       return label ? (
-                        <span key={i} className="source-chip" title={s.snippet ?? undefined}>
+                        <button
+                          key={i}
+                          type="button"
+                          className="source-chip"
+                          title={s.snippet ?? 'Show this source in the panel'}
+                          onClick={() => focusSource(s)}
+                        >
                           {label}
-                        </span>
+                        </button>
                       ) : null
                     })}
                   </div>
@@ -399,6 +471,16 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
                   style={{ opacity: 0.65 }}
                   dangerouslySetInnerHTML={{ __html: renderText(liveAssistant) }}
                 />
+              </div>
+            </div>
+          )}
+          {awaitingReply && !liveAssistant && (
+            <div className="chat-message assistant">
+              <div className="chat-avatar assistant">🤖</div>
+              <div className="typing-indicator-bubble">
+                <div className="typing-dot" />
+                <div className="typing-dot" />
+                <div className="typing-dot" />
               </div>
             </div>
           )}
@@ -431,9 +513,22 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
             {micActive ? '■' : '🎤'}
           </button>
 
-          <AudioVisualizer levels={levels} state={state} />
+          {micActive && !voiceFocus ? (
+            <button
+              type="button"
+              className="voice-expand"
+              onClick={() => setVoiceFocus(true)}
+              title="Expand voice view"
+              aria-label="Expand voice view"
+            >
+              <AudioVisualizer levels={levels} state={state} />
+            </button>
+          ) : (
+            <AudioVisualizer levels={levels} state={state} />
+          )}
 
           <input
+            ref={inputRef}
             className="chat-input"
             type="text"
             placeholder="Type a message…"
@@ -483,6 +578,39 @@ export function Assistant({ onContext, onSession, identifyCode, userName }: Assi
         highlightTick={highlightTick}
         loading={contextLoading}
       />
+
+      {voiceFocus && (
+        <div className="voice-overlay" role="dialog" aria-label="Voice conversation">
+          <div className="voice-overlay-state">{STATE_LABEL[state]}</div>
+          <div
+            className={`voice-orb${state === 'speaking' ? ' speaking' : ''}`}
+            style={{ transform: `scale(${1 + Math.min(orbLevel, 1) * 0.45})` }}
+            aria-hidden="true"
+          />
+          <div className="voice-overlay-caption" aria-live="polite">
+            {voiceCaption}
+          </div>
+          <div className="voice-overlay-controls">
+            <button
+              type="button"
+              className="voice-overlay-btn"
+              onClick={() => setVoiceFocus(false)}
+            >
+              ⌄ Minimize
+            </button>
+            <button type="button" className="voice-overlay-btn end" onClick={endVoice}>
+              ■ End voice
+            </button>
+            <button
+              type="button"
+              className={`voice-overlay-btn${muted ? ' active' : ''}`}
+              onClick={toggleMute}
+            >
+              {muted ? '🔇 Unmute' : '🔊 Mute'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

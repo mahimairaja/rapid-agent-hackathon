@@ -156,6 +156,7 @@ export function AppointmentCalendar({ sessionId, onBooked }: AppointmentCalendar
             {currentBooking
               ? `Currently booked: ${currentBooking.start_local} — pick a new slot to move it`
               : 'Pick any available slot inside your follow-up window'}
+            {' · '}times in {getClientTimeZone() ?? 'your local time'}
           </div>
         </div>
         {notice && <div className="cal-notice">{notice}</div>}
