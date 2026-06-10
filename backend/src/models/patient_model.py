@@ -36,6 +36,11 @@ class Patient(TimestampedDocument):
     follow_up_window_end: datetime | None = None
     follow_up_kind: str | None = None
 
+    # Journey onboarding: set on profiles cloned from a seeded sample (the
+    # source sample's patient_id). Seeded samples have it unset, which is how
+    # the journeys listing excludes clones.
+    cloned_from: str | None = None
+
     @field_validator("follow_up_window_start", "follow_up_window_end", mode="after")
     @classmethod
     def normalize_follow_up_window_utc(cls, value: datetime | None) -> datetime | None:

@@ -20,7 +20,7 @@ router = APIRouter(prefix="/voice", tags=["voice"])
 
 
 async def pump_client_to_session(websocket: WebSocket, session: VoiceSession) -> None:
-    """Forward inbound audio frames (and optional text control) to the session."""
+    """Forward inbound audio frames (and control frames) to the session."""
     while True:
         message = await websocket.receive()
         if message.get("type") == "websocket.disconnect":
@@ -38,6 +38,28 @@ async def pump_client_to_session(websocket: WebSocket, session: VoiceSession) ->
             continue
         if payload.get("type") == "text" and payload.get("text"):
             session.send_text(payload["text"])
+        elif payload.get("type") == "identify" and payload.get("patient_code"):
+            # Deterministic identification for onboarded accounts: no LLM round
+            # trip. Success reuses the identity source frame, so the frontend's
+            # grounding/hydration pipeline fires unchanged.
+            name = await session.identify(payload["patient_code"])
+            if name is not None:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "sources",
+                            "items": [
+                                {
+                                    "type": "identity",
+                                    "tool": "identify",
+                                    "name": name,
+                                }
+                            ],
+                        }
+                    )
+                )
+            else:
+                await websocket.send_text(json.dumps({"type": "identify_failed"}))
 
 
 async def pump_session_to_client(websocket: WebSocket, session: VoiceSession) -> None:

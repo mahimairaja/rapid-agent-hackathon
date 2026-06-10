@@ -15,6 +15,17 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException
 
 from src.agent.agent.agent_runner import run_turn
+from src.agent.tools.appointment_tools import (
+    _available_follow_up_slots,
+    _booking_payload,
+    _current_follow_up,
+    _find_requested_slot,
+    _follow_up_window,
+    _mirror_booking,
+    _parse_iso,
+    _slot_payload,
+    _zone_info,
+)
 from src.models import Appointment, CarePlanChunk, Medication, Patient
 from src.schemas.agent_schemas import ChatRequest, ChatResponse
 from src.schemas.patient_dashboard_schemas import (
@@ -22,11 +33,18 @@ from src.schemas.patient_dashboard_schemas import (
     PatientDashboardMedication,
     PatientDashboardPatient,
 )
+from src.schemas.session_booking_schemas import (
+    FollowUpWindowOut,
+    SessionBookRequest,
+    SessionBookResponse,
+    SessionSlotsResponse,
+)
 from src.schemas.session_context_schemas import (
     CarePlanChunkOut,
     CarePlanOut,
     SessionContextResponse,
 )
+from src.services.calcom_service import CalComError, get_calcom_client
 from src.services.patient_view import active_medications, upcoming_appointments
 from src.voice.session import verified_patient_id_for
 
@@ -93,4 +111,106 @@ async def session_context(session_id: str) -> SessionContextResponse:
                 for chunk in sorted(chunks, key=lambda c: c.chunk_index)
             ]
         ),
+    )
+
+
+async def _session_patient(session_id: str) -> Patient | None:
+    patient_id = await verified_patient_id_for(session_id)
+    if not patient_id:
+        return None
+    return await Patient.find_one({"patient_id": patient_id})
+
+
+def _iso_utc(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+@router.get("/session/{session_id}/slots", response_model=SessionSlotsResponse)
+async def session_slots(
+    session_id: str, time_zone: str | None = None
+) -> SessionSlotsResponse:
+    """Available follow-up slots for the calendar widget.
+
+    Same trust model and status vocabulary as the F4 agent tools, whose helpers
+    this reuses, so the widget can never book outside the follow-up window.
+    """
+    patient = await _session_patient(session_id)
+    if patient is None:
+        return SessionSlotsResponse(status="unverified")
+    zone = _zone_info(time_zone)
+    if zone is None:
+        return SessionSlotsResponse(status="invalid_time_zone")
+
+    window = _follow_up_window(patient)
+    if isinstance(window, dict):
+        return SessionSlotsResponse(status=window["status"])
+
+    current = await _current_follow_up(patient)
+    slots = await _available_follow_up_slots(
+        patient,
+        zone=zone,
+        booking_uid_to_reschedule=current.cal_booking_uid if current else None,
+    )
+    if isinstance(slots, dict):
+        return SessionSlotsResponse(status=slots["status"])
+
+    start, end = window
+    return SessionSlotsResponse(
+        status="ok",
+        window=FollowUpWindowOut(start_iso=_iso_utc(start), end_iso=_iso_utc(end)),
+        current_booking=_booking_payload(current, zone) if current else None,
+        slots=[_slot_payload(slot, zone) for slot in slots],
+    )
+
+
+@router.post("/session/{session_id}/book", response_model=SessionBookResponse)
+async def session_book(
+    session_id: str, payload: SessionBookRequest
+) -> SessionBookResponse:
+    """Book (or reschedule) the follow-up from the calendar widget.
+
+    Books when no current follow-up exists, reschedules otherwise; writes the
+    same Appointment mirror the agent tools write, so the agent, dashboard, and
+    grounding panel stay consistent.
+    """
+    patient = await _session_patient(session_id)
+    if patient is None:
+        return SessionBookResponse(status="unverified")
+    zone = _zone_info(payload.time_zone)
+    if zone is None:
+        return SessionBookResponse(status="invalid_time_zone")
+    requested = _parse_iso(payload.start_iso)
+    if requested is None:
+        return SessionBookResponse(status="invalid_time")
+
+    current = await _current_follow_up(patient)
+    slots = await _available_follow_up_slots(
+        patient,
+        zone=zone,
+        booking_uid_to_reschedule=current.cal_booking_uid if current else None,
+    )
+    if isinstance(slots, dict):
+        return SessionBookResponse(status=slots["status"])
+    selected = _find_requested_slot(requested, slots)
+    if selected is None:
+        return SessionBookResponse(status="unavailable")
+
+    try:
+        client = get_calcom_client()
+        if current is not None and current.cal_booking_uid:
+            booking = await client.reschedule_booking(
+                current.cal_booking_uid, selected, patient, time_zone=zone.key
+            )
+        else:
+            booking = await client.create_booking(selected, patient, time_zone=zone.key)
+    except CalComError:
+        logger.warning("calendar widget booking failed", exc_info=True)
+        return SessionBookResponse(status="scheduler_unavailable")
+
+    appointment = await _mirror_booking(patient, booking, existing=current)
+    return SessionBookResponse(
+        status="rescheduled" if current is not None else "booked",
+        booking=_booking_payload(appointment, zone),
     )

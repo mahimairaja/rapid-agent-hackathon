@@ -16,12 +16,18 @@ from typing import Any
 
 from google.adk.agents.live_request_queue import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig, StreamingMode
+from google.adk.events import Event, EventActions
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from src.agent.agent.root_agent import build_recognition_agent
-from src.agent.agent.session_state import verified_patient_id
+from src.agent.agent.session_state import (
+    PATIENT_ID,
+    PATIENT_NAME,
+    PATIENT_VERIFIED,
+    verified_patient_id,
+)
 from src.core.config import config
 
 logger = logging.getLogger(__name__)
@@ -281,6 +287,49 @@ class VoiceSession:
         self._queue.send_content(
             types.Content(role="user", parts=[types.Part(text=text)])
         )
+
+    async def identify(self, patient_code: str) -> str | None:
+        """Deterministically verify this session for a patient code.
+
+        Onboarded accounts identify without an LLM round trip: look up the
+        patient and write the verified identity into the live session state via
+        ``append_event`` (the same pattern the text runner uses for turn
+        preferences). The verification gate and every tool only read state, so
+        they see the session as verified immediately. Returns the patient's
+        name, or None when the code or session is unknown.
+        """
+        from src.models import Patient  # deferred: queried at call time only
+
+        code = (patient_code or "").strip().upper()
+        if not code or not self.session_id:
+            return None
+        try:
+            patient = await Patient.find_one({"patient_code": code})
+            if patient is None:
+                return None
+            session = await self._service.get_session(
+                app_name=_APP_NAME, user_id=_USER_ID, session_id=self.session_id
+            )
+            if session is None:
+                return None
+            name = f"{patient.first_name} {patient.last_name}".strip()
+            await self._service.append_event(
+                session,
+                Event(
+                    author="system",
+                    actions=EventActions(
+                        state_delta={
+                            PATIENT_VERIFIED: True,
+                            PATIENT_ID: patient.patient_id,
+                            PATIENT_NAME: name,
+                        }
+                    ),
+                ),
+            )
+            return name
+        except Exception:
+            logger.warning("deterministic identify failed", exc_info=True)
+            return None
 
     async def events(self):
         """Yield normalized client-facing events from the live session."""
