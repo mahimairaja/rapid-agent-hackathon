@@ -63,10 +63,12 @@ class Config(BaseSettings):
     GOOGLE_GENAI_USE_VERTEXAI: bool = False
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
-    # Voice (F6). GEMINI_LIVE_MODEL must be a Gemini Live native-audio model; the
-    # voice agent reuses the same tools/prompts as the text agent but with this
-    # model. Confirm the exact id against availability at deploy time.
-    GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"
+    # Voice (F6). GEMINI_LIVE_MODEL must be a Gemini Live model that supports
+    # bidiGenerateContent on the configured API; the voice agent reuses the same
+    # tools/prompts as the text agent but with this model. List available models
+    # with client.models.list() (filter supported_actions for bidiGenerateContent)
+    # if the default is not available on your key.
+    GEMINI_LIVE_MODEL: str = "gemini-2.5-flash-native-audio-latest"
     VOICE_INPUT_SAMPLE_RATE: int = 16000
     VOICE_OUTPUT_SAMPLE_RATE: int = 24000
 
