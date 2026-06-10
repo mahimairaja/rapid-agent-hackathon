@@ -50,8 +50,15 @@ async function request<T>(
   }
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new ApiError((err as { detail?: string }).detail ?? `HTTP ${res.status}`, res.status)
+    // FastAPI HTTPException uses `detail`; the app's error middleware uses
+    // `error` (human-readable) and `message` (category).
+    const err = (await res.json().catch(() => ({}))) as {
+      detail?: unknown
+      error?: unknown
+      message?: unknown
+    }
+    const msg = [err.detail, err.error, err.message].find((v): v is string => typeof v === 'string')
+    throw new ApiError(msg ?? `HTTP ${res.status}`, res.status)
   }
   return res.json() as Promise<T>
 }

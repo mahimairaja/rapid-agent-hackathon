@@ -355,6 +355,9 @@ export function JoinWizard({
             id="join-next-btn"
             className="btn btn-primary join-next"
             disabled={submitting}
+            // The journey step has no text input, so without this Enter has no
+            // focused form element and cannot confirm a preselected card.
+            autoFocus={step === 'journey'}
           >
             {submitting
               ? 'Creating your account…'
