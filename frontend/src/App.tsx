@@ -13,7 +13,7 @@ import { RecoveryPlan } from './components/RecoveryPlan'
 import { MedicationSchedule } from './components/MedicationSchedule'
 import { AppointmentTimeline } from './components/AppointmentTimeline'
 import { AssistantChat } from './components/AssistantChat'
-import { VoiceConsole } from './components/VoiceConsole'
+import { Assistant } from './components/Assistant'
 import { SymptomCheckInForm } from './components/SymptomCheckIn'
 import { CareTeamPanel } from './components/CareTeamPanel'
 import { LoadingState } from './components/LoadingState'
@@ -40,8 +40,10 @@ const PAGE_META: Record<AppView, { title: string; subtitle: string }> = {
   dashboard: { title: 'Recovery Dashboard', subtitle: 'Your personalized recovery overview' },
   medications: { title: 'Medication Schedule', subtitle: 'Daily medications and instructions' },
   appointments: { title: 'Appointment Timeline', subtitle: 'Upcoming follow-up appointments' },
-  assistant: { title: 'AI Recovery Assistant', subtitle: 'Ask anything about your recovery' },
-  voice: { title: 'Voice Conversation', subtitle: 'Talk to Homeward and interrupt any time' },
+  assistant: {
+    title: 'Recovery Assistant',
+    subtitle: 'Talk or type — answers grounded in your own plan',
+  },
   'symptom-check': {
     title: 'Symptom Check-In',
     subtitle: 'Monitor and triage how you are feeling',
@@ -72,9 +74,8 @@ function App() {
   const [dashboardError, setDashboardError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const [activeView, setActiveView] = useState<AppView>('dashboard')
+  const [activeView, setActiveView] = useState<AppView>('assistant')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [assistantDraft, setAssistantDraft] = useState<string | null>(null)
   // The patient code whose data is already on screen. Used to tell an initial
   // load (show the full-screen loader) from a background refresh (e.g. after a
   // chat turn), which must not toggle screen-level loading or it would unmount
@@ -203,13 +204,14 @@ function App() {
     setDashboardError('')
   }
 
-  const handleAssistantPrompt = (prompt: string) => {
-    setAssistantDraft(prompt)
+  // Deep-link from dashboard / appointment shortcuts into the unified Assistant.
+  // The Assistant runs its own live conversation, so the prompt text is not
+  // pre-filled; the shortcut just brings the patient to the right place.
+  const handleAssistantPrompt = () => {
     setActiveView('assistant')
   }
 
   const handleAssistantTurnComplete = () => {
-    setAssistantDraft(null)
     if (token && token !== 'demo' && patientCode) {
       setRefreshKey((prev) => prev + 1)
     }
@@ -359,22 +361,13 @@ function App() {
                   </div>
                 </div>
                 <div className="appointment-actions">
-                  <button
-                    type="button"
-                    onClick={() => handleAssistantPrompt('Can you book my follow-up?')}
-                  >
+                  <button type="button" onClick={handleAssistantPrompt}>
                     Book
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAssistantPrompt('When is my follow-up?')}
-                  >
+                  <button type="button" onClick={handleAssistantPrompt}>
                     Check
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAssistantPrompt('Can I move my follow-up?')}
-                  >
+                  <button type="button" onClick={handleAssistantPrompt}>
                     Move
                   </button>
                 </div>
@@ -388,34 +381,13 @@ function App() {
           {activeView === 'assistant' && (
             <div>
               <div className="view-header">
-                <div className="view-header-title">🤖 AI Recovery Assistant</div>
+                <div className="view-header-title">🤖 Recovery Assistant</div>
                 <div className="view-header-sub">
-                  Powered by Gemini · Ask about medications, symptoms, restrictions, or your
-                  recovery plan
+                  Talk or type in one place. Powered by Gemini Live, with answers grounded in your
+                  own discharge plan.
                 </div>
               </div>
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <AssistantChat
-                  key={assistantDraft ?? 'assistant-view'}
-                  initialInput={assistantDraft}
-                  onTurnComplete={handleAssistantTurnComplete}
-                  token={token === 'demo' ? null : token}
-                  userInitials={userInitials}
-                />
-              </div>
-            </div>
-          )}
-
-          {activeView === 'voice' && (
-            <div>
-              <div className="view-header">
-                <div className="view-header-title">🎙️ Voice Conversation</div>
-                <div className="view-header-sub">
-                  Speak with Homeward hands-free — it listens, answers aloud, and you can interrupt
-                  any time
-                </div>
-              </div>
-              <VoiceConsole />
+              <Assistant />
             </div>
           )}
 

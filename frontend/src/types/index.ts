@@ -155,12 +155,45 @@ export interface PatientDashboardResponse {
 
 export type MessageRole = 'user' | 'assistant'
 
+// A grounding source emitted by the backend for one assistant turn. The
+// frontend matches it against the grounding panel: medication by name,
+// appointment by kind/start_iso, care_plan by (source_file, chunk_index).
+export interface SourceItem {
+  type: 'identity' | 'plan' | 'medication' | 'appointment' | 'care_plan' | 'symptom'
+  tool?: string
+  name?: string
+  kind?: string
+  start_iso?: string
+  source_file?: string
+  chunk_index?: number
+  snippet?: string
+  rule_id?: string
+  status?: string
+}
+
 export interface ChatMessage {
   id: string
   role: MessageRole
   content: string
   timestamp: Date
   typing?: boolean
+  sources?: SourceItem[]
+}
+
+// ── Live-session grounding context (GET /agent/session/{id}/context) ───────────
+
+export interface CarePlanChunkOut {
+  text: string
+  source_file: string
+  chunk_index: number
+}
+
+export interface SessionContext {
+  verified: boolean
+  patient?: Patient | null
+  medications?: Medication[]
+  appointments?: Appointment[]
+  care_plan?: { chunks: CarePlanChunkOut[]; summary?: string | null } | null
 }
 
 // ── Symptom Triage ────────────────────────────────────────────────────────────
@@ -191,7 +224,6 @@ export type AppView =
   | 'medications'
   | 'appointments'
   | 'assistant'
-  | 'voice'
   | 'symptom-check'
   | 'care-team'
 

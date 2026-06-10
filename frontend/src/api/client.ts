@@ -5,6 +5,7 @@ import type {
   AuthToken,
   PatientDashboardRequest,
   PatientDashboardResponse,
+  SessionContext,
   UserMe,
   Patient,
   Medication,
@@ -191,6 +192,19 @@ export function getClientTimeZone(): string | null {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || null
   } catch {
     return null
+  }
+}
+
+/**
+ * Load the grounding context for a live session (verified patient's plan, meds,
+ * appointments, and care-plan chunks). Returns `{ verified: false }` on any
+ * failure so the panel falls back to its placeholder.
+ */
+export async function getSessionContext(sessionId: string): Promise<SessionContext> {
+  try {
+    return await request<SessionContext>(`/agent/session/${encodeURIComponent(sessionId)}/context`)
+  } catch {
+    return { verified: false }
   }
 }
 
