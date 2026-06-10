@@ -5535,3 +5535,17 @@ input[type='range']::-webkit-slider-thumb:hover {
     transition: none !important;
   }
 }
+
+.login-back-link {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13.5px;
+  padding: 0;
+  margin-bottom: 14px;
+}
+
+.login-back-link:hover {
+  color: var(--text-secondary);
+}

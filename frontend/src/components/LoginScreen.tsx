@@ -3,9 +3,10 @@ import { login, setStoredToken, signUp } from '../api/client'
 
 interface LoginScreenProps {
   onLogin: (token: string, isDemoMode: boolean, role: 'patient' | 'professional') => void
+  onBack?: () => void
 }
 
-export function LoginScreen({ onLogin }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onBack }: LoginScreenProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -183,6 +184,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
           {selectedRole === 'none' ? (
             <div className="role-selection">
+              {onBack && (
+                <button type="button" className="login-back-link" onClick={onBack}>
+                  ← Back to home
+                </button>
+              )}
               <h2 style={{ textAlign: 'center', marginBottom: 24, color: 'var(--text-primary)' }}>
                 Welcome to Rapid Recovery
               </h2>
