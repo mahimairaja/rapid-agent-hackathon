@@ -133,16 +133,42 @@ def source_items_for(name: str, response: Any) -> list[dict]:
     return []
 
 
+def _transcript_frame(transcription: Any, role: str) -> dict | None:
+    """Frame an ADK ``types.Transcription`` (text + finished), or None if empty."""
+    text = getattr(transcription, "text", None)
+    if not text:
+        return None
+    return {
+        "type": "transcript",
+        "role": role,
+        "text": text,
+        "final": bool(getattr(transcription, "finished", False)),
+    }
+
+
 def normalize_event(event: Any) -> dict | None:
     """Map an ADK live event to a small client-facing event, or None to skip.
 
     Shapes: ``{"type": "audio", "data": bytes}``,
     ``{"type": "sources", "items": [...]}``,
-    ``{"type": "transcript", "text": str, "final": bool}``,
+    ``{"type": "transcript", "role": str, "text": str, "final": bool}``,
     ``{"type": "interrupted"}``, ``{"type": "turn_complete"}``.
     """
     if getattr(event, "interrupted", False):
         return {"type": "interrupted"}
+
+    # Native-audio transcripts arrive in dedicated fields (one per event),
+    # separate from content.parts: output is the model speaking, input is the
+    # patient. This is the reliable user/assistant distinction for the unified
+    # transcript.
+    out_frame = _transcript_frame(
+        getattr(event, "output_transcription", None), "assistant"
+    )
+    if out_frame is not None:
+        return out_frame
+    in_frame = _transcript_frame(getattr(event, "input_transcription", None), "user")
+    if in_frame is not None:
+        return in_frame
 
     content = getattr(event, "content", None)
     parts = (getattr(content, "parts", None) or []) if content else []
@@ -175,8 +201,11 @@ def normalize_event(event: Any) -> dict | None:
             continue
         text = getattr(part, "text", None)
         if text:
+            # Model text output (e.g. text-mode); the patient's typed turns are
+            # echoed client-side, so any content-part text here is the assistant.
             return {
                 "type": "transcript",
+                "role": "assistant",
                 "text": text,
                 "final": not getattr(event, "partial", False),
             }

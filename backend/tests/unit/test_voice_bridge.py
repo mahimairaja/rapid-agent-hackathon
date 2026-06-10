@@ -55,6 +55,23 @@ def _function_response_event(name: str, response):
     )
 
 
+def _transcription_event(*, output=None, input=None):
+    def _tr(value):
+        if value is None:
+            return None
+        text, finished = value
+        return SimpleNamespace(text=text, finished=finished)
+
+    return SimpleNamespace(
+        interrupted=False,
+        output_transcription=_tr(output),
+        input_transcription=_tr(input),
+        content=None,
+        partial=False,
+        turn_complete=False,
+    )
+
+
 # -- normalize_event ------------------------------------------------------------
 
 
@@ -62,9 +79,10 @@ def test_normalize_audio_event():
     assert normalize_event(_audio_event(b"pcm")) == {"type": "audio", "data": b"pcm"}
 
 
-def test_normalize_final_transcript():
+def test_normalize_text_part_is_assistant_transcript():
     assert normalize_event(_text_event("hello", partial=False)) == {
         "type": "transcript",
+        "role": "assistant",
         "text": "hello",
         "final": True,
     }
@@ -73,6 +91,24 @@ def test_normalize_final_transcript():
 def test_normalize_partial_transcript():
     out = normalize_event(_text_event("hel", partial=True))
     assert out["type"] == "transcript" and out["final"] is False
+
+
+def test_normalize_output_transcription_is_assistant():
+    assert normalize_event(_transcription_event(output=("the answer", True))) == {
+        "type": "transcript",
+        "role": "assistant",
+        "text": "the answer",
+        "final": True,
+    }
+
+
+def test_normalize_input_transcription_is_user():
+    assert normalize_event(_transcription_event(input=("my name is", False))) == {
+        "type": "transcript",
+        "role": "user",
+        "text": "my name is",
+        "final": False,
+    }
 
 
 def test_normalize_interrupted_wins():
