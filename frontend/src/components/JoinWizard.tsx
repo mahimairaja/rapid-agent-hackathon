@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { UploadCloud } from 'lucide-react'
 import type { ClaimResponse, Journey } from '../types'
 import { ApiError, claimJourney, getJourneys, login, signUp } from '../api/client'
 import { JOURNEY_IMAGES } from '../data/journeyImages'
@@ -282,6 +283,27 @@ export function JoinWizard({
                 </div>
               </button>
             ))}
+            {/* Real product path, intentionally frozen for the demo: sample
+                journeys stand in for parsed discharge documents. */}
+            <div
+              aria-disabled="true"
+              className="col-span-full flex select-none items-center gap-3 rounded-xl border border-dashed border-input bg-muted/40 p-3.5 opacity-75"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <UploadCloud className="size-5" />
+              </span>
+              <span className="flex min-w-0 flex-col text-left">
+                <span className="text-sm font-semibold text-muted-foreground">
+                  Upload your discharge summary
+                </span>
+                <span className="text-xs text-muted-foreground/80">
+                  Your own plan, parsed into Maya's knowledge base
+                </span>
+              </span>
+              <span className="ml-auto shrink-0 rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                Coming soon
+              </span>
+            </div>
           </div>
         )}
 
