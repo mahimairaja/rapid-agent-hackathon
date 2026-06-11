@@ -1,23 +1,24 @@
 import type { ClaimResponse } from '../types'
 
 export interface BuildStage {
-  icon: string
+  // Icon key resolved to a lucide icon by JourneyBuildStages.
+  icon: 'profile' | 'meds' | 'appts' | 'kb' | 'ready'
   label: string
 }
 
 /** Stage list driven by the real counts in a claim response. */
 export function buildStagesFromClaim(claim: ClaimResponse): BuildStage[] {
   return [
-    { icon: '👤', label: `Creating ${claim.first_name}'s profile` },
-    { icon: '💊', label: `Copying ${claim.counts.medications} medications` },
-    { icon: '📅', label: `Scheduling ${claim.counts.appointments} appointments` },
+    { icon: 'profile', label: `Creating ${claim.first_name}'s profile` },
+    { icon: 'meds', label: `Copying ${claim.counts.medications} medications` },
+    { icon: 'appts', label: `Scheduling ${claim.counts.appointments} appointments` },
     {
-      icon: '📚',
+      icon: 'kb',
       label: `Ingesting your care plan — ${claim.counts.care_plan_chunks} knowledge chunk${
         claim.counts.care_plan_chunks === 1 ? '' : 's'
       } indexed`,
     },
-    { icon: '✅', label: 'Your personal knowledge base is ready' },
+    { icon: 'ready', label: 'Your personal knowledge base is ready' },
   ]
 }
 

@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react'
+import { ClipboardList } from 'lucide-react'
+
 export function LoadingState({ message = 'Loading…' }: { message?: string }) {
   return (
     <div className="loading-state">
@@ -8,11 +11,11 @@ export function LoadingState({ message = 'Loading…' }: { message?: string }) {
 }
 
 export function EmptyState({
-  icon = '📋',
+  icon = <ClipboardList size={28} />,
   title = 'Nothing here yet',
   subtitle,
 }: {
-  icon?: string
+  icon?: ReactNode
   title?: string
   subtitle?: string
 }) {

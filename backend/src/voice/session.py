@@ -5,7 +5,7 @@ is reused with the Live audio model (config.GEMINI_LIVE_MODEL), so every F1-F5
 tool, the verification gate, and the prompts apply unchanged. The patient
 identifies by voice exactly as they would by text.
 
-The ADK/Live event shapes are isolated in two pure helpers, ``normalize_event``
+The ADK/Live event shapes are isolated in two pure helpers, ``normalize_events``
 and ``encode_for_client``, so the WebSocket bridge and its framing can be
 unit-tested without a model, audio, or a network. The live audio path itself is
 manual-tested (no microphone in CI).
@@ -155,16 +155,19 @@ def _transcript_frame(transcription: Any, role: str) -> dict | None:
     }
 
 
-def normalize_event(event: Any) -> dict | None:
-    """Map an ADK live event to a small client-facing event, or None to skip.
+def normalize_events(event: Any) -> list[dict]:
+    """Map an ADK live event to client-facing frames, in send order.
 
     Shapes: ``{"type": "audio", "data": bytes}``,
+    ``{"type": "tool", "tool": str, "status": "running" | "done"}``,
     ``{"type": "sources", "items": [...]}``,
     ``{"type": "transcript", "role": str, "text": str, "final": bool}``,
     ``{"type": "interrupted"}``, ``{"type": "turn_complete"}``.
+    One ADK event can produce several frames (a tool response yields its
+    activity frame and then its sources frame); an empty list means skip.
     """
     if getattr(event, "interrupted", False):
-        return {"type": "interrupted"}
+        return [{"type": "interrupted"}]
 
     # Native-audio transcripts arrive in dedicated fields (one per event),
     # separate from content.parts: output is the model speaking, input is the
@@ -174,10 +177,10 @@ def normalize_event(event: Any) -> dict | None:
         getattr(event, "output_transcription", None), "assistant"
     )
     if out_frame is not None:
-        return out_frame
+        return [out_frame]
     in_frame = _transcript_frame(getattr(event, "input_transcription", None), "user")
     if in_frame is not None:
-        return in_frame
+        return [in_frame]
 
     content = getattr(event, "content", None)
     parts = (getattr(content, "parts", None) or []) if content else []
@@ -186,22 +189,27 @@ def normalize_event(event: Any) -> dict | None:
     for part in parts:
         inline = getattr(part, "inline_data", None)
         if inline is not None and getattr(inline, "data", None):
-            return {"type": "audio", "data": inline.data}
+            return [{"type": "audio", "data": inline.data}]
 
-    # Tool results carry grounding sources. Function-response parts arrive in
-    # their own events (separate from audio/text), so emitting a sources frame
-    # here never drops a spoken reply.
+    # Tool activity is visible in the chat: a call announces itself while it
+    # runs, a response resolves the chip and carries grounding sources. Call
+    # and response parts arrive in their own events (separate from audio and
+    # text), so these frames never displace a spoken reply.
+    frames: list[dict] = []
     sources: list[dict] = []
     for part in parts:
+        fc = getattr(part, "function_call", None)
+        if fc is not None and getattr(fc, "name", None):
+            frames.append({"type": "tool", "tool": fc.name, "status": "running"})
         fr = getattr(part, "function_response", None)
         if fr is not None:
-            sources.extend(
-                source_items_for(
-                    getattr(fr, "name", "") or "", getattr(fr, "response", None)
-                )
-            )
+            name = getattr(fr, "name", "") or ""
+            frames.append({"type": "tool", "tool": name, "status": "done"})
+            sources.extend(source_items_for(name, getattr(fr, "response", None)))
     if sources:
-        return {"type": "sources", "items": sources}
+        frames.append({"type": "sources", "items": sources})
+    if frames:
+        return frames
 
     for part in parts:
         # Skip the model's private reasoning ("thought") parts so only spoken
@@ -212,16 +220,18 @@ def normalize_event(event: Any) -> dict | None:
         if text:
             # Model text output (e.g. text-mode); the patient's typed turns are
             # echoed client-side, so any content-part text here is the assistant.
-            return {
-                "type": "transcript",
-                "role": "assistant",
-                "text": text,
-                "final": not getattr(event, "partial", False),
-            }
+            return [
+                {
+                    "type": "transcript",
+                    "role": "assistant",
+                    "text": text,
+                    "final": not getattr(event, "partial", False),
+                }
+            ]
 
     if getattr(event, "turn_complete", False):
-        return {"type": "turn_complete"}
-    return None
+        return [{"type": "turn_complete"}]
+    return []
 
 
 async def verified_patient_id_for(session_id: str) -> str | None:
@@ -347,8 +357,7 @@ class VoiceSession:
     async def events(self):
         """Yield normalized client-facing events from the live session."""
         async for event in self._live:
-            norm = normalize_event(event)
-            if norm is not None:
+            for norm in normalize_events(event):
                 yield norm
 
     async def close(self) -> None:

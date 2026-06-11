@@ -1,3 +1,12 @@
+import { LogOut, Menu } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
 interface HeaderProps {
   title: string
   subtitle?: string
@@ -7,6 +16,8 @@ interface HeaderProps {
   onChangePatient?: () => void
   patientCode?: string | null
   userInitials: string
+  userName?: string | null
+  userEmail?: string | null
 }
 
 export function Header({
@@ -18,6 +29,8 @@ export function Header({
   onLogout,
   patientCode,
   userInitials,
+  userName,
+  userEmail,
 }: HeaderProps) {
   return (
     <header className="header" role="banner">
@@ -31,20 +44,7 @@ export function Header({
           aria-haspopup="true"
           id="mobile-menu-btn"
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+          <Menu size={18} aria-hidden="true" />
         </button>
 
         <div>
@@ -76,16 +76,31 @@ export function Header({
           </button>
         )}
 
-        <button
-          type="button"
-          className="header-avatar"
-          onClick={onLogout}
-          title="Click to sign out"
-          aria-label={`Signed in as ${userInitials} — click to sign out`}
-          id="user-avatar-btn"
-        >
-          {userInitials}
-        </button>
+        {/* Account menu: the avatar opens a menu instead of signing out
+            directly, so a stray click can no longer end the session. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="header-avatar"
+              aria-label="Open account menu"
+              id="user-avatar-btn"
+            >
+              {userInitials}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-semibold text-foreground">{userName ?? 'Signed in'}</p>
+              {userEmail && <p className="text-xs text-muted-foreground">{userEmail}</p>}
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem id="menu-sign-out" onSelect={onLogout}>
+              <LogOut aria-hidden="true" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

@@ -1,4 +1,6 @@
 import type { Patient, Medication, Appointment } from '../types'
+import type { ReactNode } from 'react'
+import { CalendarDays, Check, Footprints, Pill, Sparkles, Zap } from 'lucide-react'
 import { dailyActionForCondition } from '../data/recoveryPlans'
 
 interface DashboardHeroProps {
@@ -79,7 +81,7 @@ export function DashboardHero({
         </div>
 
         <div className="dh-identity">
-          <div className="dh-greeting">Good morning 👋</div>
+          <div className="dh-greeting">Good morning</div>
           <div className="dh-name">
             {patient.first_name} {patient.last_name}
           </div>
@@ -129,7 +131,9 @@ export function DashboardHero({
             }
             type="button"
           >
-            <span className="dh-qs-icon med">💊</span>
+            <span className="dh-qs-icon med">
+              <Pill size={16} />
+            </span>
             <span className="dh-qs-val">
               {hasMedicationAdherence ? `${completedToday}/${medicationsTotal}` : medicationsTotal}
             </span>
@@ -144,7 +148,9 @@ export function DashboardHero({
             aria-label={`Next appointment: ${nextApptLabel}`}
             type="button"
           >
-            <span className="dh-qs-icon appt">📅</span>
+            <span className="dh-qs-icon appt">
+              <CalendarDays size={16} />
+            </span>
             <span className="dh-qs-val">{nextApptLabel}</span>
             <span className="dh-qs-lbl">Next appt</span>
           </button>
@@ -181,7 +187,9 @@ export function DashboardHero({
       <div className="dh-right">
         <div className="dh-ai-header">
           <div className="dh-ai-icon-wrap">
-            <span className="dh-ai-icon">⚡</span>
+            <span className="dh-ai-icon">
+              <Sparkles size={16} />
+            </span>
           </div>
           <div>
             <div className="dh-ai-label">AI Care Summary</div>
@@ -221,7 +229,7 @@ export function DashboardHero({
 type InsightType = 'alert' | 'caution' | 'ok' | 'info'
 
 interface Insight {
-  icon: string
+  icon: ReactNode
   text: string
   type: InsightType
 }
@@ -238,13 +246,13 @@ function buildAIInsights(
 
   if (pending.length > 0) {
     insights.push({
-      icon: '💊',
+      icon: <Pill size={13} />,
       text: `${pending.length} medication${pending.length > 1 ? 's' : ''} still due today`,
       type: 'caution',
     })
   } else if (taken.length > 0) {
     insights.push({
-      icon: '✓',
+      icon: <Check size={13} />,
       text: 'All medications taken — great adherence!',
       type: 'ok',
     })
@@ -261,7 +269,7 @@ function buildAIInsights(
     )
     const label = d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`
     insights.push({
-      icon: '📅',
+      icon: <CalendarDays size={13} />,
       text: `${nextAppt.title ?? nextAppt.kind} ${label}`,
       type: d <= 1 ? 'info' : 'ok',
     })
@@ -269,20 +277,20 @@ function buildAIInsights(
 
   if (patient.risk_level === 'moderate') {
     insights.push({
-      icon: '⚡',
+      icon: <Zap size={13} />,
       text: 'Moderate risk — log symptoms daily for safety',
       type: 'caution',
     })
   } else if (patient.risk_level === 'low') {
     insights.push({
-      icon: '✓',
+      icon: <Check size={13} />,
       text: 'Low risk — recovery on track',
       type: 'ok',
     })
   }
 
   insights.push({
-    icon: '🏃',
+    icon: <Footprints size={13} />,
     text: dailyActionForCondition(patient.discharge_reason),
     type: 'info',
   })

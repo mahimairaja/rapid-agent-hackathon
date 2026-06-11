@@ -276,8 +276,8 @@ export function JoinWizard({
                 <div className="landing-journey-body">
                   <div className="landing-journey-title">{j.title}</div>
                   <div className="join-journey-meta">
-                    💊 {j.medication_count} medications
-                    {j.clinician ? ` · 👩‍⚕️ ${j.clinician}` : ''}
+                    {j.medication_count} medications
+                    {j.clinician ? ` · ${j.clinician}` : ''}
                   </div>
                 </div>
               </button>

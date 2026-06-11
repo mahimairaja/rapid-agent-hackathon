@@ -1,3 +1,4 @@
+import { CalendarDays, Pill, Target } from 'lucide-react'
 import type { Patient } from '../types'
 
 interface StatCardsProps {
@@ -26,7 +27,9 @@ export function StatCards({
   return (
     <div className="stat-cards">
       <div className="stat-card">
-        <div className="stat-card-icon blue">💊</div>
+        <div className="stat-card-icon blue">
+          <Pill size={20} />
+        </div>
         <div className="stat-card-value">{medicationsDue}</div>
         <div className="stat-card-label">
           {hasMedicationAdherence ? 'Medications Due Today' : 'Active Medications'}
@@ -39,7 +42,9 @@ export function StatCards({
       </div>
 
       <div className="stat-card">
-        <div className="stat-card-icon teal">📅</div>
+        <div className="stat-card-icon teal">
+          <CalendarDays size={20} />
+        </div>
         <div className="stat-card-value">
           {nextAppointmentDays === 0
             ? 'Today'
@@ -52,7 +57,9 @@ export function StatCards({
       </div>
 
       <div className="stat-card">
-        <div className="stat-card-icon amber">🎯</div>
+        <div className="stat-card-icon amber">
+          <Target size={20} />
+        </div>
         <div className="stat-card-value">{recoveryPercent}%</div>
         <div className="stat-card-label">Recovery Progress</div>
         <div className="stat-card-trend up">↑ On track</div>

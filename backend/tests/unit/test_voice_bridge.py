@@ -19,7 +19,7 @@ from src.api.endpoints.voice import (
 from src.voice.session import (
     VoiceSession,
     encode_for_client,
-    normalize_event,
+    normalize_events,
     source_items_for,
 )
 
@@ -72,69 +72,75 @@ def _transcription_event(*, output=None, input=None):
     )
 
 
-# -- normalize_event ------------------------------------------------------------
+# -- normalize_events ----------------------------------------------------------
 
 
 def test_normalize_audio_event():
-    assert normalize_event(_audio_event(b"pcm")) == {"type": "audio", "data": b"pcm"}
+    assert normalize_events(_audio_event(b"pcm")) == [{"type": "audio", "data": b"pcm"}]
 
 
 def test_normalize_text_part_is_assistant_transcript():
-    assert normalize_event(_text_event("hello", partial=False)) == {
-        "type": "transcript",
-        "role": "assistant",
-        "text": "hello",
-        "final": True,
-    }
+    assert normalize_events(_text_event("hello", partial=False)) == [
+        {
+            "type": "transcript",
+            "role": "assistant",
+            "text": "hello",
+            "final": True,
+        }
+    ]
 
 
 def test_normalize_partial_transcript():
-    out = normalize_event(_text_event("hel", partial=True))
+    (out,) = normalize_events(_text_event("hel", partial=True))
     assert out["type"] == "transcript" and out["final"] is False
 
 
 def test_normalize_output_transcription_is_assistant():
-    assert normalize_event(_transcription_event(output=("the answer", True))) == {
-        "type": "transcript",
-        "role": "assistant",
-        "text": "the answer",
-        "final": True,
-    }
+    assert normalize_events(_transcription_event(output=("the answer", True))) == [
+        {
+            "type": "transcript",
+            "role": "assistant",
+            "text": "the answer",
+            "final": True,
+        }
+    ]
 
 
 def test_normalize_input_transcription_is_user():
-    assert normalize_event(_transcription_event(input=("my name is", False))) == {
-        "type": "transcript",
-        "role": "user",
-        "text": "my name is",
-        "final": False,
-    }
+    assert normalize_events(_transcription_event(input=("my name is", False))) == [
+        {
+            "type": "transcript",
+            "role": "user",
+            "text": "my name is",
+            "final": False,
+        }
+    ]
 
 
 def test_normalize_interrupted_wins():
     ev = _audio_event(b"pcm")
     ev.interrupted = True
-    assert normalize_event(ev) == {"type": "interrupted"}
+    assert normalize_events(ev) == [{"type": "interrupted"}]
 
 
 def test_normalize_turn_complete():
     ev = SimpleNamespace(
         interrupted=False, content=None, partial=False, turn_complete=True
     )
-    assert normalize_event(ev) == {"type": "turn_complete"}
+    assert normalize_events(ev) == [{"type": "turn_complete"}]
 
 
 def test_normalize_skips_empty():
     ev = SimpleNamespace(
         interrupted=False, content=None, partial=False, turn_complete=False
     )
-    assert normalize_event(ev) is None
+    assert normalize_events(ev) == []
 
 
 def test_normalize_skips_thought_text():
     # The model's private reasoning must not reach the transcript.
     assert (
-        normalize_event(_text_event("thinking...", partial=False, thought=True)) is None
+        normalize_events(_text_event("thinking...", partial=False, thought=True)) == []
     )
 
 
@@ -220,14 +226,46 @@ def test_sources_ignores_non_dict_response():
     assert source_items_for("unknown_tool", {"status": "ok"}) == []
 
 
-def test_normalize_emits_sources_frame():
+def test_normalize_emits_tool_done_then_sources():
     ev = _function_response_event(
         "get_medications", {"status": "ok", "medications": [{"name": "Aspirin"}]}
     )
-    assert normalize_event(ev) == {
-        "type": "sources",
-        "items": [{"type": "medication", "name": "Aspirin", "tool": "get_medications"}],
-    }
+    assert normalize_events(ev) == [
+        {"type": "tool", "tool": "get_medications", "status": "done"},
+        {
+            "type": "sources",
+            "items": [
+                {"type": "medication", "name": "Aspirin", "tool": "get_medications"}
+            ],
+        },
+    ]
+
+
+def _function_call_event(name: str):
+    fc = SimpleNamespace(name=name)
+    part = SimpleNamespace(
+        inline_data=None, text=None, function_call=fc, function_response=None
+    )
+    return SimpleNamespace(
+        interrupted=False,
+        content=SimpleNamespace(parts=[part]),
+        partial=False,
+        turn_complete=False,
+    )
+
+
+def test_normalize_emits_running_tool_frame_on_function_call():
+    frames = normalize_events(_function_call_event("get_medications"))
+    assert frames == [{"type": "tool", "tool": "get_medications", "status": "running"}]
+
+
+def test_normalize_tool_done_without_sources_for_quiet_tools():
+    # triage_symptom with a routine result emits no sources, but the activity
+    # frame must still arrive so the chat can resolve the running chip.
+    ev = _function_response_event("triage_symptom", {"status": "routine"})
+    assert normalize_events(ev) == [
+        {"type": "tool", "tool": "triage_symptom", "status": "done"}
+    ]
 
 
 # -- encode_for_client ----------------------------------------------------------

@@ -1,4 +1,6 @@
+import { Check, Circle, Pill } from 'lucide-react'
 import type { Medication } from '../types'
+import { REASON_FRIENDLY, friendlyReason } from '../data/medicationReasons'
 
 interface MedicationScheduleProps {
   medications: Medication[]
@@ -17,7 +19,9 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
   if (medications.length === 0) {
     return (
       <div className="empty-state">
-        <span className="empty-state-icon">💊</span>
+        <span className="empty-state-icon">
+          <Pill size={28} />
+        </span>
         <p className="empty-state-title">No medications found</p>
         <p className="empty-state-sub">Medication data will appear here once loaded.</p>
       </div>
@@ -70,7 +74,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
               marginBottom: 8,
             }}
           >
-            {hasAdherence ? '⏰ Due Today' : 'On Plan'}
+            {hasAdherence ? 'Due Today' : 'On Plan'}
           </div>
           <div className="medication-list">
             {pending.map((med) => (
@@ -93,7 +97,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
               marginBottom: 8,
             }}
           >
-            ✓ Taken Today
+            Taken Today
           </div>
           <div className="medication-list">
             {taken.map((med) => (
@@ -112,7 +116,9 @@ function MedItem({ med }: { med: Medication }) {
 
   return (
     <div className={`medication-item ${status}`}>
-      <div className={`med-check ${status}`}>{med.taken_today ? '✓' : '○'}</div>
+      <div className={`med-check ${status}`}>
+        {med.taken_today ? <Check size={14} /> : <Circle size={12} />}
+      </div>
       <div className="med-info">
         <div className="med-name">{med.name}</div>
         <div className="med-detail">
@@ -123,6 +129,15 @@ function MedItem({ med }: { med: Medication }) {
           )}
         </div>
         {med.purpose && <span className="med-purpose-tag">{med.purpose}</span>}
+        {med.reason && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground/80">Why you take this:</span>{' '}
+            {friendlyReason(med.reason)}
+            {REASON_FRIENDLY[med.reason] && (
+              <span className="text-muted-foreground/70">{` (${med.reason})`}</span>
+            )}
+          </p>
+        )}
         {med.instructions && (
           <div
             style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}

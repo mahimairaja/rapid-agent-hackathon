@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+import { CalendarDays, ClipboardList, Footprints, Stethoscope, UserRound } from 'lucide-react'
 import type { Appointment } from '../types'
 
 interface AppointmentTimelineProps {
@@ -14,18 +16,20 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
-const KIND_ICONS: Record<string, string> = {
-  physiotherapy: '🏃',
-  'nurse-check-in': '👩‍⚕️',
-  'surgeon-review': '🩺',
-  general: '📋',
+const KIND_ICONS: Record<string, ReactNode> = {
+  physiotherapy: <Footprints size={15} />,
+  'nurse-check-in': <UserRound size={15} />,
+  'surgeon-review': <Stethoscope size={15} />,
+  general: <ClipboardList size={15} />,
 }
 
 export function AppointmentTimeline({ appointments }: AppointmentTimelineProps) {
   if (appointments.length === 0) {
     return (
       <div className="empty-state">
-        <span className="empty-state-icon">📅</span>
+        <span className="empty-state-icon">
+          <CalendarDays size={28} />
+        </span>
         <p className="empty-state-title">No appointments scheduled</p>
       </div>
     )
@@ -40,7 +44,7 @@ export function AppointmentTimeline({ appointments }: AppointmentTimelineProps) 
     <div className="appointment-timeline">
       {sorted.map((appt, idx) => {
         const isUpcoming = idx === 0
-        const icon = KIND_ICONS[appt.kind] ?? '📋'
+        const icon = KIND_ICONS[appt.kind] ?? <ClipboardList size={15} />
 
         return (
           <div key={appt.id} className="timeline-item">

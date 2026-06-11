@@ -160,9 +160,9 @@ export function JourneyOnboarding({
             <div className="journey-card-title">{journey.title}</div>
             <div className="journey-card-condition">{journey.condition}</div>
             <div className="journey-card-meta">
-              <span>💊 {journey.medication_count} medications</span>
-              <span>📅 {journey.appointment_kinds.join(' · ') || 'Follow-up'}</span>
-              <span>👩‍⚕️ {journey.clinician}</span>
+              <span>{journey.medication_count} medications</span>
+              <span>{journey.appointment_kinds.join(' · ') || 'Follow-up'}</span>
+              <span>{journey.clinician}</span>
             </div>
             <div className="journey-card-cta">
               {claiming === journey.journey_code ? 'Creating…' : 'Start this journey →'}

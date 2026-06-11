@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  CheckCircle2,
+  Loader2,
+  Mic,
+  Sparkles,
+  Square,
+  UserRound,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 import type { ChatMessage, SessionContext, SourceItem } from '../types'
 import { VoiceClient, type TranscriptRole, type VoiceState } from '../lib/ws'
 import { useAudioAnalyser } from '../lib/useAudioAnalyser'
 import { getSessionContext } from '../api/client'
+import { toolLabel } from '../data/toolLabels'
 import { AudioVisualizer } from './AudioVisualizer'
 import { GroundingPanel } from './GroundingPanel'
 
@@ -62,8 +73,8 @@ function sourceLabel(s: SourceItem): string | null {
 
 function makeGreeting(userName?: string | null, onboarded?: boolean): ChatMessage {
   const content = onboarded
-    ? `👋 Welcome back${userName ? `, **${userName}**` : ''} — I'm loading your recovery plan now. Talk or type any time: medications, appointments, symptoms, or anything in your plan.`
-    : "👋 Hi, I'm your **Rapid Recovery** assistant. I can talk or chat. To pull up your plan, tell me your **name and date of birth**, or your **patient code** — say it or type it below."
+    ? `Welcome back${userName ? `, **${userName}**` : ''} — I'm Maya, and I'm loading your recovery plan now. Talk or type any time: medications, appointments, symptoms, or anything in your plan.`
+    : "Hi, I'm **Maya**, your recovery companion. I can talk or chat. To pull up your plan, tell me your **name and date of birth**, or your **patient code** — say it or type it below."
   return { id: 'greeting', role: 'assistant', content, timestamp: new Date() }
 }
 
@@ -238,6 +249,18 @@ export function Assistant({
           liveAssistantRef.current = ''
           if (!cancelled) setLiveAssistant('')
         }
+        // A tool whose response frame never arrived must not spin forever.
+        if (!cancelled) {
+          setMessages((prev) =>
+            prev.some((m) => m.kind === 'tool' && m.toolStatus === 'running')
+              ? prev.map((m) =>
+                  m.kind === 'tool' && m.toolStatus === 'running'
+                    ? { ...m, toolStatus: 'done' as const }
+                    : m,
+                )
+              : prev,
+          )
+        }
       },
       onInterrupted: () => {
         // Barge-in cut the assistant mid-reply: discard the stranded partial so
@@ -253,6 +276,35 @@ export function Assistant({
         if (items.some((i) => i.type === 'identity' || i.type === 'appointment')) {
           void loadContext()
         }
+      },
+      onTool: (tool, status) => {
+        if (cancelled) return
+        setMessages((prev) => {
+          if (status === 'done') {
+            // Resolve the most recent running chip for this tool in place, so
+            // the timeline reads call -> done instead of stacking duplicates.
+            for (let i = prev.length - 1; i >= 0; i--) {
+              const m = prev[i]
+              if (m.kind === 'tool' && m.tool === tool && m.toolStatus === 'running') {
+                const next = [...prev]
+                next[i] = { ...m, toolStatus: 'done' }
+                return next
+              }
+            }
+          }
+          return [
+            ...prev,
+            {
+              id: generateId(),
+              role: 'assistant',
+              content: '',
+              timestamp: new Date(),
+              kind: 'tool',
+              tool,
+              toolStatus: status,
+            },
+          ]
+        })
       },
     })
     client.setIdentifyCode(identifyCodeRef.current)
@@ -409,52 +461,69 @@ export function Assistant({
           </span>
           {offline && (
             <button type="button" className="suggestion-chip" onClick={() => void reconnect()}>
-              ↻ Reconnect
+              Reconnect
             </button>
           )}
         </div>
 
         <div className="assistant-transcript" aria-label="Conversation">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`chat-message ${msg.role}`}>
-              <div className={`chat-avatar ${msg.role}`}>
-                {msg.role === 'assistant' ? '🤖' : '🙂'}
-              </div>
-              <div>
-                <div
-                  className={`chat-bubble${msg.role === 'assistant' ? ' chat-bubble-md' : ''}`}
-                  dangerouslySetInnerHTML={
-                    msg.role === 'assistant' ? { __html: renderText(msg.content) } : undefined
-                  }
-                >
-                  {msg.role === 'user' ? msg.content : undefined}
-                </div>
-                {msg.sources && msg.sources.length > 0 && (
-                  <div className="source-chips">
-                    {msg.sources.map((s, i) => {
-                      const label = sourceLabel(s)
-                      return label ? (
-                        <button
-                          key={i}
-                          type="button"
-                          className="source-chip"
-                          title={s.snippet ?? 'Show this source in the panel'}
-                          onClick={() => focusSource(s)}
-                        >
-                          {label}
-                        </button>
-                      ) : null
-                    })}
-                  </div>
+          {messages.map((msg) =>
+            msg.kind === 'tool' ? (
+              <div
+                key={msg.id}
+                className="my-1 ml-11 flex w-fit items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground"
+                data-status={msg.toolStatus}
+              >
+                {msg.toolStatus === 'running' ? (
+                  <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
+                ) : (
+                  <CheckCircle2 className="size-3.5 text-secondary" aria-hidden="true" />
                 )}
-                <div className="chat-time">{formatTime(msg.timestamp)}</div>
+                <span>{toolLabel(msg.tool ?? '', msg.toolStatus ?? 'done')}</span>
               </div>
-            </div>
-          ))}
+            ) : (
+              <div key={msg.id} className={`chat-message ${msg.role}`}>
+                <div className={`chat-avatar ${msg.role}`}>
+                  {msg.role === 'assistant' ? <Sparkles size={15} /> : <UserRound size={15} />}
+                </div>
+                <div>
+                  <div
+                    className={`chat-bubble${msg.role === 'assistant' ? ' chat-bubble-md' : ''}`}
+                    dangerouslySetInnerHTML={
+                      msg.role === 'assistant' ? { __html: renderText(msg.content) } : undefined
+                    }
+                  >
+                    {msg.role === 'user' ? msg.content : undefined}
+                  </div>
+                  {msg.sources && msg.sources.length > 0 && (
+                    <div className="source-chips">
+                      {msg.sources.map((s, i) => {
+                        const label = sourceLabel(s)
+                        return label ? (
+                          <button
+                            key={i}
+                            type="button"
+                            className="source-chip"
+                            title={s.snippet ?? 'Show this source in the panel'}
+                            onClick={() => focusSource(s)}
+                          >
+                            {label}
+                          </button>
+                        ) : null
+                      })}
+                    </div>
+                  )}
+                  <div className="chat-time">{formatTime(msg.timestamp)}</div>
+                </div>
+              </div>
+            ),
+          )}
 
           {liveUser && (
             <div className="chat-message user">
-              <div className="chat-avatar user">🙂</div>
+              <div className="chat-avatar user">
+                <UserRound size={15} />
+              </div>
               <div>
                 <div className="chat-bubble" style={{ opacity: 0.65 }}>
                   {liveUser}
@@ -464,7 +533,9 @@ export function Assistant({
           )}
           {liveAssistant && (
             <div className="chat-message assistant">
-              <div className="chat-avatar assistant">🤖</div>
+              <div className="chat-avatar assistant">
+                <Sparkles size={15} />
+              </div>
               <div>
                 <div
                   className="chat-bubble chat-bubble-md"
@@ -476,7 +547,9 @@ export function Assistant({
           )}
           {awaitingReply && !liveAssistant && (
             <div className="chat-message assistant">
-              <div className="chat-avatar assistant">🤖</div>
+              <div className="chat-avatar assistant">
+                <Sparkles size={15} />
+              </div>
               <div className="typing-indicator-bubble">
                 <div className="typing-dot" />
                 <div className="typing-dot" />
@@ -510,7 +583,7 @@ export function Assistant({
             aria-label={micActive ? 'Stop talking' : 'Start talking'}
             title={micActive ? 'Stop talking' : 'Start talking'}
           >
-            {micActive ? '■' : '🎤'}
+            {micActive ? <Square size={15} /> : <Mic size={17} />}
           </button>
 
           {micActive && !voiceFocus ? (
@@ -567,9 +640,14 @@ export function Assistant({
             aria-label={muted ? 'Unmute audio' : 'Mute audio'}
             title={muted ? 'Unmute audio' : 'Mute audio (keep transcript)'}
           >
-            {muted ? '🔇' : '🔊'}
+            {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
           </button>
         </div>
+
+        {/* Standing disclaimer: Maya never repeats this in replies. */}
+        <p className="px-4 pb-3 pt-1 text-center text-xs text-muted-foreground">
+          Maya shares guidance from your care plan, not medical advice. In an emergency, call 911.
+        </p>
       </div>
 
       <GroundingPanel
@@ -596,7 +674,7 @@ export function Assistant({
               className="voice-overlay-btn"
               onClick={() => setVoiceFocus(false)}
             >
-              ⌄ Minimize
+              Minimize
             </button>
             <button type="button" className="voice-overlay-btn end" onClick={endVoice}>
               ■ End voice
@@ -606,7 +684,7 @@ export function Assistant({
               className={`voice-overlay-btn${muted ? ' active' : ''}`}
               onClick={toggleMute}
             >
-              {muted ? '🔇 Unmute' : '🔊 Mute'}
+              {muted ? 'Unmute' : 'Mute'}
             </button>
           </div>
         </div>
