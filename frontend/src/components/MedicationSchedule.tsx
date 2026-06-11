@@ -1,4 +1,4 @@
-import { Pill } from 'lucide-react'
+import { Check, Circle, Pill } from 'lucide-react'
 import type { Medication } from '../types'
 import { REASON_FRIENDLY, friendlyReason } from '../data/medicationReasons'
 
@@ -116,7 +116,9 @@ function MedItem({ med }: { med: Medication }) {
 
   return (
     <div className={`medication-item ${status}`}>
-      <div className={`med-check ${status}`}>{med.taken_today ? '✓' : '○'}</div>
+      <div className={`med-check ${status}`}>
+        {med.taken_today ? <Check size={14} /> : <Circle size={12} />}
+      </div>
       <div className="med-info">
         <div className="med-name">{med.name}</div>
         <div className="med-detail">

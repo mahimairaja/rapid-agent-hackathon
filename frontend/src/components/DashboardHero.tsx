@@ -1,5 +1,6 @@
 import type { Patient, Medication, Appointment } from '../types'
-import { CalendarDays, Pill, Sparkles } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { CalendarDays, Check, Footprints, Pill, Sparkles, Zap } from 'lucide-react'
 import { dailyActionForCondition } from '../data/recoveryPlans'
 
 interface DashboardHeroProps {
@@ -228,7 +229,7 @@ export function DashboardHero({
 type InsightType = 'alert' | 'caution' | 'ok' | 'info'
 
 interface Insight {
-  icon: string
+  icon: ReactNode
   text: string
   type: InsightType
 }
@@ -245,13 +246,13 @@ function buildAIInsights(
 
   if (pending.length > 0) {
     insights.push({
-      icon: '💊',
+      icon: <Pill size={13} />,
       text: `${pending.length} medication${pending.length > 1 ? 's' : ''} still due today`,
       type: 'caution',
     })
   } else if (taken.length > 0) {
     insights.push({
-      icon: '✓',
+      icon: <Check size={13} />,
       text: 'All medications taken — great adherence!',
       type: 'ok',
     })
@@ -268,7 +269,7 @@ function buildAIInsights(
     )
     const label = d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`
     insights.push({
-      icon: '📅',
+      icon: <CalendarDays size={13} />,
       text: `${nextAppt.title ?? nextAppt.kind} ${label}`,
       type: d <= 1 ? 'info' : 'ok',
     })
@@ -276,20 +277,20 @@ function buildAIInsights(
 
   if (patient.risk_level === 'moderate') {
     insights.push({
-      icon: '⚡',
+      icon: <Zap size={13} />,
       text: 'Moderate risk — log symptoms daily for safety',
       type: 'caution',
     })
   } else if (patient.risk_level === 'low') {
     insights.push({
-      icon: '✓',
+      icon: <Check size={13} />,
       text: 'Low risk — recovery on track',
       type: 'ok',
     })
   }
 
   insights.push({
-    icon: '🏃',
+    icon: <Footprints size={13} />,
     text: dailyActionForCondition(patient.discharge_reason),
     type: 'info',
   })

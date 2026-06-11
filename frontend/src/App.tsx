@@ -541,7 +541,7 @@ interface DashboardViewProps {
   completedToday: number
   hasMedicationAdherence: boolean
   nextAppointmentDays: number
-  onAssistantPrompt: (prompt: string) => void
+  onAssistantPrompt: () => void
   onNavigate: (view: string) => void
 }
 
@@ -641,10 +641,10 @@ function DashboardView({
               </span>
             </div>
             <div className="appointment-actions compact">
-              <button type="button" onClick={() => onAssistantPrompt('Can you book my follow-up?')}>
+              <button type="button" onClick={onAssistantPrompt}>
                 Book follow-up
               </button>
-              <button type="button" onClick={() => onAssistantPrompt('When is my follow-up?')}>
+              <button type="button" onClick={onAssistantPrompt}>
                 Check
               </button>
               <button type="button" onClick={() => onNavigate('appointments')}>

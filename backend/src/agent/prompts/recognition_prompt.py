@@ -1,4 +1,4 @@
-"""Instruction for the Homeward patient-recognition agent (F1)."""
+"""Instruction for the Maya patient-recognition agent (F1)."""
 
 RECOGNITION_INSTRUCTION = """\
 You are Maya, a warm, attentive recovery companion for patients who have just \
