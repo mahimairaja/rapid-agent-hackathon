@@ -1,214 +1,148 @@
-# Rapid Recovery — AI-Powered Post-Discharge Care Agent
+# 🏥 Rapid Recovery — AI-Powered Post-Discharge Care Agent
 
-> A hackathon-grade, production-structured healthcare recovery assistant. Patients interact with a Gemini AI agent by text **or voice** to get personalised guidance on medications, recovery milestones, and appointments after leaving hospital. Clinicians get a parallel professional portal for monitoring and escalation.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Available-success?style=for-the-badge)](https://rapid-agent-hackathon.vercel.app/)
+[![Tech Stack](https://img.shields.io/badge/Tech%20Stack-React%20%7C%20FastAPI%20%7C%20Gemini%20AI-blue?style=for-the-badge)](#)
 
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **AI Agent** | Google ADK · Gemini 2.5 Flash (text) · Gemini Live (voice) |
-| **Backend** | FastAPI · Python 3.11 · Beanie ODM · MongoDB Atlas |
-| **Embeddings** | Voyage AI (`voyage-3.5`, 1024-dim) + Atlas Vector Search |
-| **Frontend** | Vite · React 19 · TypeScript · Vanilla CSS |
-| **Package Managers** | `uv` (Python) · `pnpm` (Node) |
+> **A production-ready healthcare recovery assistant.**  
+> Rapid Recovery bridges the gap between hospital discharge and full recovery. Patients interact with an empathetic Gemini AI agent via text or real-time voice to get personalized guidance on medications, recovery milestones, and appointments, while clinicians monitor progress through a professional portal.
 
 ---
 
-## Prerequisites
+## 🔗 Links & Demo
 
-| Tool | Version | Install |
-|------|---------|---------|
-| Python | 3.11+ | [python.org](https://python.org) |
-| Node.js | 18+ | [nodejs.org](https://nodejs.org) |
-| `uv` | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| `pnpm` | latest | `npm install -g pnpm` |
+- **Hosted Application:** [https://rapid-agent-hackathon.vercel.app/](https://rapid-agent-hackathon.vercel.app/)
+- **Instant Demo (No Setup Required):** Click the **["View Live Demo"](https://rapid-agent-hackathon.vercel.app/)** button on the application's login screen. The frontend will load fully synthetic mock data, allowing users to explore the complete patient dashboard and UI features instantly—without needing a running backend!
 
 ---
 
-## Quick Start
+## ✨ Core Features
 
-### 1 — Clone & enter the repo
+- **🗣️ Voice & Text AI:** Real-time conversational AI powered by Gemini 2.5 Flash and Gemini Live.
+- **💊 Personalized Care:** Interactive medication schedules, recovery milestones, and dynamic care plans.
+- **👨‍⚕️ Professional Portal:** A clinician dashboard for monitoring patient progress and escalating risk indicators.
+- **🔒 Secure & Scalable:** Built from the ground up with FastAPI, MongoDB Atlas, and an enterprise-grade architecture.
 
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technologies |
+|-----------|--------------|
+| **Frontend** | React 19, TypeScript, Vite, Vanilla CSS |
+| **Backend** | Python 3.11, FastAPI, Beanie ODM |
+| **Database** | MongoDB Atlas |
+| **AI Agent** | Google ADK, Gemini 2.5 Flash, Gemini Live |
+| **Embeddings** | Voyage AI (`voyage-3.5`, 1024-dim), Atlas Vector Search |
+| **Package Management** | `uv` (Python), `pnpm` (Node.js) |
+
+---
+
+## 🚀 Quick Start (Local Setup)
+
+If you want to run the project locally, follow these simple steps.
+
+### Prerequisites
+- [Python 3.11+](https://python.org)
+- [Node.js 18+](https://nodejs.org)
+- `uv` (Fast Python package manager): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- `pnpm` (Fast Node package manager): `npm install -g pnpm`
+
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/mahimairaja/rapid-agent-hackathon.git
 cd rapid-agent-hackathon
 ```
 
----
-
-### 2 — Backend setup
-
+### 2. Run the Backend
+Open a terminal and execute:
 ```bash
 cd backend
 
-# Copy and fill in the environment file
+# Copy environment variables
 cp .env.example .env
-# Edit .env — at minimum set MONGODB_URI and GOOGLE_API_KEY (see below)
 
-# Install all Python dependencies into an isolated .venv
+# Open .env and add your MONGODB_URI and GOOGLE_API_KEY
+# Note: Other variables can be left as default for local dev.
+
+# Install dependencies and start the backend server
 uv sync
-
-# Start the server (auto-reloads on file changes)
 uv run uvicorn src.main:app --reload --port 8000
 ```
+*Backend runs at `http://localhost:8000`. API Docs are available at `http://localhost:8000/docs`.*
 
-The backend will be available at:
-- **API:** `http://localhost:8000/api/v1`
-- **Swagger docs:** `http://localhost:8000/docs`
-- **Health check:** `http://localhost:8000/health`
-
----
-
-### 3 — Frontend setup
-
-Open a **new terminal tab**:
-
+### 3. Run the Frontend
+Open a **new terminal tab** and execute:
 ```bash
 cd frontend
 
-# Install Node dependencies
+# Install dependencies and start the frontend server
 pnpm install
-
-# Start the Vite dev server
 pnpm dev
 ```
-
-The frontend will be available at: **`http://localhost:5173`**
-
----
-
-### 4 — Environment variables (`.env`)
-
-Create `backend/.env` from the example and set these values:
-
-```dotenv
-ENV=dev
-PROJECT_NAME=rapid
-
-# MongoDB Atlas SRV connection string
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
-
-# Google AI Studio key (for Gemini text + Live voice)
-GOOGLE_API_KEY=<your-key>
-GOOGLE_GENAI_USE_VERTEXAI=false
-GEMINI_MODEL=gemini-2.5-flash
-
-# Voyage AI for vector embeddings
-VOYAGE_API_KEY=<your-key>
-
-# JWT auth (any long random string in dev)
-JWT_SECRET_KEY=<32+ char random string>
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-
-# CORS — leave empty to allow all origins in dev
-CORS_ORIGINS_STR=
-
-# Optional: Cal.com for real appointment booking
-# CAL_API_KEY=
-# CAL_USERNAME=
-# CAL_EVENT_TYPE_SLUG=
-```
+*Frontend runs at `http://localhost:5173`. Open this in your browser.*
 
 ---
 
-### 5 — (Optional) Seed patient data
+## 🎲 Optional: Seed Demo Data
 
-Without seeded data, the AI agent will still work but won't be able to look up real patients. Run these once from `backend/`:
+To test the backend AI with realistic patient profiles instead of the frontend mock data, seed the MongoDB database:
 
 ```bash
 cd backend
-
-uv run python scripts/seed_patients.py      # patients, medications, appointments
-uv run python scripts/load_narratives.py    # care plans (chunked + embedded)
-uv run python scripts/ingest_guidelines.py  # clinical guidelines (chunked + embedded)
-uv run python scripts/create_indexes.py     # Atlas Vector Search indexes
+uv run python scripts/seed_patients.py      # Seeds patients, medications, appointments
+uv run python scripts/load_narratives.py    # Seeds care plans (chunked + embedded)
+uv run python scripts/ingest_guidelines.py  # Seeds clinical guidelines (chunked + embedded)
+uv run python scripts/create_indexes.py     # Creates Atlas Vector Search indexes
 ```
-
-After seeding, patients can be found by code (e.g. `HW-1001`) or by name + date of birth in the AI chat.
+*Tip: Once seeded, log in and ask the AI about patient code `HW-1001` or search by name and DOB.*
 
 ---
 
-## Running Both Servers (Summary)
+## ⚙️ Development Commands & APIs
 
+### Code Quality Commands
 ```bash
-# Terminal 1 — Backend
-cd backend && uv run uvicorn src.main:app --reload --port 8000
+# Backend (from /backend)
+uv run ruff check .          # Linting
+uv run ruff format .         # Formatting
+uv run mypy src              # Type checking
+uv run pytest                # Run 145+ unit & integration tests
 
-# Terminal 2 — Frontend
-cd frontend && pnpm dev
-```
-
-Open `http://localhost:5173` in your browser.
-
----
-
-## Demo Access (No Setup Required)
-
-Click **"View Live Demo"** on the login screen to skip authentication entirely. The frontend loads fully synthetic mock data so you can explore every screen without a running backend.
-
----
-
-## Key API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Service liveness |
-| `GET` | `/health/detailed` | MongoDB connectivity |
-| `POST` | `/api/v1/users/register` | Create account |
-| `POST` | `/api/v1/users/login` | Get JWT token |
-| `GET` | `/api/v1/users/me` | Authenticated user info |
-| `POST` | `/api/v1/agent/chat` | Text AI agent (Gemini) |
-| `POST` | `/api/v1/patients/dashboard` | Patient data by code |
-| `WS` | `/api/v1/voice/ws` | Real-time voice WebSocket |
-| `GET` | `/docs` | Swagger / OpenAPI UI |
-| `GET` | `/mcp` | MCP tool surface |
-
----
-
-## Development Commands
-
-```bash
-# Backend
-uv run ruff check .          # lint
-uv run ruff format .         # format
-uv run mypy src              # type check
-uv run pytest                # run tests (145 unit + integration)
-
-# Frontend
+# Frontend (from /frontend)
 pnpm tsc -b                  # TypeScript compile check
 pnpm run lint                # ESLint
 pnpm run format              # Prettier
 pnpm build                   # Production bundle
 ```
 
+### Key API Endpoints
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Service liveness |
+| `POST` | `/api/v1/users/login` | Get JWT token |
+| `POST` | `/api/v1/agent/chat` | Text AI agent (Gemini) |
+| `POST` | `/api/v1/patients/dashboard` | Patient data by code |
+| `WS`   | `/api/v1/voice/ws` | Real-time voice WebSocket |
+
 ---
 
-## Project Structure
+## 📂 Project Structure
 
-```
+```text
 rapid-agent-hackathon/
 ├── backend/
 │   ├── src/
 │   │   ├── agent/          # Google ADK agent, tools (F1-F5), prompts
-│   │   ├── api/            # FastAPI routers (users, agent, patients, voice)
-│   │   ├── core/           # Config, DI container, auth, database, events
-│   │   ├── models/         # Beanie documents (Patient, Medication, etc.)
-│   │   ├── schemas/        # Pydantic request/response DTOs
-│   │   ├── services/       # Business logic (users, embeddings)
-│   │   ├── voice/          # Gemini Live WebSocket bridge (F6)
-│   │   └── main.py         # ASGI app factory
-│   ├── scripts/            # Data seeding pipeline
-│   ├── tests/              # Unit + integration tests
-│   └── pyproject.toml
+│   │   ├── api/            # FastAPI routes
+│   │   ├── core/           # Security, config, database connections
+│   │   ├── models/         # Beanie ODM documents
+│   │   └── voice/          # Gemini Live WebSocket integration
+│   ├── scripts/            # Data ingestion and seeding pipelines
+│   └── tests/              # Comprehensive test suite
 └── frontend/
     ├── src/
-    │   ├── api/            # Backend client + mock fallbacks
-    │   ├── components/     # All React components (22 total)
-    │   ├── data/           # Mock data for demo mode
-    │   ├── lib/            # Voice WebSocket client
-    │   └── types/          # TypeScript interfaces
+    │   ├── api/            # API client and mock data fallbacks
+    │   ├── components/     # React UI components (Dashboard, Chat, etc.)
+    │   └── data/           # Synthetic data for "Live Demo" mode
     └── package.json
 ```
