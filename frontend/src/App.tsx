@@ -16,6 +16,7 @@ import { DashboardHero } from './components/DashboardHero'
 import { StatCards } from './components/StatCard'
 import { RecoveryPlan } from './components/RecoveryPlan'
 import { milestonesForCondition } from './data/recoveryPlans'
+import { isUploadedPlan } from './lib/uploadedPlan'
 import { MedicationSchedule } from './components/MedicationSchedule'
 import { AppointmentTimeline } from './components/AppointmentTimeline'
 import { Assistant } from './components/Assistant'
@@ -395,7 +396,7 @@ function App() {
     <div className="card">
       <div className="card-accent-bar" />
       <div className="card-body" style={{ paddingTop: 20 }}>
-        <MedicationSchedule medications={medications} />
+        <MedicationSchedule medications={medications} uploadedPlan={isUploadedPlan(patient)} />
       </div>
     </div>
   ) : (
@@ -594,7 +595,11 @@ function DashboardView({
               )}
             </div>
             <div className="card-body">
-              <MedicationSchedule medications={medications.slice(0, 3)} compact />
+              <MedicationSchedule
+                medications={medications.slice(0, 3)}
+                compact
+                uploadedPlan={isUploadedPlan(patient)}
+              />
             </div>
           </div>
         </div>

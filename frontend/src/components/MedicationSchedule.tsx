@@ -1,4 +1,5 @@
 import { Check, Circle, Pill, TriangleAlert } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type { Medication } from '../types'
 import { REASON_FRIENDLY, friendlyReason } from '../data/medicationReasons'
 
@@ -6,6 +7,9 @@ interface MedicationScheduleProps {
   medications: Medication[]
   // Dashboard summary mode: name/dose/schedule only, no reason or cautions.
   compact?: boolean
+  // Uploaded-plan profiles have no structured list; their medications live in
+  // the document and Maya answers from it.
+  uploadedPlan?: boolean
 }
 
 const FREQ_LABELS: Record<string, string> = {
@@ -17,15 +21,28 @@ const FREQ_LABELS: Record<string, string> = {
   'with-meals': 'With meals',
 }
 
-export function MedicationSchedule({ medications, compact = false }: MedicationScheduleProps) {
+export function MedicationSchedule({
+  medications,
+  compact = false,
+  uploadedPlan = false,
+}: MedicationScheduleProps) {
   if (medications.length === 0) {
     return (
       <div className="empty-state">
         <span className="empty-state-icon">
           <Pill size={28} />
         </span>
-        <p className="empty-state-title">No medications found</p>
-        <p className="empty-state-sub">Medication data will appear here once loaded.</p>
+        <p className="empty-state-title">No medication list on this profile</p>
+        <p className="empty-state-sub">
+          {uploadedPlan
+            ? 'Your medications live in your uploaded plan. Ask Maya: "What medications do I take today?"'
+            : 'Nothing is on the structured plan yet.'}
+        </p>
+        {uploadedPlan && !compact && (
+          <Link to="/maya" className="btn btn-primary" style={{ marginTop: 12 }}>
+            Ask Maya
+          </Link>
+        )}
       </div>
     )
   }
