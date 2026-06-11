@@ -62,6 +62,9 @@ export class VoiceClient {
   // after each new session opens (post-identify), so nothing typed during a
   // reconnect is silently dropped.
   private pendingTexts: string[] = []
+  // True once any session has opened on this client: later sessions are
+  // reconnects, and the backend greets differently for those.
+  private hadSession = false
 
   // Exposed for the visualizer (read-only use).
   inputAnalyser: AnalyserNode | null = null
@@ -211,8 +214,15 @@ export class VoiceClient {
             // Identify before surfacing the session id, so the verified state
             // is already being written when context fetches start.
             if (this.identifyCode && this.ws?.readyState === WebSocket.OPEN) {
-              this.ws.send(JSON.stringify({ type: 'identify', patient_code: this.identifyCode }))
+              this.ws.send(
+                JSON.stringify({
+                  type: 'identify',
+                  patient_code: this.identifyCode,
+                  reconnect: this.hadSession,
+                }),
+              )
             }
+            this.hadSession = true
             // Deliver anything typed while disconnected, after identify so the
             // verification gate is already satisfied for onboarded accounts.
             if (this.ws?.readyState === WebSocket.OPEN && this.pendingTexts.length) {

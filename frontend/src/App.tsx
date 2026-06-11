@@ -120,28 +120,39 @@ function App() {
     if (!token || token === 'demo' || role !== 'patient') return
     let cancelled = false
     void (async () => {
-      try {
-        const me = await getMe(token)
-        if (!cancelled) {
-          setIdentifyCode(me.patient_code ?? null)
-          setUserName(me.full_name ?? null)
-          setUserEmail(me.email ?? null)
+      // A transient backend blip during page load must not demote an
+      // onboarded account to the journey gallery: retry network failures
+      // briefly before falling back.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const me = await getMe(token)
+          if (!cancelled) {
+            setIdentifyCode(me.patient_code ?? null)
+            setUserName(me.full_name ?? null)
+            setUserEmail(me.email ?? null)
+          }
+          break
+        } catch (err) {
+          if (cancelled) return
+          // An expired or revoked token cannot claim or identify anything:
+          // return to the login screen instead of a gallery that cannot work.
+          if (err instanceof ApiError && err.status === 401) {
+            clearStoredToken()
+            clearStoredRole()
+            setToken(null)
+            setRole(null)
+            return
+          }
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)))
+            if (cancelled) return
+            continue
+          }
+          setIdentifyCode(null)
+          break
         }
-      } catch (err) {
-        if (cancelled) return
-        // An expired or revoked token cannot claim or identify anything:
-        // return to the login screen instead of a gallery that cannot work.
-        if (err instanceof ApiError && err.status === 401) {
-          clearStoredToken()
-          clearStoredRole()
-          setToken(null)
-          setRole(null)
-          return
-        }
-        setIdentifyCode(null)
-      } finally {
-        if (!cancelled) setCheckedToken(token)
       }
+      if (!cancelled) setCheckedToken(token)
     })()
     return () => {
       cancelled = true
