@@ -4366,6 +4366,17 @@ input[type='range']::-webkit-slider-thumb:hover {
 
 .assistant-bar .chat-input {
   flex: 1.4;
+  /* Without this the input's intrinsic min-width overflows the bar on
+     phone widths and clips the send button. */
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  /* The idle waveform strip (direct child, not the expanded voice view)
+     does not fit next to mic + input + send on phones. */
+  .assistant-bar > .audio-viz {
+    display: none;
+  }
 }
 
 .voice-mic-btn,
@@ -6231,9 +6242,16 @@ input[type='range']::-webkit-slider-thumb:hover {
 
 .join-journeys {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  /* Two balanced columns: four sample journeys read as 2x2, never 3+1. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
+}
+
+@media (max-width: 560px) {
+  .join-journeys {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .join-journey-card {

@@ -23,6 +23,7 @@ export function AudioVisualizer({ levels, state }: AudioVisualizerProps) {
   return (
     <div
       aria-hidden="true"
+      className="audio-viz"
       style={{
         display: 'flex',
         alignItems: 'center',
