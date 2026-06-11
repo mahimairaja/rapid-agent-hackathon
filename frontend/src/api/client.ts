@@ -214,6 +214,34 @@ export async function getJourneys(): Promise<Journey[]> {
   return request<Journey[]>('/onboarding/journeys')
 }
 
+export async function uploadDischarge(
+  file: File,
+  displayName: string,
+  birthYear: number | null,
+  token: string,
+): Promise<ClaimResponse> {
+  // Multipart, so this skips the JSON `request` helper; error shape matches.
+  const form = new FormData()
+  form.append('file', file)
+  form.append('display_name', displayName)
+  if (birthYear !== null) form.append('birth_year', String(birthYear))
+  const res = await fetch(`${BASE_URL}/onboarding/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as {
+      detail?: unknown
+      error?: unknown
+      message?: unknown
+    }
+    const msg = [err.detail, err.error, err.message].find((v): v is string => typeof v === 'string')
+    throw new ApiError(msg ?? `HTTP ${res.status}`, res.status)
+  }
+  return res.json() as Promise<ClaimResponse>
+}
+
 export async function claimJourney(
   payload: { journey_code: string; display_name: string; birth_year?: number | null },
   token: string,

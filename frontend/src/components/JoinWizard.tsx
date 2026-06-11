@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { UploadCloud } from 'lucide-react'
 import type { ClaimResponse, Journey } from '../types'
-import { ApiError, claimJourney, getJourneys, login, signUp } from '../api/client'
+import { ApiError, claimJourney, getJourneys, login, signUp, uploadDischarge } from '../api/client'
 import { JOURNEY_IMAGES } from '../data/journeyImages'
 import { buildStagesFromClaim, playStages, type BuildStage } from '../lib/journeyBuild'
 import { JourneyBuildStages } from './JourneyBuildStages'
@@ -49,6 +49,8 @@ export function JoinWizard({
   const [stepIndex, setStepIndex] = useState(0)
   const [name, setName] = useState('')
   const [journeyCode, setJourneyCode] = useState<string | null>(preselectedJourney)
+  // Bring-your-own discharge PDF (beta): mutually exclusive with a journey.
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [birthYear, setBirthYear] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -92,7 +94,7 @@ export function JoinWizard({
       case 'name':
         return name.trim().length > 0
       case 'journey':
-        return journeyCode !== null
+        return journeyCode !== null || uploadFile !== null
       case 'birth-year': {
         const t = birthYear.trim()
         if (!t) return true
@@ -139,10 +141,12 @@ export function JoinWizard({
         setAuthedToken(tk)
       }
       const year = birthYear.trim() ? Number(birthYear.trim()) : null
-      const claim = await claimJourney(
-        { journey_code: journeyCode as string, display_name: name.trim(), birth_year: year },
-        tk,
-      )
+      const claim = uploadFile
+        ? await uploadDischarge(uploadFile, name.trim(), year, tk)
+        : await claimJourney(
+            { journey_code: journeyCode as string, display_name: name.trim(), birth_year: year },
+            tk,
+          )
       const built = buildStagesFromClaim(claim)
       const finalToken = tk
       setStages(built)
@@ -257,6 +261,7 @@ export function JoinWizard({
                 }`}
                 onClick={() => {
                   setJourneyCode(j.journey_code)
+                  setUploadFile(null)
                   setError('')
                   setStepIndex(stepIndex + 1)
                 }}
@@ -283,27 +288,52 @@ export function JoinWizard({
                 </div>
               </button>
             ))}
-            {/* Real product path, intentionally frozen for the demo: sample
-                journeys stand in for parsed discharge documents. */}
-            <div
-              aria-disabled="true"
-              className="col-span-full flex select-none items-center gap-3 rounded-xl border border-dashed border-input bg-muted/40 p-3.5 opacity-75"
+            {/* Bring-your-own plan (beta): parsed locally with LiteParse and
+                embedded into a personal knowledge base. Meds/appointments are
+                not extracted yet, so those tabs start empty for uploads. */}
+            <label
+              className={`col-span-full flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-3.5 text-left transition-all ${
+                uploadFile
+                  ? 'border-primary bg-accent ring-1 ring-primary/40'
+                  : 'border-input bg-muted/40 hover:border-primary/50 hover:bg-muted/60'
+              }`}
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="sr-only"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null
+                  if (f) {
+                    setUploadFile(f)
+                    setJourneyCode(null)
+                    setError('')
+                  }
+                }}
+              />
+              <span
+                className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${
+                  uploadFile
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
                 <UploadCloud className="size-5" />
               </span>
-              <span className="flex min-w-0 flex-col text-left">
-                <span className="text-sm font-semibold text-muted-foreground">
-                  Upload your discharge summary
+              <span className="flex min-w-0 flex-col">
+                <span className="text-sm font-semibold text-foreground">
+                  {uploadFile ? uploadFile.name : 'Upload your discharge summary'}
                 </span>
-                <span className="text-xs text-muted-foreground/80">
-                  Your own plan, parsed into Maya's knowledge base
+                <span className="text-xs text-muted-foreground">
+                  {uploadFile
+                    ? 'Maya will answer from this document. Tap to change.'
+                    : "A text PDF, parsed into Maya's knowledge base"}
                 </span>
               </span>
-              <span className="ml-auto shrink-0 rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-                Coming soon
+              <span className="ml-auto shrink-0 rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                Beta
               </span>
-            </div>
+            </label>
           </div>
         )}
 
@@ -371,7 +401,7 @@ export function JoinWizard({
           </div>
         )}
 
-        {(step !== 'journey' || journeyCode !== null) && (
+        {(step !== 'journey' || journeyCode !== null || uploadFile !== null) && (
           <button
             type="submit"
             id="join-next-btn"

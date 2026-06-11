@@ -8,8 +8,14 @@ already owns a profile gets it back unchanged.
 """
 
 import logging
+import os
+import tempfile
+import uuid
+from datetime import date
+from functools import partial
 
-from fastapi import APIRouter, HTTPException
+import anyio
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from src.api.endpoints.users import CurrentUser
 from src.models import Appointment, CarePlanChunk, Medication, Patient
@@ -19,7 +25,15 @@ from src.schemas.onboarding_schemas import (
     ClaimResponse,
     JourneyOut,
 )
-from src.services.journey_service import JOURNEY_META, clone_journey
+from src.services import document_service
+from src.services.chunking_service import chunk_text
+from src.services.embeddings_service import embed_texts
+from src.services.journey_service import (
+    JOURNEY_META,
+    _unused_patient_code,
+    clone_journey,
+    split_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,4 +140,119 @@ async def claim_journey(payload: ClaimRequest, current_user: CurrentUser):
             appointments=profile.appointment_count,
             care_plan_chunks=profile.chunk_count,
         ),
+    )
+
+
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+_UPLOAD_JOURNEY_CODE = "UPLOAD"
+
+
+@router.post("/upload", response_model=ClaimResponse)
+async def upload_discharge(
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+    display_name: str = Form(...),
+    birth_year: int | None = Form(default=None),
+):
+    """Build a personal profile and knowledge base from an uploaded PDF.
+
+    The PDF is parsed locally (LiteParse, no cloud), chunked and embedded
+    with the same pipeline as the seeded care plans, so Maya answers from
+    the patient's own document. No medications or appointments are
+    extracted in this version; those tabs start empty for uploads.
+    """
+    # Idempotent like /claim: an account keeps its first profile.
+    if current_user.patient_id:
+        existing = await Patient.find_one({"patient_id": current_user.patient_id})
+        if existing is not None and existing.patient_code:
+            return ClaimResponse(
+                patient_id=existing.patient_id,
+                patient_code=existing.patient_code,
+                first_name=existing.first_name,
+                last_name=existing.last_name,
+                journey_code=_UPLOAD_JOURNEY_CODE,
+                counts=await _counts_for(existing.patient_id),
+            )
+
+    name = (file.filename or "").lower()
+    if not name.endswith(".pdf"):
+        raise HTTPException(status_code=415, detail="Upload a PDF document.")
+    data = await file.read()
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="PDF is larger than 10 MB.")
+
+    tmp_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(data)
+            tmp_path = tmp.name
+        text = await anyio.to_thread.run_sync(
+            document_service.extract_pdf_text, tmp_path
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.warning("pdf parse failed", exc_info=True)
+        raise HTTPException(
+            status_code=422, detail="We could not read that PDF."
+        ) from None
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    if len(text) < document_service.MIN_TEXT_CHARS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "We could not read enough text from that PDF. "
+                "Try a text-based discharge summary."
+            ),
+        )
+
+    chunks = chunk_text(text)
+    embeddings = await anyio.to_thread.run_sync(partial(embed_texts, chunks))
+
+    first, last = split_name(display_name.strip())
+    patient = Patient(
+        patient_id=str(uuid.uuid4()),
+        first_name=first,
+        last_name=last,
+        birth_date=date(birth_year, 1, 1) if birth_year else None,
+        patient_code=await _unused_patient_code(),
+        discharge_reason="Personal recovery plan (uploaded)",
+    )
+    await patient.insert()
+    await CarePlanChunk.insert_many(
+        [
+            CarePlanChunk(
+                patient_id=patient.patient_id,
+                source_file=file.filename or "upload.pdf",
+                chunk_index=i,
+                text=chunk,
+                embedding=embedding,
+            )
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=True))
+        ]
+    )
+
+    # Link last, so a failed ingest never strands a dangling account link.
+    current_user.patient_id = patient.patient_id
+    current_user.patient_code = patient.patient_code
+    await current_user.save()
+
+    logger.info(
+        "uploaded plan ingested for %s (%d chunks)",
+        patient.patient_code,
+        len(chunks),
+    )
+    return ClaimResponse(
+        patient_id=patient.patient_id,
+        patient_code=patient.patient_code or "",
+        first_name=patient.first_name,
+        last_name=patient.last_name,
+        journey_code=_UPLOAD_JOURNEY_CODE,
+        counts=ClaimCounts(medications=0, appointments=0, care_plan_chunks=len(chunks)),
     )
