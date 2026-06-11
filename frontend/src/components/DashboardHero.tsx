@@ -41,6 +41,11 @@ function getInitials(first: string, last: string) {
   return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase()
 }
 
+function timeOfDayGreeting() {
+  const hour = new Date().getHours()
+  return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+}
+
 export function DashboardHero({
   patient,
   medications,
@@ -87,7 +92,7 @@ export function DashboardHero({
         </div>
 
         <div className="dh-identity">
-          <div className="dh-greeting">Good morning</div>
+          <div className="dh-greeting">{timeOfDayGreeting()}</div>
           <div className="dh-name">
             {patient.first_name} {patient.last_name}
           </div>

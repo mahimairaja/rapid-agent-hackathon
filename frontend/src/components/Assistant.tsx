@@ -63,8 +63,9 @@ function sourceLabel(s: SourceItem): string | null {
 }
 
 function makeGreeting(userName?: string | null, onboarded?: boolean): ChatMessage {
+  const first = userName?.trim().split(/\s+/)[0]
   const content = onboarded
-    ? `Welcome back${userName ? `, **${userName}**` : ''}. I'm Maya, and I'm loading your recovery plan now. Talk or type any time: medications, appointments, symptoms, or anything in your plan.`
+    ? `Hi${first ? `, **${first}**` : ''}. I'm Maya, and I'm loading your recovery plan now. Talk or type any time: medications, appointments, symptoms, or anything in your plan.`
     : "Hi, I'm **Maya**, your recovery companion. I can talk or chat. To pull up your plan, tell me your **name and date of birth**, or your **patient code**: say it or type it below."
   return { id: 'greeting', role: 'assistant', content, timestamp: new Date() }
 }
