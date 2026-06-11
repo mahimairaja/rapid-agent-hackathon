@@ -32,6 +32,18 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends tini && \
     rm -rf /var/lib/apt/lists/*
 
+# Node.js runtime + the MongoDB MCP server, spawned over stdio by the backend
+# (recovery_trends). Preinstalled at build time so Cloud Run never pays a cold
+# npx download inside a request.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    npm install -g mongodb-mcp-server && \
+    apt-get purge -y curl && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN useradd --create-home --shell /bin/bash appuser
 WORKDIR /app
 

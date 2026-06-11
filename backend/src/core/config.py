@@ -61,7 +61,7 @@ class Config(BaseSettings):
     # GEMINI_MODEL is overridable (set to the team's Gemini 3 id when chosen).
     GOOGLE_API_KEY: SecretStr | None = None
     GOOGLE_GENAI_USE_VERTEXAI: bool = False
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3-flash-preview"
 
     # Voice (F6). GEMINI_LIVE_MODEL must be a Gemini Live model that advertises
     # bidiGenerateContent; the voice agent reuses the same tools/prompts as the
