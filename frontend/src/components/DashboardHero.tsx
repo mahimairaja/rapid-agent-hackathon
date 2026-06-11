@@ -253,7 +253,7 @@ function buildAIInsights(
   } else if (taken.length > 0) {
     insights.push({
       icon: <Check size={13} />,
-      text: 'All medications taken — great adherence!',
+      text: 'All medications taken: great adherence!',
       type: 'ok',
     })
   }
@@ -278,13 +278,13 @@ function buildAIInsights(
   if (patient.risk_level === 'moderate') {
     insights.push({
       icon: <Zap size={13} />,
-      text: 'Moderate risk — log symptoms daily for safety',
+      text: 'Moderate risk: log symptoms daily for safety',
       type: 'caution',
     })
   } else if (patient.risk_level === 'low') {
     insights.push({
       icon: <Check size={13} />,
-      text: 'Low risk — recovery on track',
+      text: 'Low risk: recovery on track',
       type: 'ok',
     })
   }

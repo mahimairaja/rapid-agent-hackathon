@@ -101,7 +101,7 @@ export function LoginScreen({ onLogin, onBack }: LoginScreenProps) {
 
           <p className="login-hero-sub">
             Post-discharge shouldn't be a guessing game. Rapid Recovery gives every patient a
-            personalized AI recovery guide — 24/7 monitoring, intelligent triage, and real-time care
+            personalized AI recovery guide: 24/7 monitoring, intelligent triage, and real-time care
             coordination.
           </p>
 
@@ -922,7 +922,7 @@ export function LoginScreen({ onLogin, onBack }: LoginScreenProps) {
                       lineHeight: 1.5,
                     }}
                   >
-                    Demo dashboard uses <strong>John Matthews</strong>, 64 — Total Hip Replacement
+                    Demo dashboard uses <strong>John Matthews</strong>, 64, Total Hip Replacement
                     patient.
                     <br />
                     Assistant chat connects to the backend when it is running.

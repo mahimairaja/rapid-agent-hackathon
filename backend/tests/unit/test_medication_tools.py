@@ -117,3 +117,79 @@ async def test_get_next_dose_unverified_guard():
 async def test_flag_pharmacist_unverified_guard():
     res = await flag_pharmacist("a question", tool_context=_unverified_ctx())
     assert res["status"] == "unverified"
+
+
+# ---- Uploaded-plan fallback (no structured medications) ---------------------
+
+
+def _verified_ctx():
+    return SimpleNamespace(state={"patient_verified": True, "patient_id": "p-1"})
+
+
+_PLAN_CONTEXT = [
+    {
+        "text": "Medications at discharge: Furosemide 40 mg once daily.",
+        "source_file": "upload.pdf",
+        "chunk_index": 0,
+    }
+]
+
+
+def _patch_fallback(monkeypatch, *, meds, context):
+    import src.agent.tools.medication_tools as module
+
+    async def fake_active(patient_id, now):
+        return meds
+
+    async def fake_search(patient_id, question):
+        return context
+
+    monkeypatch.setattr(module, "_active_medications", fake_active)
+    monkeypatch.setattr(module, "search_plan_context", fake_search)
+
+
+async def test_get_medications_falls_back_to_uploaded_plan(monkeypatch):
+    _patch_fallback(monkeypatch, meds=[], context=_PLAN_CONTEXT)
+    res = await get_medications(tool_context=_verified_ctx())
+    assert res["status"] == "from_care_plan"
+    assert res["context"] == _PLAN_CONTEXT
+    assert "note" in res
+
+
+async def test_get_medications_without_plan_stays_ok_empty(monkeypatch):
+    _patch_fallback(monkeypatch, meds=[], context=[])
+    res = await get_medications(tool_context=_verified_ctx())
+    assert res["status"] == "ok"
+    assert res["medications"] == []
+
+
+async def test_get_next_dose_falls_back_to_uploaded_plan(monkeypatch):
+    _patch_fallback(monkeypatch, meds=[], context=_PLAN_CONTEXT)
+    res = await get_next_dose("furosemide", tool_context=_verified_ctx())
+    assert res["status"] == "from_care_plan"
+    assert res["medication"] == "furosemide"
+    assert res["context"] == _PLAN_CONTEXT
+
+
+async def test_get_next_dose_structured_miss_skips_fallback(monkeypatch):
+    structured = SimpleNamespace(
+        name="Lisinopril 10 MG Oral Tablet",
+        dosage="10 mg",
+        frequency="daily",
+        schedule_times=["08:00"],
+        start=None,
+        stop=None,
+    )
+
+    async def fake_active(patient_id, now):
+        return [structured]
+
+    async def fail_search(patient_id, question):
+        raise AssertionError("fallback must not run when structured meds exist")
+
+    import src.agent.tools.medication_tools as module
+
+    monkeypatch.setattr(module, "_active_medications", fake_active)
+    monkeypatch.setattr(module, "search_plan_context", fail_search)
+    res = await get_next_dose("furosemide", tool_context=_verified_ctx())
+    assert res["status"] == "not_found"

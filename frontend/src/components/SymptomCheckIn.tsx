@@ -26,21 +26,21 @@ function assessTriage(s: SymptomCheckIn): TriageResult {
     const actions: string[] = []
     if (s.shortness_of_breath)
       actions.push(
-        'Call 911 immediately — shortness of breath after joint surgery may indicate a pulmonary embolism.',
+        'Call 911 immediately: shortness of breath after joint surgery may indicate a pulmonary embolism.',
       )
     if (s.calf_swelling)
-      actions.push('Seek emergency care — calf swelling may indicate deep vein thrombosis (DVT).')
+      actions.push('Seek emergency care: calf swelling may indicate deep vein thrombosis (DVT).')
     if (s.fever)
-      actions.push('Call Nurse Emily Rodriguez: (555) 204-1102 — Fever can indicate infection.')
+      actions.push('Call Nurse Emily Rodriguez: (555) 204-1102. Fever can indicate infection.')
     if (s.wound_discharge)
-      actions.push('Contact care team immediately — wound discharge needs urgent assessment.')
+      actions.push('Contact care team immediately: wound discharge needs urgent assessment.')
     if (s.pain_level >= 8)
       actions.push('Take Acetaminophen if due, apply ice, and contact your nurse within 1 hour.')
     if (actions.length === 0) actions.push('Contact your care team at (555) 204-1102 immediately.')
 
     return {
       level: 'urgent',
-      title: 'Urgent — Contact Care Team Now',
+      title: 'Urgent: Contact Care Team Now',
       message:
         'Based on your symptoms, you need to contact your care team right away. Do not wait.',
       actions,
@@ -64,14 +64,14 @@ function assessTriage(s: SymptomCheckIn): TriageResult {
 
   return {
     level: 'stable',
-    title: 'Stable — Keep it Up',
+    title: 'Stable: Keep it Up',
     message: "Your symptoms look manageable for Week 1 recovery. Here's what to continue:",
     actions: [
       'Continue short assisted walks (10–15 min, 3× daily).',
       'Do hourly ankle pumps to prevent blood clots.',
       'Take your medications as scheduled.',
       'Keep the wound site clean and dry.',
-      'Rest well — recovery happens during sleep.',
+      'Rest well: recovery happens during sleep.',
     ],
   }
 }

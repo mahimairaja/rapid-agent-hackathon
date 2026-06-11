@@ -42,7 +42,7 @@ export function JourneyOnboarding({
         if (!cancelled) {
           setJourneys(list)
           if (list.length === 0) {
-            setLoadError('Sample journeys are not seeded yet — run the seed script, then reload.')
+            setLoadError('Sample journeys are not seeded yet. Run the seed script, then reload.')
           }
         }
       } catch {
@@ -57,12 +57,12 @@ export function JourneyOnboarding({
   const pick = async (journey: Journey) => {
     const displayName = name.trim()
     if (!displayName) {
-      setClaimError('Add your name first — your plan is personalized to it.')
+      setClaimError('Add your name first: your plan is personalized to it.')
       return
     }
     const year = birthYear.trim() ? Number(birthYear.trim()) : null
     if (year !== null && (Number.isNaN(year) || year < 1900 || year > new Date().getFullYear())) {
-      setClaimError('Birth year looks off — use a 4-digit year, or leave it empty.')
+      setClaimError('Birth year looks off: use a 4-digit year, or leave it empty.')
       return
     }
     setClaimError('')
@@ -98,9 +98,9 @@ export function JourneyOnboarding({
         <div className="journey-eyebrow">Welcome to Rapid Recovery</div>
         <h1 className="journey-title">Choose a recovery journey to begin</h1>
         <p className="journey-sub">
-          This is a demo, so you don't need to bring a discharge document — pick a sample journey
-          and we'll build a personal recovery plan and knowledge base around <strong>your</strong>{' '}
-          name. Your assistant will ground every answer in it.
+          This is a demo, so you don't need to bring a discharge document: pick a sample journey and
+          we'll build a personal recovery plan and knowledge base around <strong>your</strong> name.
+          Your assistant will ground every answer in it.
         </p>
       </div>
 

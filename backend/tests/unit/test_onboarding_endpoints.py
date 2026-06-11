@@ -1,5 +1,6 @@
 """Unit tests for the journey onboarding endpoints (stubbed database)."""
 
+from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -284,6 +285,12 @@ async def test_upload_builds_profile_and_knowledge_base(monkeypatch):
     assert len(_FakeChunk.inserted) >= 1
     assert user.saved and user.patient_code == "HW-TEST"
     assert _FakeChunk.inserted[0].source_file == "discharge.pdf"
+    # Uploads get the standard two-week follow-up window so booking works.
+    created = _FakePatient.created
+    assert created.follow_up_required is True
+    assert created.follow_up_kind == "Follow-up visit"
+    window = created.follow_up_window_end - created.follow_up_window_start
+    assert window == timedelta(days=13)
 
 
 @pytest.mark.asyncio

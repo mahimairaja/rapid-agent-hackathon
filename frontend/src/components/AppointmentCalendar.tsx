@@ -118,7 +118,7 @@ export function AppointmentCalendar({ sessionId, onBooked }: AppointmentCalendar
       onBooked()
     } else {
       setNotice(
-        EMPTY_STATE_COPY[result.status] ?? 'That slot could not be booked — pick another one.',
+        EMPTY_STATE_COPY[result.status] ?? 'That slot could not be booked. Pick another one.',
       )
       await refresh()
     }
@@ -228,7 +228,7 @@ export function AppointmentCalendar({ sessionId, onBooked }: AppointmentCalendar
               : 'Pick a day'}
           </div>
           {daySlots.length === 0 && (
-            <div className="cal-slots-empty">No open times this day — pick a dotted day.</div>
+            <div className="cal-slots-empty">No open times this day. Pick a dotted day.</div>
           )}
           {daySlots.map((slot) => {
             const isHeld =

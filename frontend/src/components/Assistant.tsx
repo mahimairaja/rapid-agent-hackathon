@@ -22,7 +22,7 @@ const FOLLOW_UPS: string[] = [
 const STATE_LABEL: Record<VoiceState, string> = {
   idle: 'Offline',
   connecting: 'Connecting…',
-  connected: 'Ready — type or tap the mic',
+  connected: 'Ready: type or tap the mic',
   listening: 'Listening…',
   speaking: 'Speaking…',
   error: 'Connection problem',
@@ -64,8 +64,8 @@ function sourceLabel(s: SourceItem): string | null {
 
 function makeGreeting(userName?: string | null, onboarded?: boolean): ChatMessage {
   const content = onboarded
-    ? `Welcome back${userName ? `, **${userName}**` : ''} — I'm Maya, and I'm loading your recovery plan now. Talk or type any time: medications, appointments, symptoms, or anything in your plan.`
-    : "Hi, I'm **Maya**, your recovery companion. I can talk or chat. To pull up your plan, tell me your **name and date of birth**, or your **patient code** — say it or type it below."
+    ? `Welcome back${userName ? `, **${userName}**` : ''}. I'm Maya, and I'm loading your recovery plan now. Talk or type any time: medications, appointments, symptoms, or anything in your plan.`
+    : "Hi, I'm **Maya**, your recovery companion. I can talk or chat. To pull up your plan, tell me your **name and date of birth**, or your **patient code**: say it or type it below."
   return { id: 'greeting', role: 'assistant', content, timestamp: new Date() }
 }
 
@@ -207,9 +207,7 @@ export function Assistant({
       },
       onIdentifyFailed: () => {
         if (!cancelled) {
-          setError(
-            "I couldn't load your saved profile automatically — tell me who you are instead.",
-          )
+          setError("I couldn't load your saved profile automatically. Tell me who you are instead.")
         }
       },
       onTranscript: (text: string, final: boolean, role: TranscriptRole) => {
@@ -396,7 +394,7 @@ export function Assistant({
           id: generateId(),
           role: 'assistant',
           content:
-            "We got disconnected for a moment, so I started a fresh session. Remind me who you are — your **name and date of birth**, or your **patient code** — and I'll pick right back up.",
+            "We got disconnected for a moment, so I started a fresh session. Remind me who you are: your **name and date of birth**, or your **patient code**, and I'll pick right back up.",
           timestamp: new Date(),
         },
       ])

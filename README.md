@@ -60,7 +60,7 @@ Rapid Recovery gives every discharged patient an agent that has actually read th
 
 > Watch the 3-minute demo: **[link coming with submission]**
 
-Fastest way to try it yourself: open the [live demo](https://rapid-agent-hackathon.vercel.app/), hit **Join**, pick a sample recovery journey, and the app clones a full medical profile (medications, appointments, embedded care plan) under your name. Maya knows you on the next screen.
+Fastest way to try it yourself: open the [live demo](https://rapid-agent-hackathon.vercel.app/), hit **Join**, pick a sample recovery journey, and the app clones a full medical profile (medications, appointments, embedded care plan) under your name. Maya knows you on the next screen. Prefer your own document? Choose **Upload your discharge PDF** in the same wizard ([sample PDF](docs/assets/sample-discharge.pdf)) and Maya answers from it, parsed and indexed on the spot.
 
 ## Architecture
 
