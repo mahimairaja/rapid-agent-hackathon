@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { CalendarDays, ClipboardList, Pill, Stethoscope, UserRound } from 'lucide-react'
 import type { SessionContext, SourceItem } from '../types'
 
 interface GroundingPanelProps {
@@ -139,13 +140,23 @@ export function GroundingPanel({
         <div className="grounding-patient-name">
           {p.first_name} {p.last_name}
         </div>
-        {p.discharge_reason && <div className="grounding-line">🩺 {p.discharge_reason}</div>}
-        {p.assigned_clinician && <div className="grounding-line">👩‍⚕️ {p.assigned_clinician}</div>}
+        {p.discharge_reason && (
+          <div className="grounding-line">
+            <Stethoscope size={13} /> {p.discharge_reason}
+          </div>
+        )}
+        {p.assigned_clinician && (
+          <div className="grounding-line">
+            <UserRound size={13} /> {p.assigned_clinician}
+          </div>
+        )}
       </section>
 
       {meds.length > 0 && (
         <section className="grounding-section">
-          <div className="grounding-section-title">💊 Medications</div>
+          <div className="grounding-section-title">
+            <Pill size={13} /> Medications
+          </div>
           {meds.map((m) => {
             const isHl = highlight.medNames.has((m.name || '').toLowerCase())
             return (
@@ -163,7 +174,9 @@ export function GroundingPanel({
 
       {appts.length > 0 && (
         <section className="grounding-section">
-          <div className="grounding-section-title">📅 Appointments</div>
+          <div className="grounding-section-title">
+            <CalendarDays size={13} /> Appointments
+          </div>
           {appts.map((a) => {
             const isHl = apptHighlighted(a.start)
             return (
@@ -188,7 +201,9 @@ export function GroundingPanel({
 
       {chunks.length > 0 && (
         <section className="grounding-section">
-          <div className="grounding-section-title">📋 Care plan</div>
+          <div className="grounding-section-title">
+            <ClipboardList size={13} /> Care plan
+          </div>
           {chunks.map((c) => {
             const id = `${c.source_file}#${c.chunk_index}`
             const isHl = highlight.planChunks.has(id)

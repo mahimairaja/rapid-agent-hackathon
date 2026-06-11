@@ -14,26 +14,16 @@ function getInitials(name: string) {
     .slice(0, 2)
 }
 
-const ROLE_ICONS: Record<string, string> = {
-  'Orthopedic Surgeon': '🩺',
-  'Recovery Nurse': '👩‍⚕️',
-  Physiotherapist: '🏃',
-  General: '⚕️',
-}
-
 export function CareTeamPanel({ careTeam }: CareTeamPanelProps) {
   return (
     <div>
       {/* Care team cards */}
       <div className="care-team-grid" style={{ marginBottom: 24 }}>
         {careTeam.map((member) => {
-          const icon = ROLE_ICONS[member.role] ?? '⚕️'
           return (
             <div key={member.id} className="care-team-member-card">
               <div className="care-team-avatar">{getInitials(member.name)}</div>
-              <div className="care-team-name">
-                {icon} {member.name}
-              </div>
+              <div className="care-team-name">{member.name}</div>
               <div className="care-team-role">{member.role}</div>
               <div className="care-team-contact">
                 {member.phone && (
