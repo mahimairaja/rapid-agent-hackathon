@@ -1,4 +1,3 @@
-import React from 'react'
 import { ONBOARDING_PROCESS, LANDING_JOURNEYS } from '../data/landingContent'
 
 interface ProcessSectionProps {

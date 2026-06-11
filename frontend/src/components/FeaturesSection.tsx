@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { HOW_IT_WORKS } from '../data/landingContent'
 
 interface FeaturesSectionProps {
