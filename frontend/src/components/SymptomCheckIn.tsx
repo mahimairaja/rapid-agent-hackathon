@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { SymptomCheckIn, TriageResult } from '../types'
+import { symptomTogglesForCondition } from '../data/recoveryPlans'
 
 const INITIAL_STATE: SymptomCheckIn = {
   pain_level: 3,
@@ -76,13 +77,10 @@ function assessTriage(s: SymptomCheckIn): TriageResult {
   }
 }
 
-function composeReport(s: SymptomCheckIn): string {
-  const symptoms: string[] = []
-  if (s.fever) symptoms.push('a fever')
-  if (s.swelling) symptoms.push('swelling')
-  if (s.shortness_of_breath) symptoms.push('shortness of breath')
-  if (s.wound_discharge) symptoms.push('discharge from my wound')
-  if (s.calf_swelling) symptoms.push('calf pain and swelling')
+function composeReport(s: SymptomCheckIn, toggles: ToggleDef[]): string {
+  // Each toggle carries its own first-person phrase so the submitted text
+  // always matches what the patient actually tapped (labels vary by condition).
+  const symptoms = toggles.filter((t) => s[t.field]).map((t) => t.report)
   const parts = [`my pain level is ${s.pain_level}/10`]
   if (symptoms.length) parts.push(`I have ${symptoms.join(', ')}`)
   if (s.notes.trim()) parts.push(s.notes.trim())
@@ -93,27 +91,53 @@ interface SymptomCheckInFormProps {
   // When provided, submissions go to Maya's live conversation (real triage,
   // check-in/escalation records) instead of the local mock assessment.
   onSubmitReport?: (text: string) => void
+  // Selects condition-specific toggle labels (heart, COPD, diabetes); the
+  // surgical defaults below fit the knee journey and demo mode.
+  dischargeReason?: string | null
 }
 
-const TOGGLES: Array<{
+interface ToggleDef {
   field: keyof Omit<SymptomCheckIn, 'pain_level' | 'notes'>
   label: string
   hint: string
+  report: string
   icon: React.ComponentType<{ className?: string }>
-}> = [
-  { field: 'fever', label: 'Fever', hint: '38.5°C or higher', icon: Thermometer },
-  { field: 'swelling', label: 'Hip / leg swelling', hint: 'Around the joint', icon: Footprints },
+}
+
+const TOGGLES: ToggleDef[] = [
+  {
+    field: 'fever',
+    label: 'Fever',
+    hint: '38.5°C or higher',
+    report: 'a fever',
+    icon: Thermometer,
+  },
+  {
+    field: 'swelling',
+    label: 'Hip / leg swelling',
+    hint: 'Around the joint',
+    report: 'swelling',
+    icon: Footprints,
+  },
   {
     field: 'shortness_of_breath',
     label: 'Shortness of breath',
     hint: 'At rest or sudden',
+    report: 'shortness of breath',
     icon: Wind,
   },
-  { field: 'wound_discharge', label: 'Wound discharge', hint: 'Fluid or redness', icon: Droplets },
+  {
+    field: 'wound_discharge',
+    label: 'Wound discharge',
+    hint: 'Fluid or redness',
+    report: 'discharge from my wound',
+    icon: Droplets,
+  },
   {
     field: 'calf_swelling',
     label: 'Calf pain / swelling',
     hint: 'One-sided tenderness',
+    report: 'calf pain and swelling',
     icon: Zap,
   },
 ]
@@ -126,9 +150,17 @@ function painTone(level: number): { badge: string; track: string; label: string 
   return { badge: 'bg-destructive/10 text-destructive', track: 'bg-destructive', label: 'Severe' }
 }
 
-export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) {
+export function SymptomCheckInForm({ onSubmitReport, dischargeReason }: SymptomCheckInFormProps) {
   const [form, setForm] = useState<SymptomCheckIn>(INITIAL_STATE)
   const [result, setResult] = useState<TriageResult | null>(null)
+
+  const conditionToggles = symptomTogglesForCondition(dischargeReason)
+  const toggles: ToggleDef[] = conditionToggles
+    ? TOGGLES.map((t) => {
+        const o = conditionToggles.find((c) => c.field === t.field)
+        return o ? { ...t, label: o.label, hint: o.hint, report: o.report } : t
+      })
+    : TOGGLES
 
   const tone = painTone(form.pain_level)
 
@@ -139,7 +171,7 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (onSubmitReport) {
-      onSubmitReport(composeReport(form))
+      onSubmitReport(composeReport(form, toggles))
       setForm(INITIAL_STATE)
       return
     }
@@ -193,7 +225,7 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
           <span className="font-normal text-muted-foreground">Tap all that apply</span>
         </h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          {TOGGLES.map(({ field, label, hint, icon: Icon }, i) => {
+          {toggles.map(({ field, label, hint, icon: Icon }, i) => {
             const active = form[field]
             return (
               <button
@@ -204,7 +236,7 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
                 onClick={() => toggle(field)}
                 className={cn(
                   'flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all',
-                  i === TOGGLES.length - 1 && 'sm:col-span-2',
+                  i === toggles.length - 1 && 'sm:col-span-2',
                   active
                     ? 'border-primary bg-accent ring-1 ring-primary/40'
                     : 'border-border bg-card hover:border-input hover:shadow-sm',

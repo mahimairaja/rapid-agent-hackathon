@@ -437,13 +437,20 @@ function App() {
   const symptomEl = (
     <div className="mx-auto max-w-3xl">
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <SymptomCheckInForm onSubmitReport={handleSymptomReport} />
+        <SymptomCheckInForm
+          onSubmitReport={handleSymptomReport}
+          dischargeReason={patient?.discharge_reason}
+        />
       </div>
     </div>
   )
 
   const careTeamEl = patient ? (
-    <CareTeamPanel careTeam={patient.care_team ?? []} clinician={patient.assigned_clinician} />
+    <CareTeamPanel
+      careTeam={patient.care_team ?? []}
+      clinician={patient.assigned_clinician}
+      dischargeReason={patient.discharge_reason}
+    />
   ) : (
     <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
   )
