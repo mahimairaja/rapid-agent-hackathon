@@ -153,7 +153,7 @@ function MedItem({ med, compact }: { med: Medication; compact?: boolean }) {
         {!compact && med.reason && (
           <p className="mt-1 text-xs text-muted-foreground">
             <span className="font-semibold text-foreground/80">Why you take this:</span>{' '}
-            {friendlyReason(med.reason)}
+            {friendlyReason(med.reason, med.name)}
             {REASON_FRIENDLY[med.reason] && (
               <span className="text-muted-foreground/70">{` (${med.reason})`}</span>
             )}
