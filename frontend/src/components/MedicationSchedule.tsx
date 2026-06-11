@@ -1,3 +1,4 @@
+import { Pill } from 'lucide-react'
 import type { Medication } from '../types'
 import { REASON_FRIENDLY, friendlyReason } from '../data/medicationReasons'
 
@@ -18,7 +19,9 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
   if (medications.length === 0) {
     return (
       <div className="empty-state">
-        <span className="empty-state-icon">💊</span>
+        <span className="empty-state-icon">
+          <Pill size={28} />
+        </span>
         <p className="empty-state-title">No medications found</p>
         <p className="empty-state-sub">Medication data will appear here once loaded.</p>
       </div>
@@ -71,7 +74,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
               marginBottom: 8,
             }}
           >
-            {hasAdherence ? '⏰ Due Today' : 'On Plan'}
+            {hasAdherence ? 'Due Today' : 'On Plan'}
           </div>
           <div className="medication-list">
             {pending.map((med) => (
@@ -94,7 +97,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
               marginBottom: 8,
             }}
           >
-            ✓ Taken Today
+            Taken Today
           </div>
           <div className="medication-list">
             {taken.map((med) => (

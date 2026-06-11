@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Sparkles } from 'lucide-react'
 import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import './index.css'
 import './App.css'
@@ -381,7 +382,7 @@ function App() {
   const medicationsEl = patient ? (
     <div>
       <div className="view-header">
-        <div className="view-header-title">💊 Medication Schedule</div>
+        <div className="view-header-title">Medication Schedule</div>
         <div className="view-header-sub">
           {hasMedicationAdherence
             ? `${completedToday} of ${medications.length} medications taken today`
@@ -403,7 +404,7 @@ function App() {
     <div>
       <AppointmentCalendar sessionId={sessionId} onBooked={handleCalendarBooked} />
       <div className="view-header" style={{ marginTop: 22 }}>
-        <div className="view-header-title">📅 Appointment Timeline</div>
+        <div className="view-header-title">Appointment Timeline</div>
         <div className="view-header-sub">
           {nextAppointment
             ? `${appointments.filter((a) => a.status !== 'completed').length} upcoming
@@ -442,7 +443,7 @@ function App() {
   const symptomEl = (
     <div>
       <div className="view-header">
-        <div className="view-header-title">📈 Symptom Check-In</div>
+        <div className="view-header-title">Symptom Check-In</div>
         <div className="view-header-sub">
           Tell Maya how you're feeling — she runs the real triage and replies in the conversation
         </div>
@@ -462,7 +463,7 @@ function App() {
   const careTeamEl = patient ? (
     <div>
       <div className="view-header">
-        <div className="view-header-title">👥 Your Care Team</div>
+        <div className="view-header-title">Your Care Team</div>
         <div className="view-header-sub">
           Contact information, emergency warning signs, and care team escalation
         </div>
@@ -504,8 +505,11 @@ function IdentifyCallout({ onOpenAssistant }: { onOpenAssistant: () => void }) {
         className="card-body"
         style={{ textAlign: 'center', padding: '56px 24px', maxWidth: 520, margin: '0 auto' }}
       >
-        <div style={{ fontSize: 44, marginBottom: 14 }} aria-hidden="true">
-          👋
+        <div
+          style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}
+          aria-hidden="true"
+        >
+          <Sparkles size={40} color="var(--blue-400)" />
         </div>
         <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)' }}>
           Let's find your recovery plan
@@ -585,7 +589,7 @@ function DashboardView({
             <div className="card-accent-bar" />
             <div className="card-header" style={{ paddingTop: 18 }}>
               <div>
-                <div className="card-title">🎯 Recovery Plan</div>
+                <div className="card-title">Recovery Plan</div>
                 <div className="card-subtitle">
                   Week-by-week milestones, goals, and restrictions
                 </div>
@@ -603,7 +607,7 @@ function DashboardView({
           <div className="card" style={{ height: '100%' }}>
             <div className="card-header">
               <div>
-                <div className="card-title">💊 Today's Medications</div>
+                <div className="card-title">Today's Medications</div>
                 <div className="card-subtitle">
                   {hasMedicationAdherence
                     ? `${completedToday} of ${medications.length} taken`
@@ -625,7 +629,7 @@ function DashboardView({
           <div className="card" style={{ height: '100%' }}>
             <div className="card-header">
               <div>
-                <div className="card-title">📅 Upcoming Appointments</div>
+                <div className="card-title">Upcoming Appointments</div>
                 <div className="card-subtitle">
                   {appointments.some((a) => a.status !== 'completed')
                     ? `Next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`

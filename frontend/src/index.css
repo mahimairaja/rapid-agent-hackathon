@@ -84,8 +84,6 @@
   --text-muted: #94a3b8;
   --text-xmuted: #b8c6d6;
   --text-inverse: var(--white);
-  --accent: var(--blue-500);
-  --accent-hover: var(--blue-600);
 
   /* ── Shadows ── */
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
@@ -168,11 +166,12 @@ svg {
   max-width: 100%;
 }
 
+/* Border/background zeroing now comes from Tailwind preflight (base layer),
+   so utilities like bg-primary/border can restyle buttons; this unlayered
+   rule must only carry what preflight does not set. */
 button {
   cursor: pointer;
   font-family: var(--font-sans);
-  border: none;
-  background: none;
 }
 
 input,

@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import {
+  CheckCircle2,
+  Loader2,
+  Mic,
+  Sparkles,
+  Square,
+  UserRound,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 import type { ChatMessage, SessionContext, SourceItem } from '../types'
 import { VoiceClient, type TranscriptRole, type VoiceState } from '../lib/ws'
 import { useAudioAnalyser } from '../lib/useAudioAnalyser'
@@ -452,7 +461,7 @@ export function Assistant({
           </span>
           {offline && (
             <button type="button" className="suggestion-chip" onClick={() => void reconnect()}>
-              ↻ Reconnect
+              Reconnect
             </button>
           )}
         </div>
@@ -475,7 +484,7 @@ export function Assistant({
             ) : (
               <div key={msg.id} className={`chat-message ${msg.role}`}>
                 <div className={`chat-avatar ${msg.role}`}>
-                  {msg.role === 'assistant' ? '🤖' : '🙂'}
+                  {msg.role === 'assistant' ? <Sparkles size={15} /> : <UserRound size={15} />}
                 </div>
                 <div>
                   <div
@@ -512,7 +521,9 @@ export function Assistant({
 
           {liveUser && (
             <div className="chat-message user">
-              <div className="chat-avatar user">🙂</div>
+              <div className="chat-avatar user">
+                <UserRound size={15} />
+              </div>
               <div>
                 <div className="chat-bubble" style={{ opacity: 0.65 }}>
                   {liveUser}
@@ -522,7 +533,9 @@ export function Assistant({
           )}
           {liveAssistant && (
             <div className="chat-message assistant">
-              <div className="chat-avatar assistant">🤖</div>
+              <div className="chat-avatar assistant">
+                <Sparkles size={15} />
+              </div>
               <div>
                 <div
                   className="chat-bubble chat-bubble-md"
@@ -534,7 +547,9 @@ export function Assistant({
           )}
           {awaitingReply && !liveAssistant && (
             <div className="chat-message assistant">
-              <div className="chat-avatar assistant">🤖</div>
+              <div className="chat-avatar assistant">
+                <Sparkles size={15} />
+              </div>
               <div className="typing-indicator-bubble">
                 <div className="typing-dot" />
                 <div className="typing-dot" />
@@ -568,7 +583,7 @@ export function Assistant({
             aria-label={micActive ? 'Stop talking' : 'Start talking'}
             title={micActive ? 'Stop talking' : 'Start talking'}
           >
-            {micActive ? '■' : '🎤'}
+            {micActive ? <Square size={15} /> : <Mic size={17} />}
           </button>
 
           {micActive && !voiceFocus ? (
@@ -625,7 +640,7 @@ export function Assistant({
             aria-label={muted ? 'Unmute audio' : 'Mute audio'}
             title={muted ? 'Unmute audio' : 'Mute audio (keep transcript)'}
           >
-            {muted ? '🔇' : '🔊'}
+            {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
           </button>
         </div>
 
@@ -659,7 +674,7 @@ export function Assistant({
               className="voice-overlay-btn"
               onClick={() => setVoiceFocus(false)}
             >
-              ⌄ Minimize
+              Minimize
             </button>
             <button type="button" className="voice-overlay-btn end" onClick={endVoice}>
               ■ End voice
@@ -669,7 +684,7 @@ export function Assistant({
               className={`voice-overlay-btn${muted ? ' active' : ''}`}
               onClick={toggleMute}
             >
-              {muted ? '🔇 Unmute' : '🔊 Mute'}
+              {muted ? 'Unmute' : 'Mute'}
             </button>
           </div>
         </div>

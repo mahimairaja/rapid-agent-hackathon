@@ -1,4 +1,5 @@
 import type { Patient, Medication, Appointment } from '../types'
+import { CalendarDays, Pill, Sparkles } from 'lucide-react'
 import { dailyActionForCondition } from '../data/recoveryPlans'
 
 interface DashboardHeroProps {
@@ -79,7 +80,7 @@ export function DashboardHero({
         </div>
 
         <div className="dh-identity">
-          <div className="dh-greeting">Good morning 👋</div>
+          <div className="dh-greeting">Good morning</div>
           <div className="dh-name">
             {patient.first_name} {patient.last_name}
           </div>
@@ -129,7 +130,9 @@ export function DashboardHero({
             }
             type="button"
           >
-            <span className="dh-qs-icon med">💊</span>
+            <span className="dh-qs-icon med">
+              <Pill size={16} />
+            </span>
             <span className="dh-qs-val">
               {hasMedicationAdherence ? `${completedToday}/${medicationsTotal}` : medicationsTotal}
             </span>
@@ -144,7 +147,9 @@ export function DashboardHero({
             aria-label={`Next appointment: ${nextApptLabel}`}
             type="button"
           >
-            <span className="dh-qs-icon appt">📅</span>
+            <span className="dh-qs-icon appt">
+              <CalendarDays size={16} />
+            </span>
             <span className="dh-qs-val">{nextApptLabel}</span>
             <span className="dh-qs-lbl">Next appt</span>
           </button>
@@ -181,7 +186,9 @@ export function DashboardHero({
       <div className="dh-right">
         <div className="dh-ai-header">
           <div className="dh-ai-icon-wrap">
-            <span className="dh-ai-icon">⚡</span>
+            <span className="dh-ai-icon">
+              <Sparkles size={16} />
+            </span>
           </div>
           <div>
             <div className="dh-ai-label">AI Care Summary</div>

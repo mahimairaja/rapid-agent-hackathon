@@ -1,4 +1,9 @@
 import { useState } from 'react'
+import { Droplets, Footprints, Sparkles, Thermometer, Wind, Zap } from 'lucide-react'
+import { Slider } from '@/components/ui/slider'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { SymptomCheckIn, TriageResult } from '../types'
 
 const INITIAL_STATE: SymptomCheckIn = {
@@ -21,24 +26,21 @@ function assessTriage(s: SymptomCheckIn): TriageResult {
     const actions: string[] = []
     if (s.shortness_of_breath)
       actions.push(
-        '🚨 Call 911 immediately — shortness of breath after joint surgery may indicate a pulmonary embolism.',
+        'Call 911 immediately — shortness of breath after joint surgery may indicate a pulmonary embolism.',
       )
     if (s.calf_swelling)
-      actions.push(
-        '🚨 Seek emergency care — calf swelling may indicate deep vein thrombosis (DVT).',
-      )
+      actions.push('Seek emergency care — calf swelling may indicate deep vein thrombosis (DVT).')
     if (s.fever)
-      actions.push('📞 Call Nurse Emily Rodriguez: (555) 204-1102 — Fever can indicate infection.')
+      actions.push('Call Nurse Emily Rodriguez: (555) 204-1102 — Fever can indicate infection.')
     if (s.wound_discharge)
-      actions.push('📞 Contact care team immediately — wound discharge needs urgent assessment.')
+      actions.push('Contact care team immediately — wound discharge needs urgent assessment.')
     if (s.pain_level >= 8)
-      actions.push('💊 Take Acetaminophen if due, apply ice, and contact your nurse within 1 hour.')
-    if (actions.length === 0)
-      actions.push('📞 Contact your care team at (555) 204-1102 immediately.')
+      actions.push('Take Acetaminophen if due, apply ice, and contact your nurse within 1 hour.')
+    if (actions.length === 0) actions.push('Contact your care team at (555) 204-1102 immediately.')
 
     return {
       level: 'urgent',
-      title: '⚠️ Urgent — Contact Care Team Now',
+      title: 'Urgent — Contact Care Team Now',
       message:
         'Based on your symptoms, you need to contact your care team right away. Do not wait.',
       actions,
@@ -48,11 +50,11 @@ function assessTriage(s: SymptomCheckIn): TriageResult {
   if (isCaution) {
     return {
       level: 'caution',
-      title: '⚡ Monitor Closely',
+      title: 'Monitor Closely',
       message: 'Your symptoms are manageable but need watching. Follow these steps:',
       actions: [
-        s.swelling ? '🧊 Apply ice for 20 minutes to reduce swelling.' : '',
-        s.pain_level >= 5 ? '💊 Take Acetaminophen as scheduled if pain continues.' : '',
+        s.swelling ? 'Apply ice for 20 minutes to reduce swelling.' : '',
+        s.pain_level >= 5 ? 'Take Acetaminophen as scheduled if pain continues.' : '',
         'Rest and elevate your operated leg above heart level when sitting.',
         'Log your symptoms in this tool every 4–6 hours.',
         'Contact Nurse Emily if symptoms worsen: (555) 204-1102',
@@ -62,7 +64,7 @@ function assessTriage(s: SymptomCheckIn): TriageResult {
 
   return {
     level: 'stable',
-    title: '✓ Stable — Keep it Up',
+    title: 'Stable — Keep it Up',
     message: "Your symptoms look manageable for Week 1 recovery. Here's what to continue:",
     actions: [
       'Continue short assisted walks (10–15 min, 3× daily).',
@@ -88,16 +90,47 @@ function composeReport(s: SymptomCheckIn): string {
 }
 
 interface SymptomCheckInFormProps {
-  // When provided, submissions go to the live assistant (real triage,
+  // When provided, submissions go to Maya's live conversation (real triage,
   // check-in/escalation records) instead of the local mock assessment.
   onSubmitReport?: (text: string) => void
+}
+
+const TOGGLES: Array<{
+  field: keyof Omit<SymptomCheckIn, 'pain_level' | 'notes'>
+  label: string
+  hint: string
+  icon: React.ComponentType<{ className?: string }>
+}> = [
+  { field: 'fever', label: 'Fever', hint: '38.5°C or higher', icon: Thermometer },
+  { field: 'swelling', label: 'Hip / leg swelling', hint: 'Around the joint', icon: Footprints },
+  {
+    field: 'shortness_of_breath',
+    label: 'Shortness of breath',
+    hint: 'At rest or sudden',
+    icon: Wind,
+  },
+  { field: 'wound_discharge', label: 'Wound discharge', hint: 'Fluid or redness', icon: Droplets },
+  {
+    field: 'calf_swelling',
+    label: 'Calf pain / swelling',
+    hint: 'One-sided tenderness',
+    icon: Zap,
+  },
+]
+
+function painTone(level: number): { badge: string; track: string; label: string } {
+  if (level <= 3)
+    return { badge: 'bg-secondary/15 text-secondary', track: 'bg-secondary', label: 'Mild' }
+  if (level <= 6)
+    return { badge: 'bg-amber-100 text-amber-600', track: 'bg-amber-500', label: 'Moderate' }
+  return { badge: 'bg-destructive/10 text-destructive', track: 'bg-destructive', label: 'Severe' }
 }
 
 export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) {
   const [form, setForm] = useState<SymptomCheckIn>(INITIAL_STATE)
   const [result, setResult] = useState<TriageResult | null>(null)
 
-  const painColor = form.pain_level <= 3 ? 'low' : form.pain_level <= 6 ? 'medium' : 'high'
+  const tone = painTone(form.pain_level)
 
   const toggle = (field: keyof Omit<SymptomCheckIn, 'pain_level' | 'notes'>) => {
     setForm((prev) => ({ ...prev, [field]: !prev[field] }))
@@ -119,119 +152,105 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
     setResult(null)
   }
 
-  const TOGGLES: Array<{
-    field: keyof Omit<SymptomCheckIn, 'pain_level' | 'notes'>
-    label: string
-    emoji: string
-  }> = [
-    { field: 'fever', label: 'Fever (≥38.5°C)', emoji: '🌡️' },
-    { field: 'swelling', label: 'Hip/Leg Swelling', emoji: '🦵' },
-    { field: 'shortness_of_breath', label: 'Shortness of Breath', emoji: '🫁' },
-    { field: 'wound_discharge', label: 'Wound Discharge', emoji: '🩹' },
-    { field: 'calf_swelling', label: 'Calf Pain/Swelling', emoji: '⚡' },
-  ]
-
   return (
-    <form className="symptom-form" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-7" onSubmit={handleSubmit}>
       {/* Pain slider */}
-      <div className="symptom-pain-slider">
-        <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
-          Current Pain Level
-        </label>
-        <div className="pain-level-display">
-          <span className={`pain-number ${painColor}`}>{form.pain_level}</span>
-          <div style={{ flex: 1 }}>
-            <input
-              id="pain-level-slider"
-              type="range"
-              min={0}
-              max={10}
-              value={form.pain_level}
-              onChange={(e) => setForm((prev) => ({ ...prev, pain_level: Number(e.target.value) }))}
-            />
-            <div className="pain-slider-labels">
-              <span>0 – No pain</span>
-              <span>5 – Moderate</span>
-              <span>10 – Worst</span>
-            </div>
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">How bad is your pain?</h3>
+            <p className="text-xs text-muted-foreground">Slide to where it feels right now</p>
           </div>
+          <span
+            className={cn(
+              'flex items-baseline gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold',
+              tone.badge,
+            )}
+          >
+            {form.pain_level}/10
+            <span className="text-xs font-semibold opacity-80">{tone.label}</span>
+          </span>
         </div>
-      </div>
+        <Slider
+          id="pain-level-slider"
+          min={0}
+          max={10}
+          step={1}
+          value={[form.pain_level]}
+          onValueChange={([v]) => setForm((prev) => ({ ...prev, pain_level: v }))}
+          className="py-2"
+          aria-label="Current pain level"
+        />
+        <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+          <span>0 · No pain</span>
+          <span>5 · Moderate</span>
+          <span>10 · Worst imaginable</span>
+        </div>
+      </section>
 
-      {/* Symptom toggles */}
-      <div>
-        <label
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: 'var(--text-secondary)',
-            marginBottom: 10,
-            display: 'block',
-          }}
-        >
-          Symptoms Present?
-        </label>
-        <div className="symptom-toggles">
-          {TOGGLES.map(({ field, label, emoji }) => (
-            <div
-              key={field}
-              className={`symptom-toggle-item${form[field] ? ' active' : ''}`}
-              onClick={() => toggle(field)}
-              role="checkbox"
-              aria-checked={form[field]}
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && toggle(field)}
-            >
-              <div className="symptom-toggle-checkbox">
-                {form[field] && (
-                  <svg width="10" height="10" viewBox="0 0 12 10" fill="none">
-                    <path
-                      d="M1 5l3.5 3.5L11 1"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+      {/* Symptom toggle cards */}
+      <section>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
+          Anything else going on?{' '}
+          <span className="font-normal text-muted-foreground">Tap all that apply</span>
+        </h3>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          {TOGGLES.map(({ field, label, hint, icon: Icon }) => {
+            const active = form[field]
+            return (
+              <button
+                key={field}
+                type="button"
+                role="checkbox"
+                aria-checked={active}
+                onClick={() => toggle(field)}
+                className={cn(
+                  'flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all',
+                  active
+                    ? 'border-primary bg-accent ring-2 ring-primary/30'
+                    : 'border-border bg-card hover:border-input hover:shadow-sm',
                 )}
-              </div>
-              <span className="symptom-toggle-label">
-                <span>{emoji}</span> {label}
-              </span>
-            </div>
-          ))}
+              >
+                <Icon className={cn('size-5', active ? 'text-primary' : 'text-muted-foreground')} />
+                <span className="text-[13px] font-semibold leading-tight text-foreground">
+                  {label}
+                </span>
+                <span className="text-[11px] leading-tight text-muted-foreground">{hint}</span>
+              </button>
+            )
+          })}
         </div>
-      </div>
+      </section>
 
       {/* Notes */}
-      <div className="symptom-notes">
-        <label htmlFor="symptom-notes">Additional Notes (optional)</label>
-        <textarea
+      <section>
+        <label htmlFor="symptom-notes" className="mb-2 block text-sm font-semibold text-foreground">
+          Anything you want Maya to know?{' '}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
+        <Textarea
           id="symptom-notes"
-          placeholder="Describe how you're feeling…"
+          placeholder="Describe how you're feeling in your own words…"
           value={form.notes}
           onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+          className="min-h-24 resize-none bg-card"
         />
-      </div>
+      </section>
 
       {/* Submit */}
       <div className="flex gap-2">
-        <button
-          id="symptom-submit-btn"
-          type="submit"
-          className="btn btn-primary"
-          style={{ flex: 1 }}
-        >
-          {onSubmitReport ? 'Send to my care assistant' : 'Assess Symptoms'}
-        </button>
+        <Button id="symptom-submit-btn" type="submit" size="lg" className="flex-1 gap-2">
+          {onSubmitReport && <Sparkles className="size-4" aria-hidden="true" />}
+          {onSubmitReport ? 'Send to Maya' : 'Assess Symptoms'}
+        </Button>
         {result && (
-          <button type="button" className="btn btn-outline" onClick={handleReset}>
+          <Button type="button" variant="outline" size="lg" onClick={handleReset}>
             Reset
-          </button>
+          </Button>
         )}
       </div>
 
-      {/* Result */}
+      {/* Result (local mock fallback only; the live path replies in Maya) */}
       {result && (
         <div className={`triage-result ${result.level}`}>
           <div className="triage-result-header">{result.title}</div>
@@ -246,12 +265,10 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
         </div>
       )}
 
-      {/* Medical disclaimer */}
-      <div className="medical-disclaimer">
-        ⚕️ <strong>Medical Disclaimer:</strong> This tool provides general recovery guidance based
-        on your care plan. It does not replace professional medical advice. For medical emergencies,
-        call <strong>911</strong> immediately.
-      </div>
+      <p className="text-center text-xs text-muted-foreground">
+        Maya shares guidance from your care plan, not medical advice. In an emergency, call{' '}
+        <strong>911</strong>.
+      </p>
     </form>
   )
 }
