@@ -132,7 +132,7 @@ function MedItem({ med }: { med: Medication }) {
             <span className="font-semibold text-foreground/80">Why you take this:</span>{' '}
             {friendlyReason(med.reason)}
             {REASON_FRIENDLY[med.reason] && (
-              <span className="ml-1 text-muted-foreground/70">({med.reason})</span>
+              <span className="text-muted-foreground/70">{` (${med.reason})`}</span>
             )}
           </p>
         )}
