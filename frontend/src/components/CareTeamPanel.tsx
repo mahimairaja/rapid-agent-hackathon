@@ -1,8 +1,33 @@
+import type { ReactNode } from 'react'
+import {
+  Droplets,
+  HeartPulse,
+  Phone,
+  Thermometer,
+  TriangleAlert,
+  UserRound,
+  Wind,
+  Zap,
+} from 'lucide-react'
 import type { CareTeamMember } from '../types'
 import { URGENT_WARNING_SIGNS } from '../data/mockData'
 
 interface CareTeamPanelProps {
   careTeam: CareTeamMember[]
+  // Cloned journey profiles carry no care_team list; the assigned clinician
+  // string (for example "Dr. Helen Park (Cardiology)") backs a fallback card.
+  clinician?: string | null
+}
+
+// Decorative icon per warning sign, matched on the label keywords.
+function warningIcon(label: string): ReactNode {
+  const l = label.toLowerCase()
+  if (l.includes('fever')) return <Thermometer size={17} />
+  if (l.includes('chest')) return <HeartPulse size={17} />
+  if (l.includes('breath')) return <Wind size={17} />
+  if (l.includes('calf')) return <Zap size={17} />
+  if (l.includes('wound')) return <Droplets size={17} />
+  return <TriangleAlert size={17} />
 }
 
 function getInitials(name: string) {
@@ -14,7 +39,15 @@ function getInitials(name: string) {
     .slice(0, 2)
 }
 
-export function CareTeamPanel({ careTeam }: CareTeamPanelProps) {
+export function CareTeamPanel({ careTeam, clinician }: CareTeamPanelProps) {
+  const clinicianMatch = clinician?.match(/^(.*?)\s*\((.*)\)\s*$/)
+  const fallback =
+    careTeam.length === 0 && clinician
+      ? {
+          name: (clinicianMatch?.[1] ?? clinician).trim(),
+          role: clinicianMatch?.[2]?.trim() ?? 'Attending clinician',
+        }
+      : null
   return (
     <div>
       {/* Care team cards */}
@@ -65,13 +98,29 @@ export function CareTeamPanel({ careTeam }: CareTeamPanelProps) {
             </div>
           )
         })}
+        {fallback && (
+          <div className="care-team-member-card">
+            <div className="care-team-avatar">
+              {getInitials(fallback.name.replace(/^Dr\.?\s+/i, ''))}
+            </div>
+            <div className="care-team-name">{fallback.name}</div>
+            <div className="care-team-role">{fallback.role}</div>
+            <div className="care-team-contact">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <UserRound size={12} /> Reach them through Maya or your discharge papers
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Warning signs */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header" style={{ paddingBottom: 16 }}>
           <div>
-            <div className="card-title">⚠️ When to Seek Urgent Help</div>
+            <div className="card-title flex items-center gap-2">
+              <TriangleAlert size={17} /> When to Seek Urgent Help
+            </div>
             <div className="card-subtitle">Contact your care team or call 911 immediately</div>
           </div>
         </div>
@@ -79,7 +128,7 @@ export function CareTeamPanel({ careTeam }: CareTeamPanelProps) {
           <div className="warning-signs-grid">
             {URGENT_WARNING_SIGNS.map((sign, i) => (
               <div key={i} className="warning-sign-item">
-                <span style={{ fontSize: 18 }}>{sign.icon}</span>
+                <span style={{ display: 'flex' }}>{warningIcon(sign.label)}</span>
                 <span>{sign.label}</span>
               </div>
             ))}
@@ -91,10 +140,10 @@ export function CareTeamPanel({ careTeam }: CareTeamPanelProps) {
       <div className="emergency-cta">
         <div>
           <div className="emergency-cta-text">In a medical emergency</div>
-          <div className="emergency-cta-sub">Don't wait — call emergency services immediately</div>
+          <div className="emergency-cta-sub">Don't wait. Call emergency services immediately</div>
         </div>
         <a href="tel:911" className="emergency-cta-btn">
-          📞 Call 911
+          <Phone size={14} style={{ display: 'inline', verticalAlign: -2 }} /> Call 911
         </a>
       </div>
     </div>

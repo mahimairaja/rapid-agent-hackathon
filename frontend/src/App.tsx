@@ -380,20 +380,10 @@ function App() {
   )
 
   const medicationsEl = patient ? (
-    <div>
-      <div className="view-header">
-        <div className="view-header-title">Medication Schedule</div>
-        <div className="view-header-sub">
-          {hasMedicationAdherence
-            ? `${completedToday} of ${medications.length} medications taken today`
-            : `${medications.length} active medication${medications.length !== 1 ? 's' : ''} on this plan`}
-        </div>
-      </div>
-      <div className="card">
-        <div className="card-accent-bar" />
-        <div className="card-body" style={{ paddingTop: 20 }}>
-          <MedicationSchedule medications={medications} />
-        </div>
+    <div className="card">
+      <div className="card-accent-bar" />
+      <div className="card-body" style={{ paddingTop: 20 }}>
+        <MedicationSchedule medications={medications} />
       </div>
     </div>
   ) : (
@@ -403,16 +393,7 @@ function App() {
   const appointmentsEl = patient ? (
     <div>
       <AppointmentCalendar sessionId={sessionId} onBooked={handleCalendarBooked} />
-      <div className="view-header" style={{ marginTop: 22 }}>
-        <div className="view-header-title">Appointment Timeline</div>
-        <div className="view-header-sub">
-          {nextAppointment
-            ? `${appointments.filter((a) => a.status !== 'completed').length} upcoming
-               appointments — next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`
-            : 'No upcoming appointments — ask Maya to book your follow-up'}
-        </div>
-      </div>
-      <div className="card">
+      <div className="card" style={{ marginTop: 22 }}>
         <div className="card-accent-bar" />
         <div className="card-header" style={{ paddingBottom: 0 }}>
           <div>
@@ -441,35 +422,15 @@ function App() {
   )
 
   const symptomEl = (
-    <div>
-      <div className="view-header">
-        <div className="view-header-title">Symptom Check-In</div>
-        <div className="view-header-sub">
-          Tell Maya how you're feeling — she runs the real triage and replies in the conversation
-        </div>
-      </div>
-      <div className="card">
-        <div
-          className="card-accent-bar"
-          style={{ background: 'linear-gradient(90deg, var(--amber-400), var(--red-400))' }}
-        />
-        <div className="card-body" style={{ paddingTop: 20 }}>
-          <SymptomCheckInForm onSubmitReport={handleSymptomReport} />
-        </div>
+    <div className="mx-auto max-w-3xl">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <SymptomCheckInForm onSubmitReport={handleSymptomReport} />
       </div>
     </div>
   )
 
   const careTeamEl = patient ? (
-    <div>
-      <div className="view-header">
-        <div className="view-header-title">Your Care Team</div>
-        <div className="view-header-sub">
-          Contact information, emergency warning signs, and care team escalation
-        </div>
-      </div>
-      <CareTeamPanel careTeam={patient.care_team ?? []} />
-    </div>
+    <CareTeamPanel careTeam={patient.care_team ?? []} clinician={patient.assigned_clinician} />
   ) : (
     <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
   )
@@ -619,7 +580,7 @@ function DashboardView({
               )}
             </div>
             <div className="card-body">
-              <MedicationSchedule medications={medications.slice(0, 3)} />
+              <MedicationSchedule medications={medications.slice(0, 3)} compact />
             </div>
           </div>
         </div>

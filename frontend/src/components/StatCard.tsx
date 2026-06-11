@@ -1,4 +1,4 @@
-import { CalendarDays, Pill, Target } from 'lucide-react'
+import { CalendarDays, Pill, Target, TriangleAlert } from 'lucide-react'
 import type { Patient } from '../types'
 
 interface StatCardsProps {
@@ -66,12 +66,14 @@ export function StatCards({
       </div>
 
       <div className="stat-card">
-        <div className="stat-card-icon red">⚠️</div>
+        <div className="stat-card-icon red">
+          <TriangleAlert size={20} />
+        </div>
         <div className="stat-card-value">
           {/* Default matches the sidebar/hero ('moderate'), so the cards never
               disagree with the rest of the shell. */}
           {(patient.risk_level ?? 'moderate') === 'moderate'
-            ? 'Mod.'
+            ? 'Moderate'
             : (patient.risk_level ?? 'moderate')}
         </div>
         <div className="stat-card-label">Risk Level</div>

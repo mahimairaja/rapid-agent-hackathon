@@ -1,3 +1,4 @@
+import { CalendarDays } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { SessionSlot, SessionSlotsResponse } from '../types'
 import { getClientTimeZone, getSessionSlots, postSessionBook } from '../api/client'
@@ -18,12 +19,11 @@ function dayKey(d: Date): string {
 }
 
 const EMPTY_STATE_COPY: Record<string, string> = {
-  unverified:
-    'Say hi to your assistant first — once it knows you, your follow-up slots appear here.',
-  none_required: 'Your plan does not require a follow-up visit. Nothing to book 🎉',
+  unverified: 'Say hi to Maya first. Once she knows you, your follow-up slots appear here.',
+  none_required: 'Your plan does not require a follow-up visit. Nothing to book.',
   no_window: 'Your plan has no follow-up window, so there are no slots to offer.',
-  scheduler_unavailable: 'The scheduling system is not reachable right now — try again shortly.',
-  already_booked: 'A follow-up was just booked in your conversation — schedule refreshed.',
+  scheduler_unavailable: 'The scheduling system is not reachable right now. Try again shortly.',
+  already_booked: 'A follow-up was just booked in your conversation. Schedule refreshed.',
 }
 
 /**
@@ -50,8 +50,17 @@ export function AppointmentCalendar({ sessionId, onBooked }: AppointmentCalendar
     let cancelled = false
     void (async () => {
       if (!sessionId) return
-      const result = await getSessionSlots(sessionId, getClientTimeZone())
-      if (!cancelled) setData(result)
+      // On a fresh page load the deterministic identify handshake may still be
+      // in flight, so an unverified answer is retried briefly instead of
+      // sticking on the "say hi first" placeholder forever.
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const result = await getSessionSlots(sessionId, getClientTimeZone())
+        if (cancelled) return
+        setData(result)
+        if (result.status !== 'unverified') return
+        await new Promise((resolve) => setTimeout(resolve, 1600))
+        if (cancelled) return
+      }
     })()
     return () => {
       cancelled = true
@@ -151,10 +160,12 @@ export function AppointmentCalendar({ sessionId, onBooked }: AppointmentCalendar
     <div className="cal-widget card">
       <div className="cal-header">
         <div>
-          <div className="card-title">📆 Book your follow-up</div>
+          <div className="card-title flex items-center gap-2">
+            <CalendarDays size={17} /> Book your follow-up
+          </div>
           <div className="card-subtitle">
             {currentBooking
-              ? `Currently booked: ${currentBooking.start_local} — pick a new slot to move it`
+              ? `Currently booked: ${currentBooking.start_local}. Pick a new slot to move it`
               : 'Pick any available slot inside your follow-up window'}
             {' · '}times in {getClientTimeZone() ?? 'your local time'}
           </div>

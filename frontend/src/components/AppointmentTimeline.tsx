@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react'
-import { CalendarDays, ClipboardList, Footprints, Stethoscope, UserRound } from 'lucide-react'
+import {
+  CalendarDays,
+  ClipboardList,
+  Footprints,
+  Info,
+  MapPin,
+  Stethoscope,
+  UserRound,
+} from 'lucide-react'
 import type { Appointment } from '../types'
 
 interface AppointmentTimelineProps {
@@ -70,12 +78,12 @@ export function AppointmentTimeline({ appointments }: AppointmentTimelineProps) 
                 <div className="timeline-card-meta">
                   {appt.provider && (
                     <span>
-                      <span>👤</span> {appt.provider}
+                      <UserRound size={12} /> {appt.provider}
                     </span>
                   )}
                   {appt.location && (
                     <span>
-                      <span>📍</span> {appt.location}
+                      <MapPin size={12} /> {appt.location}
                     </span>
                   )}
                   {appt.reason && (
@@ -94,7 +102,8 @@ export function AppointmentTimeline({ appointments }: AppointmentTimelineProps) 
                       border: '1px solid var(--blue-100)',
                     }}
                   >
-                    💡 {appt.instructions}
+                    <Info size={12} style={{ display: 'inline', verticalAlign: -2 }} />{' '}
+                    {appt.instructions}
                   </div>
                 )}
                 <div className={`timeline-status-badge ${appt.status}`}>

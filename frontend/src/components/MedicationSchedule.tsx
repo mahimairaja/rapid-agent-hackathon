@@ -1,9 +1,11 @@
-import { Check, Circle, Pill } from 'lucide-react'
+import { Check, Circle, Pill, TriangleAlert } from 'lucide-react'
 import type { Medication } from '../types'
 import { REASON_FRIENDLY, friendlyReason } from '../data/medicationReasons'
 
 interface MedicationScheduleProps {
   medications: Medication[]
+  // Dashboard summary mode: name/dose/schedule only, no reason or cautions.
+  compact?: boolean
 }
 
 const FREQ_LABELS: Record<string, string> = {
@@ -15,7 +17,7 @@ const FREQ_LABELS: Record<string, string> = {
   'with-meals': 'With meals',
 }
 
-export function MedicationSchedule({ medications }: MedicationScheduleProps) {
+export function MedicationSchedule({ medications, compact = false }: MedicationScheduleProps) {
   if (medications.length === 0) {
     return (
       <div className="empty-state">
@@ -35,31 +37,33 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
   return (
     <div>
       {/* Summary bar */}
-      <div
-        className="flex items-center justify-between mb-4"
-        style={{
-          padding: '10px 14px',
-          background: 'var(--slate-50)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border)',
-        }}
-      >
-        <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-          {hasAdherence ? "Today's Progress" : 'Active Medications'}
-        </span>
-        <span
-          className="text-sm font-semibold"
+      {!compact && (
+        <div
+          className="flex items-center justify-between mb-4"
           style={{
-            color: hasAdherence
-              ? taken.length === medications.length
-                ? 'var(--green-500)'
-                : 'var(--amber-500)'
-              : 'var(--blue-500)',
+            padding: '10px 14px',
+            background: 'var(--slate-50)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border)',
           }}
         >
-          {hasAdherence ? `${taken.length} / ${medications.length} taken` : medications.length}
-        </span>
-      </div>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
+            {hasAdherence ? "Today's Progress" : 'Active Medications'}
+          </span>
+          <span
+            className="text-sm font-semibold"
+            style={{
+              color: hasAdherence
+                ? taken.length === medications.length
+                  ? 'var(--green-500)'
+                  : 'var(--amber-500)'
+                : 'var(--blue-500)',
+            }}
+          >
+            {hasAdherence ? `${taken.length} / ${medications.length} taken` : medications.length}
+          </span>
+        </div>
+      )}
 
       {/* Pending first */}
       {pending.length > 0 && (
@@ -78,7 +82,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
           </div>
           <div className="medication-list">
             {pending.map((med) => (
-              <MedItem key={med.id} med={med} />
+              <MedItem key={med.id} med={med} compact={compact} />
             ))}
           </div>
         </div>
@@ -101,7 +105,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
           </div>
           <div className="medication-list">
             {taken.map((med) => (
-              <MedItem key={med.id} med={med} />
+              <MedItem key={med.id} med={med} compact={compact} />
             ))}
           </div>
         </div>
@@ -110,7 +114,7 @@ export function MedicationSchedule({ medications }: MedicationScheduleProps) {
   )
 }
 
-function MedItem({ med }: { med: Medication }) {
+function MedItem({ med, compact }: { med: Medication; compact?: boolean }) {
   const freqLabel = med.frequency ? (FREQ_LABELS[med.frequency] ?? med.frequency) : ''
   const status = med.taken_today ? 'taken' : 'pending'
 
@@ -129,7 +133,7 @@ function MedItem({ med }: { med: Medication }) {
           )}
         </div>
         {med.purpose && <span className="med-purpose-tag">{med.purpose}</span>}
-        {med.reason && (
+        {!compact && med.reason && (
           <p className="mt-1 text-xs text-muted-foreground">
             <span className="font-semibold text-foreground/80">Why you take this:</span>{' '}
             {friendlyReason(med.reason)}
@@ -138,17 +142,23 @@ function MedItem({ med }: { med: Medication }) {
             )}
           </p>
         )}
-        {med.instructions && (
+        {!compact && med.instructions && (
           <div
             style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}
           >
             {med.instructions}
           </div>
         )}
-        {med.cautions && med.cautions.length > 0 && (
-          <div className="med-cautions">
+        {!compact && med.cautions && med.cautions.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {med.cautions.slice(0, 2).map((caution) => (
-              <span key={caution}>{caution}</span>
+              <span
+                key={caution}
+                className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700"
+              >
+                <TriangleAlert className="size-3" />
+                {caution}
+              </span>
             ))}
           </div>
         )}
