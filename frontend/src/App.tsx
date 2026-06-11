@@ -254,7 +254,7 @@ function App() {
   const nextAppointment = appointments
     .filter((a) => a.status !== 'completed')
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
-  const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : 0
+  const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : null
 
   const loggedOut = !token || !role
   const goView = (view: string) => navigate(VIEW_PATHS[view] ?? '/maya')
@@ -513,7 +513,7 @@ interface DashboardViewProps {
   medicationsDue: number
   completedToday: number
   hasMedicationAdherence: boolean
-  nextAppointmentDays: number
+  nextAppointmentDays: number | null
   onAssistantPrompt: () => void
   onNavigate: (view: string) => void
 }

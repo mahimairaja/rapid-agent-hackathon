@@ -102,18 +102,20 @@ export function PatientCard({ patient }: PatientCardProps) {
           >
             Risk Assessment
           </div>
-          <div className={`risk-badge-large ${patient.risk_level ?? 'moderate'}`}>
-            <span>
-              {patient.risk_level === 'low'
-                ? '🟢'
-                : patient.risk_level === 'moderate'
-                  ? '🟡'
-                  : '🔴'}
-            </span>
-            {(patient.risk_level ?? 'Moderate').charAt(0).toUpperCase() +
-              (patient.risk_level ?? 'moderate').slice(1)}{' '}
-            Risk
-          </div>
+          {patient.risk_level ? (
+            <div className={`risk-badge-large ${patient.risk_level}`}>
+              <span>
+                {patient.risk_level === 'low'
+                  ? '🟢'
+                  : patient.risk_level === 'moderate'
+                    ? '🟡'
+                    : '🔴'}
+              </span>
+              {patient.risk_level.charAt(0).toUpperCase() + patient.risk_level.slice(1)} Risk
+            </div>
+          ) : (
+            <div className="risk-badge-large">Not assessed</div>
+          )}
         </div>
 
         <div className="recovery-progress">
