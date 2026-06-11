@@ -487,8 +487,8 @@ function IdentifyCallout({ onOpenAssistant }: { onOpenAssistant: () => void }) {
           Let's find your recovery plan
         </h3>
         <p style={{ color: 'var(--text-muted)', margin: '0 0 22px', lineHeight: 1.6 }}>
-          Tell Maya who you are — just say or type your name and date of birth, or your patient code
-          — and your dashboard, medications, and appointments will load automatically.
+          Tell Maya who you are: just say or type your name and date of birth, or your patient code,
+          and your dashboard, medications, and appointments will load automatically.
         </p>
         <button
           type="button"

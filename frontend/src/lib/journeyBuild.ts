@@ -14,7 +14,7 @@ export function buildStagesFromClaim(claim: ClaimResponse): BuildStage[] {
     { icon: 'appts', label: `Scheduling ${claim.counts.appointments} appointments` },
     {
       icon: 'kb',
-      label: `Ingesting your care plan — ${claim.counts.care_plan_chunks} knowledge chunk${
+      label: `Ingesting your care plan: ${claim.counts.care_plan_chunks} knowledge chunk${
         claim.counts.care_plan_chunks === 1 ? '' : 's'
       } indexed`,
     },

@@ -10,7 +10,7 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': { title: 'Recovery Dashboard', subtitle: 'Your recovery at a glance' },
   '/medications': { title: 'Medications', subtitle: 'Schedule, doses, and why each one matters' },
   '/appointments': { title: 'Appointments', subtitle: 'Book and track your follow-up visits' },
-  '/maya': { title: 'Maya', subtitle: 'Your recovery companion — talk or type any time' },
+  '/maya': { title: 'Maya', subtitle: 'Your recovery companion: talk or type any time' },
   '/symptom-check': { title: 'Symptom Check', subtitle: 'Tell Maya how you feel right now' },
   '/care-team': { title: 'Care Team', subtitle: 'Your clinicians and when to reach them' },
 }

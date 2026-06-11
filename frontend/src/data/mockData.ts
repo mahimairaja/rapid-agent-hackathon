@@ -239,7 +239,7 @@ If stairs are unavoidable, use the handrail firmly, lead with your **non-operate
 
 1. **Take your Acetaminophen** now if it has been 4+ hours since your last dose.
 2. **Ice your hip** for 20 minutes to reduce inflammation.
-3. **Notify your care team** — Nurse Emily Rodriguez can be reached at (555) 204-1102.
+3. **Notify your care team**: Nurse Emily Rodriguez can be reached at (555) 204-1102.
 
 ⚠️ **If pain is sudden, severe, or accompanied by chest pain or shortness of breath, call emergency services immediately (911).**
 
