@@ -153,6 +153,11 @@ export function JoinWizard({
       playStages(built.length, setStageIndex, () => onComplete(finalToken, claim))
     } catch (err) {
       setSubmitting(false)
+      // A rejected upload (wrong type, too large, unreadable) sends the user
+      // back to the journey step where the file can be changed.
+      if (uploadFile && err instanceof ApiError && [413, 415, 422, 502].includes(err.status)) {
+        setStepIndex(STEPS.indexOf('journey'))
+      }
       setError(err instanceof Error ? err.message : 'Could not create your account. Try again.')
     }
   }
@@ -302,6 +307,9 @@ export function JoinWizard({
                 type="file"
                 accept="application/pdf,.pdf"
                 className="sr-only"
+                onClick={(e) => {
+                  ;(e.target as HTMLInputElement).value = ''
+                }}
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null
                   if (f) {

@@ -177,6 +177,8 @@ async def upload_discharge(
     name = (file.filename or "").lower()
     if not name.endswith(".pdf"):
         raise HTTPException(status_code=415, detail="Upload a PDF document.")
+    if file.size is not None and file.size > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="PDF is larger than 10 MB.")
     data = await file.read()
     if len(data) > _MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="PDF is larger than 10 MB.")
@@ -212,8 +214,18 @@ async def upload_discharge(
             ),
         )
 
+    # Cap what one upload may index: beyond this a single request would
+    # spend minutes in embedding calls; 80k chars is ~40 chunks.
+    text = text[:80_000]
     chunks = chunk_text(text)
-    embeddings = await anyio.to_thread.run_sync(partial(embed_texts, chunks))
+    try:
+        embeddings = await anyio.to_thread.run_sync(partial(embed_texts, chunks))
+    except Exception:
+        logger.warning("upload embedding failed", exc_info=True)
+        raise HTTPException(
+            status_code=502,
+            detail="We could not index that document right now. Try again shortly.",
+        ) from None
 
     first, last = split_name(display_name.strip())
     patient = Patient(
