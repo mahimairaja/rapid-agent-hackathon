@@ -1,4 +1,5 @@
 import type { Medication } from '../types'
+import { REASON_FRIENDLY, friendlyReason } from '../data/medicationReasons'
 
 interface MedicationScheduleProps {
   medications: Medication[]
@@ -123,6 +124,15 @@ function MedItem({ med }: { med: Medication }) {
           )}
         </div>
         {med.purpose && <span className="med-purpose-tag">{med.purpose}</span>}
+        {med.reason && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground/80">Why you take this:</span>{' '}
+            {friendlyReason(med.reason)}
+            {REASON_FRIENDLY[med.reason] && (
+              <span className="ml-1 text-muted-foreground/70">({med.reason})</span>
+            )}
+          </p>
+        )}
         {med.instructions && (
           <div
             style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}

@@ -643,8 +643,8 @@ function DashboardView({
               <button type="button" onClick={() => onAssistantPrompt('When is my follow-up?')}>
                 Check
               </button>
-              <button type="button" onClick={() => onAssistantPrompt('Can I move my follow-up?')}>
-                Move
+              <button type="button" onClick={() => onNavigate('appointments')}>
+                Open calendar
               </button>
             </div>
             <div className="card-body">
