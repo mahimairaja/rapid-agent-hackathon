@@ -239,6 +239,11 @@ export interface ChatMessage {
   timestamp: Date
   typing?: boolean
   sources?: SourceItem[]
+  // Tool-activity items render inline in the thread as status chips
+  // ("Checking your medications…") instead of bubbles.
+  kind?: 'message' | 'tool'
+  tool?: string
+  toolStatus?: 'running' | 'done'
 }
 
 // ── Live-session grounding context (GET /agent/session/{id}/context) ───────────

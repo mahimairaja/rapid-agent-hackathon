@@ -11,6 +11,7 @@ export interface VoiceHandlers {
   onError?: (message: string) => void
   onSession?: (sessionId: string) => void
   onSources?: (items: SourceItem[]) => void
+  onTool?: (tool: string, status: 'running' | 'done') => void
   onTurnComplete?: () => void
   onInterrupted?: () => void
   onIdentifyFailed?: () => void
@@ -26,6 +27,8 @@ interface ControlFrame {
   role?: TranscriptRole
   session_id?: string
   items?: SourceItem[]
+  tool?: string
+  status?: string
 }
 
 /**
@@ -235,6 +238,11 @@ export class VoiceClient {
           break
         case 'sources':
           if (msg.items?.length) this.handlers.onSources?.(msg.items)
+          break
+        case 'tool':
+          if (msg.tool) {
+            this.handlers.onTool?.(msg.tool, msg.status === 'done' ? 'done' : 'running')
+          }
           break
         case 'interrupted':
           this.flushPlayback()
