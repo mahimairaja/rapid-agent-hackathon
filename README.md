@@ -6,10 +6,15 @@
 
 **Meet Maya, a voice-first recovery companion for the riskiest two weeks in healthcare: the days right after hospital discharge.**
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-rapid--agent--hackathon.vercel.app-2563eb?style=for-the-badge)](https://rapid-agent-hackathon.vercel.app/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-0d9488?style=for-the-badge)](LICENSE)
-[![Built with Gemini](https://img.shields.io/badge/Gemini_3-Live_Audio-1d4ed8?style=for-the-badge)](https://ai.google.dev/)
-[![MongoDB Atlas](https://img.shields.io/badge/MongoDB-Atlas_Vector_Search-00684A?style=for-the-badge)](https://www.mongodb.com/atlas)
+<p>
+  <a href="https://rapid-agent-hackathon.vercel.app/"><img src="docs/assets/badges/demo.svg" height="30" alt="Live Demo"/></a>
+  <img src="docs/assets/badges/gemini.svg" height="30" alt="Gemini 3 Live"/>
+  <img src="docs/assets/badges/adk.svg" height="30" alt="Google ADK"/>
+  <img src="docs/assets/badges/mongodb.svg" height="30" alt="MongoDB MCP"/>
+  <img src="docs/assets/badges/cloudrun.svg" height="30" alt="Cloud Run"/>
+  <img src="docs/assets/badges/voice.svg" height="30" alt="Voice First"/>
+  <a href="LICENSE"><img src="docs/assets/badges/mit.svg" height="30" alt="MIT License"/></a>
+</p>
 
 [Live demo](https://rapid-agent-hackathon.vercel.app/) · [Demo video](#demo-video) · [Quick start](#quick-start) · [Architecture](#architecture)
 
@@ -78,6 +83,8 @@ flowchart LR
         T3[answer_recovery_question<br/>RAG over care plan]
         T4[triage_symptom<br/>deterministic red-flag rules]
         T5[book / reschedule follow_up]
+        T6[recovery_trends]
+        MCP[MongoDB MCP server<br/>read-only]
     end
 
     subgraph Data["MongoDB Atlas"]
@@ -89,9 +96,10 @@ flowchart LR
 
     UI <-->|PCM audio + JSON frames| WS
     WS <--> ADK
-    ADK --> T1 & T2 & T3 & T4 & T5
+    ADK --> T1 & T2 & T3 & T4 & T5 & T6
     T1 & T2 & T5 --> P
     T3 --> V
+    T6 --> MCP --> P
     T5 <--> EXT
     GP --> CTX
     CAL --> CTX
@@ -105,6 +113,16 @@ Key decisions worth a look:
 - **Tool activity frames.** The WebSocket bridge normalizes ADK live events into typed frames (transcript, audio, tool, sources), so the UI renders Maya's reasoning trail without ever exposing raw model output.
 - **Voice-first prompting.** Reply style follows the LiveKit voice-agent prompting guide: answer-first, no narrated lookups, varied phrasing between turns, one greeting per conversation.
 
+## Partner superpowers over MCP
+
+Maya's trends capability runs through the official [MongoDB MCP server](https://github.com/mongodb-js/mongodb-mcp-server). Ask her "how has my week been?" and the `recovery_trends` tool sends a pinned aggregation pipeline (daily check-in buckets, average pain extracted in-pipeline with `$regexFind`, red-flag escalations) to the MCP server, which executes it on Atlas and streams the result back.
+
+Three deliberate choices keep this healthcare-safe:
+
+- **Pinned pipelines.** The model never writes a query. The tool builds the pipeline in Python and scopes it to the verified patient from session state, so a prompt injection cannot reach another patient's data.
+- **Read-only.** The server runs with `MDB_MCP_READ_ONLY=true`; even a malformed call cannot write.
+- **Graceful degradation.** If the MCP subprocess is unreachable, the tool reports `unavailable` and Maya says so instead of inventing numbers.
+
 ## Built for the MongoDB track
 
 MongoDB Atlas is the system of record and the retrieval engine:
@@ -117,9 +135,9 @@ MongoDB Atlas is the system of record and the retrieval engine:
 
 | Layer | Technology |
 |---|---|
-| Agent | Google ADK (Agent Builder toolkit), Gemini 3 Flash Live (native audio), Gemini Flash for text |
+| Agent | Google ADK (Agent Builder toolkit), Gemini 3 Flash Live (native audio), Gemini 3 Flash for text |
 | Backend | Python 3.11, FastAPI, Beanie ODM, WebSockets |
-| Data | MongoDB Atlas, Atlas Vector Search, Voyage AI embeddings |
+| Data | MongoDB Atlas, Atlas Vector Search, MongoDB MCP server, Voyage AI embeddings |
 | Scheduling | Cal.com API v2 (slots, bookings, reschedules) |
 | Frontend | React 19, Vite, React Router 7, Tailwind CSS v4, shadcn/ui, lucide |
 | Quality | pytest (241 tests), ruff, mypy, ESLint, TypeScript strict |

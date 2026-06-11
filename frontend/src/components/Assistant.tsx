@@ -14,9 +14,9 @@ const SUGGESTED_FIRST: string[] = [
 ]
 
 const FOLLOW_UPS: string[] = [
+  'How has my week been?',
   'What medications do I take today?',
   'When is my next appointment?',
-  'Can I climb stairs this week?',
 ]
 
 const STATE_LABEL: Record<VoiceState, string> = {

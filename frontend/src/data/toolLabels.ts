@@ -20,6 +20,10 @@ export const TOOL_LABELS: Record<string, { running: string; done: string }> = {
   },
   get_follow_up_booking: { running: 'Checking your booking', done: 'Checked your booking' },
   flag_pharmacist: { running: 'Flagging your pharmacist', done: 'Flagged your pharmacist' },
+  recovery_trends: {
+    running: 'Looking at your check-in trends',
+    done: 'Reviewed your check-ins',
+  },
 }
 
 export function toolLabel(tool: string, status: 'running' | 'done'): string {

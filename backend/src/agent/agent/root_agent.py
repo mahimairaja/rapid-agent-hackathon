@@ -17,6 +17,7 @@ from src.agent.prompts.medication_prompt import MEDICATION_INSTRUCTION
 from src.agent.prompts.recognition_prompt import RECOGNITION_INSTRUCTION
 from src.agent.prompts.recovery_prompt import RECOVERY_INSTRUCTION
 from src.agent.prompts.symptom_prompt import SYMPTOM_INSTRUCTION
+from src.agent.prompts.trends_prompt import TRENDS_INSTRUCTION
 from src.agent.tools.appointment_tools import (
     book_follow_up_slot,
     get_follow_up_booking,
@@ -32,6 +33,7 @@ from src.agent.tools.medication_tools import (
 from src.agent.tools.patient_tools import find_patient, get_my_plan
 from src.agent.tools.recovery_tools import answer_recovery_question
 from src.agent.tools.symptom_tools import triage_symptom
+from src.agent.tools.trends_tools import recovery_trends
 from src.core.config import config
 
 
@@ -69,6 +71,7 @@ def build_recognition_agent(model: BaseLlm | str | None = None) -> Agent:
                 MEDICATION_INSTRUCTION,
                 APPOINTMENT_INSTRUCTION,
                 SYMPTOM_INSTRUCTION,
+                TRENDS_INSTRUCTION,
             ]
         ),
         tools=[
@@ -83,6 +86,7 @@ def build_recognition_agent(model: BaseLlm | str | None = None) -> Agent:
             get_follow_up_booking,
             reschedule_follow_up,
             triage_symptom,
+            recovery_trends,
         ],
         before_tool_callback=verification_gate,
     )
