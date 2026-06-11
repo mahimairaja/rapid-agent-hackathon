@@ -8,7 +8,7 @@ export interface BuildStage {
 
 /** Stage list driven by the real counts in a claim response. */
 export function buildStagesFromClaim(claim: ClaimResponse): BuildStage[] {
-  return [
+  const stages: BuildStage[] = [
     { icon: 'profile', label: `Creating ${claim.first_name}'s profile` },
     { icon: 'meds', label: `Copying ${claim.counts.medications} medications` },
     { icon: 'appts', label: `Scheduling ${claim.counts.appointments} appointments` },
@@ -20,6 +20,8 @@ export function buildStagesFromClaim(claim: ClaimResponse): BuildStage[] {
     },
     { icon: 'ready', label: 'Your personal knowledge base is ready' },
   ]
+  // Uploaded plans carry no medications/appointments yet; skip empty stages.
+  return stages.filter((s) => !/Copying 0 |Scheduling 0 /.test(s.label))
 }
 
 /** Reveal stages one by one (450ms apart), then fire onDone. */

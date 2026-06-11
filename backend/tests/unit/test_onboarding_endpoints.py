@@ -211,3 +211,112 @@ async def test_claim_unseeded_database_409(monkeypatch, claim_env):
             json={"journey_code": "HW-1001", "display_name": "Asha"},
         )
     assert resp.status_code == 409
+
+
+# -- POST /onboarding/upload (F9) ------------------------------------------------
+
+_LONG_TEXT = (
+    "Discharge summary for the patient. Take rest, hydrate, and walk daily. "
+) * 10
+
+
+class _FakePatient:
+    created = None
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+        _FakePatient.created = self
+
+    async def insert(self):
+        return self
+
+
+class _FakeChunk:
+    inserted: list = []
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    @classmethod
+    async def insert_many(cls, docs):
+        cls.inserted = docs
+
+
+def _patch_upload(monkeypatch, text=_LONG_TEXT, parse_error=None):
+    def fake_extract(path):
+        if parse_error:
+            raise parse_error
+        return text
+
+    async def fake_code():
+        return "HW-TEST"
+
+    monkeypatch.setattr(
+        onboarding_module.document_service, "extract_pdf_text", fake_extract
+    )
+    monkeypatch.setattr(
+        onboarding_module, "embed_texts", lambda chunks: [[0.1] * 4 for _ in chunks]
+    )
+    monkeypatch.setattr(onboarding_module, "_unused_patient_code", fake_code)
+    monkeypatch.setattr(onboarding_module, "Patient", _FakePatient)
+    monkeypatch.setattr(onboarding_module, "CarePlanChunk", _FakeChunk)
+    _FakeChunk.inserted = []
+    _FakePatient.created = None
+
+
+@pytest.mark.asyncio
+async def test_upload_builds_profile_and_knowledge_base(monkeypatch):
+    _patch_upload(monkeypatch)
+    user = _fake_user()
+    async with await _client(_build_app(user)) as client:
+        resp = await client.post(
+            "/api/v1/onboarding/upload",
+            files={"file": ("discharge.pdf", b"%PDF-fake", "application/pdf")},
+            data={"display_name": "Upload User"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["journey_code"] == "UPLOAD"
+    assert body["patient_code"] == "HW-TEST"
+    assert body["first_name"] == "Upload"
+    assert body["counts"]["medications"] == 0
+    assert body["counts"]["care_plan_chunks"] == len(_FakeChunk.inserted)
+    assert len(_FakeChunk.inserted) >= 1
+    assert user.saved and user.patient_code == "HW-TEST"
+    assert _FakeChunk.inserted[0].source_file == "discharge.pdf"
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_non_pdf(monkeypatch):
+    _patch_upload(monkeypatch)
+    async with await _client(_build_app(_fake_user())) as client:
+        resp = await client.post(
+            "/api/v1/onboarding/upload",
+            files={"file": ("notes.txt", b"hello", "text/plain")},
+            data={"display_name": "Upload User"},
+        )
+    assert resp.status_code == 415
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_unreadable_text(monkeypatch):
+    _patch_upload(monkeypatch, text="too short")
+    async with await _client(_build_app(_fake_user())) as client:
+        resp = await client.post(
+            "/api/v1/onboarding/upload",
+            files={"file": ("scan.pdf", b"%PDF-fake", "application/pdf")},
+            data={"display_name": "Upload User"},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_upload_parse_failure_is_422(monkeypatch):
+    _patch_upload(monkeypatch, parse_error=RuntimeError("boom"))
+    async with await _client(_build_app(_fake_user())) as client:
+        resp = await client.post(
+            "/api/v1/onboarding/upload",
+            files={"file": ("broken.pdf", b"%PDF-fake", "application/pdf")},
+            data={"display_name": "Upload User"},
+        )
+    assert resp.status_code == 422
