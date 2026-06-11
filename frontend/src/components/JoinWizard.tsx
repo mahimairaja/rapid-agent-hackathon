@@ -287,7 +287,7 @@ export function JoinWizard({
                 <div className="landing-journey-body">
                   <div className="landing-journey-title">{j.title}</div>
                   <div className="join-journey-meta">
-                    {j.medication_count} medications
+                    {j.medication_count} medication{j.medication_count === 1 ? '' : 's'}
                     {j.clinician ? ` · ${j.clinician}` : ''}
                   </div>
                 </div>
