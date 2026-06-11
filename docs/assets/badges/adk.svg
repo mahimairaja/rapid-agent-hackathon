@@ -1,0 +1,5 @@
+<svg width="122" height="30" viewBox="0 0 122 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0.5" y="0.5" width="121" height="29" rx="14.5" fill="#0d1e38" stroke="#28508a"/>
+  <g transform="translate(11,7)"><path d="M8 0L15 4V12L8 16L1 12V4Z" stroke="#93c5fd" stroke-width="1.6" fill="none"/><circle cx="8" cy="8" r="2.6" fill="#93c5fd"/></g>
+  <text x="34" y="19.5" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="600" fill="#ffffff">Google ADK</text>
+</svg>
