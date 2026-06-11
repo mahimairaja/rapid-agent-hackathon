@@ -127,14 +127,10 @@
   --z-tooltip: 300;
 }
 
-/* ── Reset ─────────────────────────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ── Reset ──────────────────────────────────────────────────────────────────
+   The universal box-sizing/margin/padding reset now comes from Tailwind
+   preflight (base layer). An unlayered copy here would outrank every layered
+   margin/padding utility (mx-auto, p-*, m-*) and silently zero them. */
 
 html {
   font-size: 16px;

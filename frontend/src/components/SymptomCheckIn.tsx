@@ -156,14 +156,11 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
     <form className="flex flex-col gap-7" onSubmit={handleSubmit}>
       {/* Pain slider */}
       <section>
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">How bad is your pain?</h3>
-            <p className="text-xs text-muted-foreground">Slide to where it feels right now</p>
-          </div>
+        <div className="mb-0.5 flex items-center justify-between gap-4">
+          <h3 className="text-sm font-semibold text-foreground">How bad is your pain?</h3>
           <span
             className={cn(
-              'flex items-baseline gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold',
+              'flex shrink-0 items-baseline gap-1.5 rounded-full px-3 py-1 text-sm font-bold',
               tone.badge,
             )}
           >
@@ -171,6 +168,7 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
             <span className="text-xs font-semibold opacity-80">{tone.label}</span>
           </span>
         </div>
+        <p className="mb-4 text-xs text-muted-foreground">Slide to where it feels right now</p>
         <Slider
           id="pain-level-slider"
           min={0}
@@ -194,8 +192,8 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
           Anything else going on?{' '}
           <span className="font-normal text-muted-foreground">Tap all that apply</span>
         </h3>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-          {TOGGLES.map(({ field, label, hint, icon: Icon }) => {
+        <div className="grid gap-3 sm:grid-cols-2">
+          {TOGGLES.map(({ field, label, hint, icon: Icon }, i) => {
             const active = form[field]
             return (
               <button
@@ -205,17 +203,29 @@ export function SymptomCheckInForm({ onSubmitReport }: SymptomCheckInFormProps) 
                 aria-checked={active}
                 onClick={() => toggle(field)}
                 className={cn(
-                  'flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all',
+                  'flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all',
+                  i === TOGGLES.length - 1 && 'sm:col-span-2',
                   active
-                    ? 'border-primary bg-accent ring-2 ring-primary/30'
+                    ? 'border-primary bg-accent ring-1 ring-primary/40'
                     : 'border-border bg-card hover:border-input hover:shadow-sm',
                 )}
               >
-                <Icon className={cn('size-5', active ? 'text-primary' : 'text-muted-foreground')} />
-                <span className="text-[13px] font-semibold leading-tight text-foreground">
-                  {label}
+                <span
+                  className={cn(
+                    'flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors',
+                    active
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground',
+                  )}
+                >
+                  <Icon className="size-5" />
                 </span>
-                <span className="text-[11px] leading-tight text-muted-foreground">{hint}</span>
+                <span className="flex flex-col">
+                  <span className="text-sm font-semibold leading-tight text-foreground">
+                    {label}
+                  </span>
+                  <span className="text-xs leading-tight text-muted-foreground">{hint}</span>
+                </span>
               </button>
             )
           })}
