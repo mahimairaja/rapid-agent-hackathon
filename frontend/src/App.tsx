@@ -15,6 +15,7 @@ import { PatientLayout } from './components/PatientLayout'
 import { DashboardHero } from './components/DashboardHero'
 import { StatCards } from './components/StatCard'
 import { RecoveryPlan } from './components/RecoveryPlan'
+import { milestonesForCondition } from './data/recoveryPlans'
 import { MedicationSchedule } from './components/MedicationSchedule'
 import { AppointmentTimeline } from './components/AppointmentTimeline'
 import { Assistant } from './components/Assistant'
@@ -566,7 +567,9 @@ function DashboardView({
                   Week-by-week milestones, goals, and restrictions
                 </div>
               </div>
-              <span className="badge badge-blue">Week 1 Active</span>
+              {milestonesForCondition(patient.discharge_reason) && (
+                <span className="badge badge-blue">Week 1 Active</span>
+              )}
             </div>
             <div className="card-body">
               <RecoveryPlan condition={patient.discharge_reason} />

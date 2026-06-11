@@ -1,5 +1,4 @@
 import type { RecoveryMilestone } from './mockData'
-import { MOCK_RECOVERY_MILESTONES } from './mockData'
 
 /**
  * Condition-specific recovery milestones for the dashboard plan card, keyed by
@@ -192,8 +191,8 @@ interface ConditionContent {
 }
 
 // Order matters only for overlapping wording; discharge reasons in the seeds
-// match exactly one entry. The hip-replacement mock remains the demo-mode
-// fallback (John Matthews).
+// match exactly one entry. Unmatched reasons (uploaded plans) get no canned
+// content at all; callers render a document-sourced fallback instead.
 const CONDITION_CONTENT: ConditionContent[] = [
   {
     match: /heart failure|cardiac|chf/i,
@@ -222,10 +221,15 @@ function contentFor(dischargeReason?: string | null): ConditionContent | null {
   return CONDITION_CONTENT.find((c) => c.match.test(dischargeReason)) ?? null
 }
 
-export function milestonesForCondition(dischargeReason?: string | null): RecoveryMilestone[] {
-  return contentFor(dischargeReason)?.milestones ?? MOCK_RECOVERY_MILESTONES
+export function milestonesForCondition(
+  dischargeReason?: string | null,
+): RecoveryMilestone[] | null {
+  // No match (uploaded plans, unknown conditions): never show another
+  // condition's milestones. The demo provider view imports the hip mock
+  // directly from mockData and is unaffected.
+  return contentFor(dischargeReason)?.milestones ?? null
 }
 
 export function dailyActionForCondition(dischargeReason?: string | null): string {
-  return contentFor(dischargeReason)?.dailyAction ?? 'Continue 10–15 min assisted walks 3× daily'
+  return contentFor(dischargeReason)?.dailyAction ?? 'Check in with Maya about today’s plan'
 }
