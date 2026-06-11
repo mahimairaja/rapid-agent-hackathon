@@ -17,10 +17,12 @@ import logging
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from src.models import Appointment, CarePlanChunk, Medication, Patient
+from src.models.checkin_model import Checkin
+from src.models.escalation_model import Escalation
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +109,8 @@ class ClonePlan:
     medications: list[dict[str, Any]]
     appointments: list[dict[str, Any]]
     chunks: list[dict[str, Any]]
+    checkins: list[dict[str, Any]]
+    escalations: list[dict[str, Any]]
 
 
 def build_clone(
@@ -119,6 +123,9 @@ def build_clone(
     birth_year: int | None,
     patient_id: str,
     patient_code: str,
+    checkins: list[dict[str, Any]] | None = None,
+    escalations: list[dict[str, Any]] | None = None,
+    claim_time: datetime | None = None,
 ) -> ClonePlan:
     """Construct the personalized clone documents as dicts. Pure (no I/O).
 
@@ -164,11 +171,30 @@ def build_clone(
         }
         for c in chunks
     ]
+    # Check-in/escalation history rides along, re-dated so the newest entry
+    # lands one day before the claim: a fresh account asks "how has my week
+    # been?" and gets a real, recent answer.
+    history = list(checkins or []) + list(escalations or [])
+    delta: timedelta | None = None
+    if history and claim_time is not None:
+        stamps = [d["created_at"] for d in history if d.get("created_at")]
+        if stamps:
+            delta = (claim_time - timedelta(days=1)) - max(stamps)
+
+    def _redate(doc: dict[str, Any]) -> dict[str, Any]:
+        out = {**_strip(doc), "patient_id": patient_id}
+        original = doc.get("created_at")
+        if original is not None and delta is not None:
+            out["created_at"] = original + delta
+        return out
+
     return ClonePlan(
         patient=patient,
         medications=cloned_meds,
         appointments=cloned_appts,
         chunks=cloned_chunks,
+        checkins=[_redate(c) for c in (checkins or [])],
+        escalations=[_redate(e) for e in (escalations or [])],
     )
 
 
@@ -199,6 +225,8 @@ async def clone_journey(
     medications = await Medication.find({"patient_id": sample.patient_id}).to_list()
     appointments = await Appointment.find({"patient_id": sample.patient_id}).to_list()
     chunks = await CarePlanChunk.find({"patient_id": sample.patient_id}).to_list()
+    checkins = await Checkin.find({"patient_id": sample.patient_id}).to_list()
+    escalations = await Escalation.find({"patient_id": sample.patient_id}).to_list()
 
     plan = build_clone(
         sample.model_dump(),
@@ -209,6 +237,9 @@ async def clone_journey(
         birth_year=birth_year,
         patient_id=str(uuid.uuid4()),
         patient_code=await _unused_patient_code(),
+        checkins=[c.model_dump() for c in checkins],
+        escalations=[e.model_dump() for e in escalations],
+        claim_time=datetime.now(UTC),
     )
 
     patient = Patient(**plan.patient)
@@ -219,6 +250,10 @@ async def clone_journey(
         await Appointment.insert_many([Appointment(**a) for a in plan.appointments])
     if plan.chunks:
         await CarePlanChunk.insert_many([CarePlanChunk(**c) for c in plan.chunks])
+    if plan.checkins:
+        await Checkin.insert_many([Checkin(**c) for c in plan.checkins])
+    if plan.escalations:
+        await Escalation.insert_many([Escalation(**e) for e in plan.escalations])
     logger.info(
         "cloned journey %s -> %s (%d meds, %d appts, %d chunks)",
         sample.patient_code,

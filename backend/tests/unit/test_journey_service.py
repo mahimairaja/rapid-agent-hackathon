@@ -195,3 +195,73 @@ def test_build_clone_drops_cal_booking_uid_and_reassigns_ownership():
     # The sample's live Cal.com booking must not be shared by clones.
     assert "cal_booking_uid" not in appt
     assert appt["kind"] == "Cardiology follow-up"
+
+
+def test_build_clone_redates_history_relative_to_claim():
+    from datetime import UTC, datetime, timedelta
+
+    sample, meds, appts, chunks = _inputs()
+    claim = datetime(2026, 6, 11, 12, 0, tzinfo=UTC)
+    checkins = [
+        {
+            "patient_id": "pid-sample",
+            "reported_text": "Symptom check-in: my pain level is 6/10.",
+            "severity": "routine",
+            "created_at": datetime(2026, 6, 1, 9, 0, tzinfo=UTC),
+        },
+        {
+            "patient_id": "pid-sample",
+            "reported_text": "Symptom check-in: my pain level is 3/10.",
+            "severity": "routine",
+            "created_at": datetime(2026, 6, 4, 9, 0, tzinfo=UTC),
+        },
+    ]
+    escalations = [
+        {
+            "patient_id": "pid-sample",
+            "kind": "symptom_red_flag",
+            "level": "urgent",
+            "message": "shortness of breath [breathing]",
+            "status": "open",
+            "created_at": datetime(2026, 6, 2, 9, 0, tzinfo=UTC),
+        }
+    ]
+    plan = build_clone(
+        sample,
+        meds,
+        appts,
+        chunks,
+        display_name="Asha Rao",
+        birth_year=None,
+        patient_id="pid-new",
+        patient_code="HW-7K3F",
+        checkins=checkins,
+        escalations=escalations,
+        claim_time=claim,
+    )
+    # Newest history item (June 4 checkin) lands exactly one day pre-claim.
+    newest = max(c["created_at"] for c in plan.checkins)
+    assert newest == claim - timedelta(days=1)
+    # Relative spacing is preserved (3 days between the two checkins).
+    oldest = min(c["created_at"] for c in plan.checkins)
+    assert newest - oldest == timedelta(days=3)
+    # The escalation shifts by the same shared delta (2 days before newest).
+    assert plan.escalations[0]["created_at"] == newest - timedelta(days=2)
+    assert plan.escalations[0]["message"] == "shortness of breath [breathing]"
+    assert all(c["patient_id"] == "pid-new" for c in plan.checkins)
+    assert plan.escalations[0]["patient_id"] == "pid-new"
+
+
+def test_build_clone_history_defaults_empty():
+    sample, meds, appts, chunks = _inputs()
+    plan = build_clone(
+        sample,
+        meds,
+        appts,
+        chunks,
+        display_name="Asha Rao",
+        birth_year=None,
+        patient_id="pid-new",
+        patient_code="HW-7K3F",
+    )
+    assert plan.checkins == [] and plan.escalations == []
