@@ -56,7 +56,9 @@ export function DashboardHero({
   const stage = patient.recovery_stage ?? 'week-1'
   const progress = STAGE_PROGRESS[stage] ?? 8
   const stageLabel = STAGE_LABELS[stage] ?? 'Recovery'
-  const daysSinceDischarge = patient.discharge_date ? daysSince(patient.discharge_date) : 0
+  // The backend does not record discharge_date for real accounts (only the
+  // demo mock has one); never invent a day counter.
+  const daysSinceDischarge = patient.discharge_date ? daysSince(patient.discharge_date) : null
   const initials = getInitials(patient.first_name, patient.last_name)
 
   const medicationsTotal = medications.length
@@ -127,7 +129,9 @@ export function DashboardHero({
             />
           </div>
           <div className="dh-progress-sub">
-            Day {daysSinceDischarge} post-discharge · 12-week program
+            {daysSinceDischarge === null
+              ? '12-week program'
+              : `Day ${daysSinceDischarge} post-discharge · 12-week program`}
           </div>
         </div>
 
