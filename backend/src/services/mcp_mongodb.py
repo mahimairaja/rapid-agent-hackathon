@@ -14,7 +14,7 @@ import shutil
 from contextlib import AsyncExitStack
 from typing import Any
 
-from mcp import ClientSession, StdioServerParameters
+from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 
 from src.core.config import config
@@ -134,20 +134,15 @@ class _McpRunner:
                         ),
                         timeout=_CALL_TIMEOUT_S,
                     )
-                    if getattr(result, "isError", False):
-                        texts = [
-                            c.text
-                            for c in (result.content or [])
-                            if getattr(c, "text", None)
-                        ]
-                        raise McpUnavailableError(
-                            f"aggregate error: {' '.join(texts)[:200]}"
-                        )
                     texts = [
                         c.text
                         for c in (result.content or [])
-                        if getattr(c, "text", None)
+                        if isinstance(c, types.TextContent) and c.text
                     ]
+                    if getattr(result, "isError", False):
+                        raise McpUnavailableError(
+                            f"aggregate error: {' '.join(texts)[:200]}"
+                        )
                     return parse_tool_text(texts)
                 except Exception as err:  # noqa: BLE001 - degrade to unavailable
                     last_error = err
