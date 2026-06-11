@@ -1,20 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  CheckCircle2,
-  Loader2,
-  Mic,
-  Sparkles,
-  Square,
-  UserRound,
-  Volume2,
-  VolumeX,
-} from 'lucide-react'
+import { Mic, Sparkles, Square, UserRound, Volume2, VolumeX } from 'lucide-react'
 import type { ChatMessage, SessionContext, SourceItem } from '../types'
 import { VoiceClient, type TranscriptRole, type VoiceState } from '../lib/ws'
 import { useAudioAnalyser } from '../lib/useAudioAnalyser'
 import { getSessionContext } from '../api/client'
-import { toolLabel } from '../data/toolLabels'
 import { AudioVisualizer } from './AudioVisualizer'
+import { ToolTrail } from './ToolTrail'
 import { GroundingPanel } from './GroundingPanel'
 
 const SUGGESTED_FIRST: string[] = [
@@ -439,6 +430,21 @@ export function Assistant({
     '',
   )
 
+  // Consecutive tool calls collapse into one activity trail per turn.
+  type ThreadEntry =
+    | { kind: 'msg'; msg: ChatMessage }
+    | { kind: 'trail'; id: string; items: ChatMessage[] }
+  const thread: ThreadEntry[] = []
+  for (const msg of messages) {
+    const last = thread[thread.length - 1]
+    if (msg.kind === 'tool') {
+      if (last?.kind === 'trail') last.items.push(msg)
+      else thread.push({ kind: 'trail', id: msg.id, items: [msg] })
+    } else {
+      thread.push({ kind: 'msg', msg })
+    }
+  }
+
   // Cite-on-click: clicking a source chip re-pulses the matching panel item.
   const focusSource = (s: SourceItem) => {
     setHighlights([s])
@@ -467,55 +473,46 @@ export function Assistant({
         </div>
 
         <div className="assistant-transcript" aria-label="Conversation">
-          {messages.map((msg) =>
-            msg.kind === 'tool' ? (
-              <div
-                key={msg.id}
-                className="my-1 ml-11 flex w-fit items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground"
-                data-status={msg.toolStatus}
-              >
-                {msg.toolStatus === 'running' ? (
-                  <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
-                ) : (
-                  <CheckCircle2 className="size-3.5 text-secondary" aria-hidden="true" />
-                )}
-                <span>{toolLabel(msg.tool ?? '', msg.toolStatus ?? 'done')}</span>
-              </div>
+          {thread.map((entry) =>
+            entry.kind === 'trail' ? (
+              <ToolTrail key={entry.id} items={entry.items} />
             ) : (
-              <div key={msg.id} className={`chat-message ${msg.role}`}>
-                <div className={`chat-avatar ${msg.role}`}>
-                  {msg.role === 'assistant' ? <Sparkles size={15} /> : <UserRound size={15} />}
-                </div>
-                <div>
-                  <div
-                    className={`chat-bubble${msg.role === 'assistant' ? ' chat-bubble-md' : ''}`}
-                    dangerouslySetInnerHTML={
-                      msg.role === 'assistant' ? { __html: renderText(msg.content) } : undefined
-                    }
-                  >
-                    {msg.role === 'user' ? msg.content : undefined}
+              (({ msg }) => (
+                <div key={msg.id} className={`chat-message ${msg.role}`}>
+                  <div className={`chat-avatar ${msg.role}`}>
+                    {msg.role === 'assistant' ? <Sparkles size={15} /> : <UserRound size={15} />}
                   </div>
-                  {msg.sources && msg.sources.length > 0 && (
-                    <div className="source-chips">
-                      {msg.sources.map((s, i) => {
-                        const label = sourceLabel(s)
-                        return label ? (
-                          <button
-                            key={i}
-                            type="button"
-                            className="source-chip"
-                            title={s.snippet ?? 'Show this source in the panel'}
-                            onClick={() => focusSource(s)}
-                          >
-                            {label}
-                          </button>
-                        ) : null
-                      })}
+                  <div>
+                    <div
+                      className={`chat-bubble${msg.role === 'assistant' ? ' chat-bubble-md' : ''}`}
+                      dangerouslySetInnerHTML={
+                        msg.role === 'assistant' ? { __html: renderText(msg.content) } : undefined
+                      }
+                    >
+                      {msg.role === 'user' ? msg.content : undefined}
                     </div>
-                  )}
-                  <div className="chat-time">{formatTime(msg.timestamp)}</div>
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="source-chips">
+                        {msg.sources.map((s, i) => {
+                          const label = sourceLabel(s)
+                          return label ? (
+                            <button
+                              key={i}
+                              type="button"
+                              className="source-chip"
+                              title={s.snippet ?? 'Show this source in the panel'}
+                              onClick={() => focusSource(s)}
+                            >
+                              {label}
+                            </button>
+                          ) : null
+                        })}
+                      </div>
+                    )}
+                    <div className="chat-time">{formatTime(msg.timestamp)}</div>
+                  </div>
                 </div>
-              </div>
+              ))(entry)
             ),
           )}
 

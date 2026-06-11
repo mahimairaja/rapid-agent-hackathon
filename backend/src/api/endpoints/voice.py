@@ -61,14 +61,28 @@ async def pump_client_to_session(websocket: WebSocket, session: VoiceSession) ->
                 )
                 # The live model's context predates the state write, so tell it
                 # the patient is verified; otherwise it still asks who they are.
-                # Its reply doubles as a personal greeting after onboarding.
-                session.send_text(
-                    f"[system note, not spoken by the patient] {name} has just "
-                    "been verified automatically through their saved patient "
-                    "code; their discharge plan is available through your "
-                    f"tools. Greet {name} by name in one short sentence and "
-                    "offer to help. Never ask them to identify themselves."
-                )
+                # On the first session the reply doubles as a personal greeting;
+                # on a reconnect the patient already has a running transcript,
+                # so a fresh greeting would read as a non sequitur.
+                if payload.get("reconnect"):
+                    session.send_text(
+                        f"[system note, not spoken by the patient] {name} has "
+                        "just been re-verified automatically after a brief "
+                        "reconnect; their discharge plan is available through "
+                        "your tools. The conversation is already in progress: "
+                        "do not greet them, do not introduce yourself, and do "
+                        "not mention the reconnect or their plan being loaded. "
+                        "Stay silent until they say something. Never ask them "
+                        "to identify themselves."
+                    )
+                else:
+                    session.send_text(
+                        f"[system note, not spoken by the patient] {name} has just "
+                        "been verified automatically through their saved patient "
+                        "code; their discharge plan is available through your "
+                        f"tools. Greet {name} by name in one short sentence and "
+                        "offer to help. Never ask them to identify themselves."
+                    )
             else:
                 await websocket.send_text(json.dumps({"type": "identify_failed"}))
 
