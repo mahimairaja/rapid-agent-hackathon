@@ -1,8 +1,6 @@
-import type { AppView } from '../types'
+import { NavLink } from 'react-router-dom'
 
 interface SidebarProps {
-  activeView: AppView
-  onNavigate: (view: AppView) => void
   isOpen: boolean
   onClose: () => void
   patientName: string
@@ -11,7 +9,8 @@ interface SidebarProps {
 }
 
 interface NavItem {
-  id: AppView
+  id: string
+  to: string
   label: string
   icon: React.ReactNode
 }
@@ -19,6 +18,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
+    to: '/dashboard',
     label: 'Dashboard',
     icon: (
       <svg
@@ -39,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'medications',
+    to: '/medications',
     label: 'Medications',
     icon: (
       <svg
@@ -58,6 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'appointments',
+    to: '/appointments',
     label: 'Appointments',
     icon: (
       <svg
@@ -77,8 +79,9 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: 'assistant',
-    label: 'Assistant (Voice + Chat)',
+    id: 'maya',
+    to: '/maya',
+    label: 'Maya',
     icon: (
       <svg
         className="sidebar-nav-icon"
@@ -98,6 +101,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'symptom-check',
+    to: '/symptom-check',
     label: 'Symptom Check',
     icon: (
       <svg
@@ -115,6 +119,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'care-team',
+    to: '/care-team',
     label: 'Care Team',
     icon: (
       <svg
@@ -135,15 +140,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ]
 
-export function Sidebar({
-  activeView,
-  onNavigate,
-  isOpen,
-  onClose,
-  patientName,
-  riskLevel,
-  recoveryStage,
-}: SidebarProps) {
+export function Sidebar({ isOpen, onClose, patientName, riskLevel, recoveryStage }: SidebarProps) {
   const STAGE_LABELS: Record<string, string> = {
     'week-1': 'Week 1 Recovery',
     'week-2': 'Week 2 Recovery',
@@ -189,19 +186,16 @@ export function Sidebar({
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Navigation</div>
           {NAV_ITEMS.map((item) => (
-            <button
+            <NavLink
               key={item.id}
               id={`nav-${item.id}`}
-              type="button"
-              className={`sidebar-nav-item${activeView === item.id ? ' active' : ''}`}
-              onClick={() => {
-                onNavigate(item.id)
-                onClose()
-              }}
+              to={item.to}
+              className={({ isActive }) => `sidebar-nav-item${isActive ? ' active' : ''}`}
+              onClick={onClose}
             >
               {item.icon}
               {item.label}
-            </button>
+            </NavLink>
           ))}
         </nav>
 

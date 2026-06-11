@@ -1,23 +1,16 @@
 import { useState, useEffect } from 'react'
+import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import './index.css'
 import './App.css'
 
-import type {
-  AppView,
-  ClaimResponse,
-  Patient,
-  Medication,
-  Appointment,
-  SessionContext,
-} from './types'
+import type { ClaimResponse, Patient, Medication, Appointment, SessionContext } from './types'
 
 import { LoginScreen } from './components/LoginScreen'
 import { LandingPage } from './components/LandingPage'
 import { JoinWizard } from './components/JoinWizard'
 import { JourneyOnboarding } from './components/JourneyOnboarding'
 import { AppointmentCalendar } from './components/AppointmentCalendar'
-import { Sidebar } from './components/Sidebar'
-import { Header } from './components/Header'
+import { PatientLayout } from './components/PatientLayout'
 import { DashboardHero } from './components/DashboardHero'
 import { StatCards } from './components/StatCard'
 import { RecoveryPlan } from './components/RecoveryPlan'
@@ -43,24 +36,15 @@ import {
   clearStoredRole,
 } from './api/client'
 
-// ── Page metadata ──────────────────────────────────────────────────────────────
-
-const PAGE_META: Record<AppView, { title: string; subtitle: string }> = {
-  dashboard: { title: 'Recovery Dashboard', subtitle: 'Your personalized recovery overview' },
-  medications: { title: 'Medication Schedule', subtitle: 'Daily medications and instructions' },
-  appointments: { title: 'Appointment Timeline', subtitle: 'Upcoming follow-up appointments' },
-  assistant: {
-    title: 'Recovery Assistant',
-    subtitle: 'Talk or type — answers grounded in your own plan',
-  },
-  'symptom-check': {
-    title: 'Symptom Check-In',
-    subtitle: 'Monitor and triage how you are feeling',
-  },
-  'care-team': {
-    title: 'Care Team',
-    subtitle: 'Your dedicated recovery team and emergency contacts',
-  },
+// Sidebar / dashboard shortcuts still speak in view names; the router speaks
+// in paths.
+const VIEW_PATHS: Record<string, string> = {
+  dashboard: '/dashboard',
+  medications: '/medications',
+  appointments: '/appointments',
+  assistant: '/maya',
+  'symptom-check': '/symptom-check',
+  'care-team': '/care-team',
 }
 
 // Module-level helper so the impure Date.now() call stays out of render.
@@ -68,9 +52,21 @@ function daysUntil(iso: string) {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 }
 
+// The /join route reads the preselected journey from the URL, so a landing
+// card click survives refreshes and back/forward.
+function JoinRoute(props: {
+  onComplete: (token: string, claim: ClaimResponse) => void
+  onBack: () => void
+  onLoginInstead: () => void
+}) {
+  const [params] = useSearchParams()
+  return <JoinWizard preselectedJourney={params.get('journey')} {...props} />
+}
+
 // ── Root App ──────────────────────────────────────────────────────────────────
 
 function App() {
+  const navigate = useNavigate()
   const [token, setToken] = useState<string | null>(getStoredToken)
   const [role, setRole] = useState<'patient' | 'professional' | null>(getStoredRole)
   const [isDemoMode, setIsDemoMode] = useState(false)
@@ -84,19 +80,12 @@ function App() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(false)
 
-  const [activeView, setActiveView] = useState<AppView>('assistant')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  // Pre-auth routing: landing is the front door; "Join" opens the wizard,
-  // optionally preselecting the journey card clicked on the landing page.
-  const [authView, setAuthView] = useState<'landing' | 'login' | 'join'>('landing')
-  const [joinPreselect, setJoinPreselect] = useState<string | null>(null)
-
   // Journey onboarding: the account's linked patient code (drives deterministic
   // session identification), the display name for greetings, the live session
   // id (drives the calendar widget), and which token's /users/me has resolved.
   const [identifyCode, setIdentifyCode] = useState<string | null>(null)
   const [userName, setUserName] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [checkedToken, setCheckedToken] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   // A symptom report handed from the check-in form into the live assistant.
@@ -135,6 +124,7 @@ function App() {
         if (!cancelled) {
           setIdentifyCode(me.patient_code ?? null)
           setUserName(me.full_name ?? null)
+          setUserEmail(me.email ?? null)
         }
       } catch (err) {
         if (cancelled) return
@@ -184,11 +174,10 @@ function App() {
     setIsDemoMode(false)
     setIdentifyCode(null)
     setUserName(null)
+    setUserEmail(null)
     setCheckedToken(null)
     setSessionId(null)
-    setActiveView('assistant')
-    setAuthView('landing')
-    setJoinPreselect(null)
+    navigate('/')
   }
 
   // First-time onboarding finished: remember the profile and enter the app.
@@ -216,18 +205,18 @@ function App() {
     void getSessionContext(sessionId).then(handleSessionContext)
   }
 
-  // Deep-link from dashboard / appointment shortcuts into the unified Assistant.
-  // The Assistant runs its own live conversation, so the prompt text is not
-  // pre-filled; the shortcut just brings the patient to the right place.
+  // Deep-link from dashboard / appointment shortcuts into Maya. She runs her
+  // own live conversation, so the prompt text is not pre-filled; the shortcut
+  // just brings the patient to the right place.
   const handleAssistantPrompt = () => {
-    setActiveView('assistant')
+    navigate('/maya')
   }
 
   // The symptom check-in form submits into the live conversation: the agent
   // runs the real triage (check-in or red-flag escalation) and replies there.
   const handleSymptomReport = (text: string) => {
     setPendingReport(text)
-    setActiveView('assistant')
+    navigate('/maya')
   }
 
   // Conversational onboarding: once the assistant verifies the patient, its
@@ -254,48 +243,58 @@ function App() {
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
   const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : 0
 
-  // Not logged in: landing page first; corner "Log in" opens the classic
-  // screen, "Join" opens the typeform wizard.
-  if (!token || !role) {
-    if (authView === 'login') {
-      return <LoginScreen onLogin={handleLogin} onBack={() => setAuthView('landing')} />
-    }
-    if (authView === 'join') {
+  const loggedOut = !token || !role
+  const goView = (view: string) => navigate(VIEW_PATHS[view] ?? '/maya')
+
+  // ── Pre-auth route elements ─────────────────────────────────────────────────
+
+  const authedHome = role === 'professional' ? '/provider' : '/maya'
+
+  const landingEl = loggedOut ? (
+    <LandingPage
+      onJoin={(code) => navigate(code ? `/join?journey=${encodeURIComponent(code)}` : '/join')}
+      onLogin={() => navigate('/login')}
+    />
+  ) : (
+    <Navigate to={authedHome} replace />
+  )
+
+  const loginEl = loggedOut ? (
+    <LoginScreen onLogin={handleLogin} onBack={() => navigate('/')} />
+  ) : (
+    <Navigate to={authedHome} replace />
+  )
+
+  const joinEl = loggedOut ? (
+    <JoinRoute
+      onComplete={handleJoinComplete}
+      onBack={() => navigate('/')}
+      onLoginInstead={() => navigate('/login')}
+    />
+  ) : (
+    <Navigate to="/maya" replace />
+  )
+
+  const providerEl =
+    token && role === 'professional' ? (
+      <ProfessionalApp onLogout={handleLogout} />
+    ) : (
+      <Navigate to="/" replace />
+    )
+
+  // ── Journey gallery (old accounts without a claimed journey) ───────────────
+
+  const welcomeEl = (() => {
+    if (!token || role !== 'patient') return <Navigate to="/" replace />
+    if (token === 'demo') return <Navigate to="/maya" replace />
+    if (!accountChecked) {
       return (
-        <JoinWizard
-          preselectedJourney={joinPreselect}
-          onComplete={handleJoinComplete}
-          onBack={() => setAuthView('landing')}
-          onLoginInstead={() => setAuthView('login')}
-        />
+        <div className="app-loading-screen">
+          <LoadingState message="Checking your profile…" />
+        </div>
       )
     }
-    return (
-      <LandingPage
-        onJoin={(code) => {
-          setJoinPreselect(code ?? null)
-          setAuthView('join')
-        }}
-        onLogin={() => setAuthView('login')}
-      />
-    )
-  }
-
-  if (role === 'professional') {
-    return <ProfessionalApp onLogout={handleLogout} />
-  }
-
-  // Signed-in patients: wait for the account check, then route first-timers
-  // through the journey gallery. Returning users land straight in the app and
-  // auto-identify. Demo mode skips all of this.
-  if (token !== 'demo' && !accountChecked) {
-    return (
-      <div className="app-loading-screen">
-        <LoadingState message="Checking your profile…" />
-      </div>
-    )
-  }
-  if (token !== 'demo' && !identifyCode) {
+    if (identifyCode) return <Navigate to="/maya" replace />
     return (
       <JourneyOnboarding
         token={token}
@@ -304,201 +303,193 @@ function App() {
         onLogout={handleLogout}
       />
     )
-  }
+  })()
 
-  // Loading initial demo data. A signed-in patient renders the shell right
-  // away and lands in the assistant, which identifies them conversationally.
-  if (token === 'demo' && (loading || !patient)) {
-    return (
-      <div className="app-loading-screen">
-        <div className="app-loading-logo">
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-          </svg>
+  // ── Patient shell (layout route with the always-mounted Maya) ──────────────
+
+  const patientShellEl = (() => {
+    if (!token || !role) return <Navigate to="/" replace />
+    if (role === 'professional') return <Navigate to="/provider" replace />
+    if (token !== 'demo' && !accountChecked) {
+      return (
+        <div className="app-loading-screen">
+          <LoadingState message="Checking your profile…" />
         </div>
-        <LoadingState message="Loading your recovery dashboard…" />
-      </div>
-    )
-  }
-
-  const { title, subtitle } = PAGE_META[activeView]
-  const userInitials = patient
-    ? `${patient.first_name[0]}${patient.last_name[0]}`.toUpperCase()
-    : 'ME'
-
-  return (
-    <div className="app-layout">
-      {/* Sidebar */}
-      <Sidebar
-        activeView={activeView}
-        onNavigate={setActiveView}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        patientName={patient ? `${patient.first_name} ${patient.last_name}` : ''}
-        riskLevel={patient?.risk_level ?? 'moderate'}
-        recoveryStage={patient?.recovery_stage ?? 'week-1'}
-      />
-
-      {/* Main content */}
-      <div className="main-content">
-        <Header
-          title={title}
-          subtitle={subtitle}
-          isDemoMode={isDemoMode}
-          onMenuClick={() => setSidebarOpen(true)}
-          onLogout={handleLogout}
-          userInitials={userInitials}
-        />
-
-        <main className="page-body">
-          {activeView === 'dashboard' &&
-            (patient ? (
-              <DashboardView
-                patient={patient}
-                medications={medications}
-                appointments={appointments}
-                medicationsDue={medicationsDue}
-                completedToday={completedToday}
-                hasMedicationAdherence={hasMedicationAdherence}
-                nextAppointmentDays={nextAppointmentDays}
-                onAssistantPrompt={handleAssistantPrompt}
-                onNavigate={setActiveView}
-              />
-            ) : (
-              <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
-            ))}
-
-          {activeView === 'medications' && !patient && (
-            <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
-          )}
-          {activeView === 'medications' && patient && (
-            <div>
-              <div className="view-header">
-                <div className="view-header-title">💊 Medication Schedule</div>
-                <div className="view-header-sub">
-                  {hasMedicationAdherence
-                    ? `${completedToday} of ${medications.length} medications taken today`
-                    : `${medications.length} active medication${medications.length !== 1 ? 's' : ''} on this plan`}
-                </div>
-              </div>
-              <div className="card">
-                <div className="card-accent-bar" />
-                <div className="card-body" style={{ paddingTop: 20 }}>
-                  <MedicationSchedule medications={medications} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeView === 'appointments' && !patient && (
-            <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
-          )}
-          {activeView === 'appointments' && patient && (
-            <div>
-              <AppointmentCalendar sessionId={sessionId} onBooked={handleCalendarBooked} />
-              <div className="view-header" style={{ marginTop: 22 }}>
-                <div className="view-header-title">📅 Appointment Timeline</div>
-                <div className="view-header-sub">
-                  {nextAppointment
-                    ? `${appointments.filter((a) => a.status !== 'completed').length} upcoming
-                       appointments — next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`
-                    : 'No upcoming appointments — ask the assistant to book your follow-up'}
-                </div>
-              </div>
-              <div className="card">
-                <div className="card-accent-bar" />
-                <div className="card-header" style={{ paddingBottom: 0 }}>
-                  <div>
-                    <div className="card-title">Follow-up scheduling</div>
-                    <div className="card-subtitle">
-                      Use the assistant to book, check, or move a visit
-                    </div>
-                  </div>
-                </div>
-                <div className="appointment-actions">
-                  <button type="button" onClick={handleAssistantPrompt}>
-                    Book
-                  </button>
-                  <button type="button" onClick={handleAssistantPrompt}>
-                    Check
-                  </button>
-                  <button type="button" onClick={handleAssistantPrompt}>
-                    Move
-                  </button>
-                </div>
-                <div className="card-body" style={{ paddingTop: 20 }}>
-                  <AppointmentTimeline appointments={appointments} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Kept mounted (hidden when inactive) so switching tabs never tears
-              down the live Gemini session or loses the conversation. */}
-          <div style={{ display: activeView === 'assistant' ? 'block' : 'none' }}>
-            <div className="view-header">
-              <div className="view-header-title">🤖 Recovery Assistant</div>
-              <div className="view-header-sub">
-                Talk or type in one place. Powered by Gemini Live, with answers grounded in your own
-                discharge plan.
-              </div>
-            </div>
-            <Assistant
-              onContext={handleSessionContext}
-              onSession={setSessionId}
-              identifyCode={token === 'demo' ? null : identifyCode}
-              userName={userName}
-              outboundText={pendingReport}
-              onOutboundConsumed={() => setPendingReport(null)}
-            />
+      )
+    }
+    if (token !== 'demo' && !identifyCode) return <Navigate to="/welcome" replace />
+    if (token === 'demo' && (loading || !patient)) {
+      return (
+        <div className="app-loading-screen">
+          <div className="app-loading-logo">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
           </div>
+          <LoadingState message="Loading your recovery dashboard…" />
+        </div>
+      )
+    }
+    return (
+      <PatientLayout
+        assistant={
+          <Assistant
+            onContext={handleSessionContext}
+            onSession={setSessionId}
+            identifyCode={token === 'demo' ? null : identifyCode}
+            userName={userName}
+            outboundText={pendingReport}
+            onOutboundConsumed={() => setPendingReport(null)}
+          />
+        }
+        patient={patient}
+        isDemoMode={isDemoMode}
+        userName={userName}
+        userEmail={userEmail}
+        onLogout={handleLogout}
+      />
+    )
+  })()
 
-          {activeView === 'symptom-check' && (
-            <div>
-              <div className="view-header">
-                <div className="view-header-title">📈 Symptom Check-In</div>
-                <div className="view-header-sub">
-                  Log how you're feeling right now — AI will triage and give personalized guidance
-                </div>
-              </div>
-              <div className="card">
-                <div
-                  className="card-accent-bar"
-                  style={{ background: 'linear-gradient(90deg, var(--amber-400), var(--red-400))' }}
-                />
-                <div className="card-body" style={{ paddingTop: 20 }}>
-                  <SymptomCheckInForm onSubmitReport={handleSymptomReport} />
-                </div>
-              </div>
-            </div>
-          )}
+  // ── Tab route elements ──────────────────────────────────────────────────────
 
-          {activeView === 'care-team' && !patient && (
-            <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
-          )}
-          {activeView === 'care-team' && patient && (
-            <div>
-              <div className="view-header">
-                <div className="view-header-title">👥 Your Care Team</div>
-                <div className="view-header-sub">
-                  Contact information, emergency warning signs, and care team escalation
-                </div>
-              </div>
-              <CareTeamPanel careTeam={patient.care_team ?? []} />
-            </div>
-          )}
-        </main>
+  const dashboardEl = patient ? (
+    <DashboardView
+      patient={patient}
+      medications={medications}
+      appointments={appointments}
+      medicationsDue={medicationsDue}
+      completedToday={completedToday}
+      hasMedicationAdherence={hasMedicationAdherence}
+      nextAppointmentDays={nextAppointmentDays}
+      onAssistantPrompt={handleAssistantPrompt}
+      onNavigate={goView}
+    />
+  ) : (
+    <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+  )
+
+  const medicationsEl = patient ? (
+    <div>
+      <div className="view-header">
+        <div className="view-header-title">💊 Medication Schedule</div>
+        <div className="view-header-sub">
+          {hasMedicationAdherence
+            ? `${completedToday} of ${medications.length} medications taken today`
+            : `${medications.length} active medication${medications.length !== 1 ? 's' : ''} on this plan`}
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-accent-bar" />
+        <div className="card-body" style={{ paddingTop: 20 }}>
+          <MedicationSchedule medications={medications} />
+        </div>
       </div>
     </div>
+  ) : (
+    <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+  )
+
+  const appointmentsEl = patient ? (
+    <div>
+      <AppointmentCalendar sessionId={sessionId} onBooked={handleCalendarBooked} />
+      <div className="view-header" style={{ marginTop: 22 }}>
+        <div className="view-header-title">📅 Appointment Timeline</div>
+        <div className="view-header-sub">
+          {nextAppointment
+            ? `${appointments.filter((a) => a.status !== 'completed').length} upcoming
+               appointments — next in ${nextAppointmentDays} day${nextAppointmentDays !== 1 ? 's' : ''}`
+            : 'No upcoming appointments — ask Maya to book your follow-up'}
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-accent-bar" />
+        <div className="card-header" style={{ paddingBottom: 0 }}>
+          <div>
+            <div className="card-title">Follow-up scheduling</div>
+            <div className="card-subtitle">Ask Maya to book, check, or move a visit</div>
+          </div>
+        </div>
+        <div className="appointment-actions">
+          <button type="button" onClick={handleAssistantPrompt}>
+            Book
+          </button>
+          <button type="button" onClick={handleAssistantPrompt}>
+            Check
+          </button>
+          <button type="button" onClick={handleAssistantPrompt}>
+            Move
+          </button>
+        </div>
+        <div className="card-body" style={{ paddingTop: 20 }}>
+          <AppointmentTimeline appointments={appointments} />
+        </div>
+      </div>
+    </div>
+  ) : (
+    <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+  )
+
+  const symptomEl = (
+    <div>
+      <div className="view-header">
+        <div className="view-header-title">📈 Symptom Check-In</div>
+        <div className="view-header-sub">
+          Tell Maya how you're feeling — she runs the real triage and replies in the conversation
+        </div>
+      </div>
+      <div className="card">
+        <div
+          className="card-accent-bar"
+          style={{ background: 'linear-gradient(90deg, var(--amber-400), var(--red-400))' }}
+        />
+        <div className="card-body" style={{ paddingTop: 20 }}>
+          <SymptomCheckInForm onSubmitReport={handleSymptomReport} />
+        </div>
+      </div>
+    </div>
+  )
+
+  const careTeamEl = patient ? (
+    <div>
+      <div className="view-header">
+        <div className="view-header-title">👥 Your Care Team</div>
+        <div className="view-header-sub">
+          Contact information, emergency warning signs, and care team escalation
+        </div>
+      </div>
+      <CareTeamPanel careTeam={patient.care_team ?? []} />
+    </div>
+  ) : (
+    <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
+  )
+
+  return (
+    <Routes>
+      <Route path="/" element={landingEl} />
+      <Route path="/login" element={loginEl} />
+      <Route path="/join" element={joinEl} />
+      <Route path="/provider" element={providerEl} />
+      <Route path="/welcome" element={welcomeEl} />
+      <Route element={patientShellEl}>
+        <Route path="/maya" element={null} />
+        <Route path="/dashboard" element={dashboardEl} />
+        <Route path="/medications" element={medicationsEl} />
+        <Route path="/appointments" element={appointmentsEl} />
+        <Route path="/symptom-check" element={symptomEl} />
+        <Route path="/care-team" element={careTeamEl} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
@@ -520,8 +511,8 @@ function IdentifyCallout({ onOpenAssistant }: { onOpenAssistant: () => void }) {
           Let's find your recovery plan
         </h3>
         <p style={{ color: 'var(--text-muted)', margin: '0 0 22px', lineHeight: 1.6 }}>
-          Tell your assistant who you are — just say or type your name and date of birth, or your
-          patient code — and your dashboard, medications, and appointments will load automatically.
+          Tell Maya who you are — just say or type your name and date of birth, or your patient code
+          — and your dashboard, medications, and appointments will load automatically.
         </p>
         <button
           type="button"
@@ -529,7 +520,7 @@ function IdentifyCallout({ onOpenAssistant }: { onOpenAssistant: () => void }) {
           style={{ width: 'auto', padding: '12px 28px', margin: '0 auto' }}
           onClick={onOpenAssistant}
         >
-          Talk to your assistant
+          Talk to Maya
         </button>
       </div>
     </div>
@@ -547,7 +538,7 @@ interface DashboardViewProps {
   hasMedicationAdherence: boolean
   nextAppointmentDays: number
   onAssistantPrompt: (prompt: string) => void
-  onNavigate: (view: AppView) => void
+  onNavigate: (view: string) => void
 }
 
 function DashboardView({
@@ -662,8 +653,8 @@ function DashboardView({
           </div>
         </div>
 
-        {/* The conversation lives in the unified Assistant tab (voice + chat on
-            one live session); the hero's "Ask AI Assistant" button leads there. */}
+        {/* The conversation lives with Maya (voice + chat on one live session);
+            the hero's assistant button leads there. */}
       </div>
     </div>
   )
