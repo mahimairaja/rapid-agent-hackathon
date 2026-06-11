@@ -265,3 +265,33 @@ def test_build_clone_history_defaults_empty():
         patient_code="HW-7K3F",
     )
     assert plan.checkins == [] and plan.escalations == []
+
+
+def test_build_clone_redates_naive_timestamps_from_mongo():
+    # Beanie model_dump() yields naive UTC datetimes; the claim time is aware.
+    from datetime import UTC, datetime, timedelta
+
+    sample, meds, appts, chunks = _inputs()
+    claim = datetime(2026, 6, 11, 12, 0, tzinfo=UTC)
+    checkins = [
+        {
+            "patient_id": "pid-sample",
+            "reported_text": "Symptom check-in: my pain level is 4/10.",
+            "severity": "routine",
+            "created_at": datetime(2026, 6, 3, 9, 0),  # naive
+        }
+    ]
+    plan = build_clone(
+        sample,
+        meds,
+        appts,
+        chunks,
+        display_name="Asha Rao",
+        birth_year=None,
+        patient_id="pid-new",
+        patient_code="HW-7K3F",
+        checkins=checkins,
+        escalations=[],
+        claim_time=claim,
+    )
+    assert plan.checkins[0]["created_at"] == claim - timedelta(days=1)

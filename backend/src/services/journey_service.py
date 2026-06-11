@@ -175,17 +175,22 @@ def build_clone(
     # lands one day before the claim: a fresh account asks "how has my week
     # been?" and gets a real, recent answer.
     history = list(checkins or []) + list(escalations or [])
+
+    def _aware_utc(value: datetime) -> datetime:
+        # Mongo round-trips datetimes as naive UTC; claim_time is aware.
+        return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
     delta: timedelta | None = None
     if history and claim_time is not None:
-        stamps = [d["created_at"] for d in history if d.get("created_at")]
+        stamps = [_aware_utc(d["created_at"]) for d in history if d.get("created_at")]
         if stamps:
-            delta = (claim_time - timedelta(days=1)) - max(stamps)
+            delta = (_aware_utc(claim_time) - timedelta(days=1)) - max(stamps)
 
     def _redate(doc: dict[str, Any]) -> dict[str, Any]:
         out = {**_strip(doc), "patient_id": patient_id}
         original = doc.get("created_at")
         if original is not None and delta is not None:
-            out["created_at"] = original + delta
+            out["created_at"] = _aware_utc(original) + delta
         return out
 
     return ClonePlan(
