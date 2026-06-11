@@ -11,12 +11,16 @@ import {
 } from 'lucide-react'
 import type { CareTeamMember } from '../types'
 import { URGENT_WARNING_SIGNS } from '../data/mockData'
+import { warningSignsForCondition } from '../data/recoveryPlans'
 
 interface CareTeamPanelProps {
   careTeam: CareTeamMember[]
   // Cloned journey profiles carry no care_team list; the assigned clinician
   // string (for example "Dr. Helen Park (Cardiology)") backs a fallback card.
   clinician?: string | null
+  // Selects condition-specific urgent warning signs; the surgical defaults
+  // fit the knee journey and demo mode.
+  dischargeReason?: string | null
 }
 
 // Decorative icon per warning sign, matched on the label keywords.
@@ -39,7 +43,9 @@ function getInitials(name: string) {
     .slice(0, 2)
 }
 
-export function CareTeamPanel({ careTeam, clinician }: CareTeamPanelProps) {
+export function CareTeamPanel({ careTeam, clinician, dischargeReason }: CareTeamPanelProps) {
+  const warningSigns =
+    warningSignsForCondition(dischargeReason) ?? URGENT_WARNING_SIGNS.map((s) => s.label)
   const clinicianMatch = clinician?.match(/^(.*?)\s*\((.*)\)\s*$/)
   const fallback =
     careTeam.length === 0 && clinician
@@ -126,10 +132,10 @@ export function CareTeamPanel({ careTeam, clinician }: CareTeamPanelProps) {
         </div>
         <div className="card-body" style={{ paddingTop: 0 }}>
           <div className="warning-signs-grid">
-            {URGENT_WARNING_SIGNS.map((sign, i) => (
+            {warningSigns.map((label, i) => (
               <div key={i} className="warning-sign-item">
-                <span style={{ display: 'flex' }}>{warningIcon(sign.label)}</span>
-                <span>{sign.label}</span>
+                <span style={{ display: 'flex' }}>{warningIcon(label)}</span>
+                <span>{label}</span>
               </div>
             ))}
           </div>

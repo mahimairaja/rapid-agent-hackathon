@@ -5,7 +5,7 @@ interface StatCardsProps {
   hasMedicationAdherence: boolean
   patient: Patient
   medicationsDue: number
-  nextAppointmentDays: number
+  nextAppointmentDays: number | null
   nextAppointmentKind?: string | null
   completedToday: number
 }
@@ -46,11 +46,13 @@ export function StatCards({
           <CalendarDays size={20} />
         </div>
         <div className="stat-card-value">
-          {nextAppointmentDays === 0
-            ? 'Today'
-            : nextAppointmentDays === 1
-              ? 'Tomorrow'
-              : `${nextAppointmentDays}d`}
+          {nextAppointmentDays === null
+            ? '—'
+            : nextAppointmentDays === 0
+              ? 'Today'
+              : nextAppointmentDays === 1
+                ? 'Tomorrow'
+                : `${nextAppointmentDays}d`}
         </div>
         <div className="stat-card-label">Next Appointment</div>
         <div className="stat-card-trend neutral">{nextAppointmentKind ?? 'None scheduled yet'}</div>
@@ -65,20 +67,20 @@ export function StatCards({
         <div className="stat-card-trend up">↑ On track</div>
       </div>
 
-      <div className="stat-card">
-        <div className="stat-card-icon red">
-          <TriangleAlert size={20} />
+      {/* The backend does not assign risk levels to real patients; only the
+          demo-mode mock carries one. Never invent it. */}
+      {patient.risk_level && (
+        <div className="stat-card">
+          <div className="stat-card-icon red">
+            <TriangleAlert size={20} />
+          </div>
+          <div className="stat-card-value">
+            {patient.risk_level.charAt(0).toUpperCase() + patient.risk_level.slice(1)}
+          </div>
+          <div className="stat-card-label">Risk Level</div>
+          <div className="stat-card-trend neutral">Monitored daily</div>
         </div>
-        <div className="stat-card-value">
-          {/* Default matches the sidebar/hero ('moderate'), so the cards never
-              disagree with the rest of the shell. */}
-          {(patient.risk_level ?? 'moderate') === 'moderate'
-            ? 'Moderate'
-            : (patient.risk_level ?? 'moderate')}
-        </div>
-        <div className="stat-card-label">Risk Level</div>
-        <div className="stat-card-trend neutral">Monitored daily</div>
-      </div>
+      )}
     </div>
   )
 }

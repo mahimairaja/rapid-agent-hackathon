@@ -13,7 +13,7 @@ interface SidebarProps {
   isOpen: boolean
   onClose: () => void
   patientName: string
-  riskLevel: string
+  riskLevel?: string | null
   recoveryStage: string
 }
 
@@ -138,10 +138,12 @@ export function Sidebar({ isOpen, onClose, patientName, riskLevel, recoveryStage
             <div className="sidebar-patient-sub">
               {STAGE_LABELS[recoveryStage] ?? recoveryStage}
             </div>
-            <div className={`sidebar-risk-badge ${riskLevel}`}>
-              <span className="sidebar-risk-dot" />
-              {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} Risk
-            </div>
+            {riskLevel && (
+              <div className={`sidebar-risk-badge ${riskLevel}`}>
+                <span className="sidebar-risk-dot" />
+                {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} Risk
+              </div>
+            )}
           </div>
         ) : (
           <div className="sidebar-patient">

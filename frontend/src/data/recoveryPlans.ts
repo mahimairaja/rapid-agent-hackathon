@@ -1,5 +1,4 @@
 import type { RecoveryMilestone } from './mockData'
-import { MOCK_RECOVERY_MILESTONES } from './mockData'
 
 /**
  * Condition-specific recovery milestones for the dashboard plan card, keyed by
@@ -185,20 +184,69 @@ const COPD: RecoveryMilestone[] = [
   },
 ]
 
+// Condition-specific symptom toggles. `field` reuses the five check-in fields
+// so the form state shape never changes; `report` is the first-person phrase
+// submitted to Maya's deterministic triage. Red-flag phrasings ("shortness of
+// breath", "chest ...") stay intact so rule matching is unaffected; phrases
+// that match no rule simply log as routine, which is correct.
+export interface ConditionSymptomToggle {
+  field: 'fever' | 'swelling' | 'shortness_of_breath' | 'wound_discharge' | 'calf_swelling'
+  label: string
+  hint: string
+  report: string
+}
+
 interface ConditionContent {
   match: RegExp
   milestones: RecoveryMilestone[]
   dailyAction: string
+  symptomToggles?: ConditionSymptomToggle[]
+  warningSigns?: string[]
 }
 
 // Order matters only for overlapping wording; discharge reasons in the seeds
-// match exactly one entry. The hip-replacement mock remains the demo-mode
-// fallback (John Matthews).
+// match exactly one entry. Unmatched reasons (uploaded plans) get no canned
+// content at all; callers render a document-sourced fallback instead.
 const CONDITION_CONTENT: ConditionContent[] = [
   {
     match: /heart failure|cardiac|chf/i,
     milestones: HEART_FAILURE,
     dailyAction: 'Weigh yourself each morning and log it',
+    symptomToggles: [
+      { field: 'fever', label: 'Fever', hint: '38.5°C or higher', report: 'a fever' },
+      {
+        field: 'swelling',
+        label: 'Leg or belly swelling',
+        hint: 'New or worsening',
+        report: 'new swelling in my legs and belly',
+      },
+      {
+        field: 'shortness_of_breath',
+        label: 'Shortness of breath',
+        hint: 'At rest or lying flat',
+        report: 'shortness of breath',
+      },
+      {
+        field: 'wound_discharge',
+        label: 'Rapid weight gain',
+        hint: '2–3 lb in a day',
+        report: 'rapid weight gain of two to three pounds in a day',
+      },
+      {
+        field: 'calf_swelling',
+        label: 'Dizziness or palpitations',
+        hint: 'New or frequent',
+        report: 'dizziness and palpitations',
+      },
+    ],
+    warningSigns: [
+      'Weight gain over 2–3 lb in a day',
+      'Shortness of breath at rest or lying flat',
+      'Chest pain or palpitations',
+      'New or worsening leg or belly swelling',
+      'Fainting or severe dizziness',
+      'Fever above 38.5°C (101.3°F)',
+    ],
   },
   {
     match: /knee/i,
@@ -209,11 +257,81 @@ const CONDITION_CONTENT: ConditionContent[] = [
     match: /diabet/i,
     milestones: DIABETES,
     dailyAction: 'Check fasting glucose before breakfast',
+    symptomToggles: [
+      { field: 'fever', label: 'Fever', hint: '38.5°C or higher', report: 'a fever' },
+      {
+        field: 'swelling',
+        label: 'Very high glucose reading',
+        hint: 'Over 300 mg/dL',
+        report: 'a glucose reading over 300',
+      },
+      {
+        field: 'shortness_of_breath',
+        label: 'Shortness of breath',
+        hint: 'At rest or sudden',
+        report: 'shortness of breath',
+      },
+      {
+        field: 'wound_discharge',
+        label: 'Shaky, sweaty, or confused',
+        hint: 'Possible low blood sugar',
+        report: 'feeling shaky and sweaty like my blood sugar is low',
+      },
+      {
+        field: 'calf_swelling',
+        label: 'Blurred vision or headache',
+        hint: 'New or persistent',
+        report: 'blurred vision and a headache',
+      },
+    ],
+    warningSigns: [
+      'Glucose readings over 300 mg/dL',
+      'Severe low blood sugar (shaky, sweaty, confused)',
+      'Vomiting and unable to keep fluids down',
+      'Fruity-smelling breath or rapid breathing',
+      'Blurred vision that does not clear',
+      'Fever above 38.5°C (101.3°F)',
+    ],
   },
   {
     match: /copd|pulmonary|respiratory/i,
     milestones: COPD,
     dailyAction: 'Use your controller inhaler morning and night',
+    symptomToggles: [
+      { field: 'fever', label: 'Fever', hint: '38.5°C or higher', report: 'a fever' },
+      {
+        field: 'swelling',
+        label: 'More sputum or color change',
+        hint: 'Yellow, green, or bloody',
+        report: 'more sputum than usual and a color change',
+      },
+      {
+        field: 'shortness_of_breath',
+        label: 'Shortness of breath',
+        hint: 'Worse than your baseline',
+        report: 'shortness of breath',
+      },
+      {
+        field: 'wound_discharge',
+        label: 'Rescue inhaler used often',
+        hint: 'More than usual',
+        report: 'needing my rescue inhaler more than usual',
+      },
+      {
+        field: 'calf_swelling',
+        label: 'Chest tightness',
+        hint: 'New or unusual',
+        report: 'chest tightness',
+      },
+    ],
+    warningSigns: [
+      'Severe shortness of breath your rescue inhaler does not relieve',
+      'Blue lips or fingertips',
+      'Fever with a change in sputum color',
+      'Confusion or unusual drowsiness',
+      'Chest pain or tightness',
+      'New swelling in your ankles or legs',
+    ],
   },
 ]
 
@@ -222,10 +340,25 @@ function contentFor(dischargeReason?: string | null): ConditionContent | null {
   return CONDITION_CONTENT.find((c) => c.match.test(dischargeReason)) ?? null
 }
 
-export function milestonesForCondition(dischargeReason?: string | null): RecoveryMilestone[] {
-  return contentFor(dischargeReason)?.milestones ?? MOCK_RECOVERY_MILESTONES
+export function milestonesForCondition(
+  dischargeReason?: string | null,
+): RecoveryMilestone[] | null {
+  // No match (uploaded plans, unknown conditions): never show another
+  // condition's milestones. The demo provider view imports the hip mock
+  // directly from mockData and is unaffected.
+  return contentFor(dischargeReason)?.milestones ?? null
 }
 
 export function dailyActionForCondition(dischargeReason?: string | null): string {
-  return contentFor(dischargeReason)?.dailyAction ?? 'Continue 10–15 min assisted walks 3× daily'
+  return contentFor(dischargeReason)?.dailyAction ?? 'Check in with Maya about today’s plan'
+}
+
+export function symptomTogglesForCondition(
+  dischargeReason?: string | null,
+): ConditionSymptomToggle[] | null {
+  return contentFor(dischargeReason)?.symptomToggles ?? null
+}
+
+export function warningSignsForCondition(dischargeReason?: string | null): string[] | null {
+  return contentFor(dischargeReason)?.warningSigns ?? null
 }

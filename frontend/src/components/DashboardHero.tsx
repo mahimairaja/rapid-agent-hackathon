@@ -41,6 +41,11 @@ function getInitials(first: string, last: string) {
   return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase()
 }
 
+function timeOfDayGreeting() {
+  const hour = new Date().getHours()
+  return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+}
+
 export function DashboardHero({
   patient,
   medications,
@@ -51,7 +56,9 @@ export function DashboardHero({
   const stage = patient.recovery_stage ?? 'week-1'
   const progress = STAGE_PROGRESS[stage] ?? 8
   const stageLabel = STAGE_LABELS[stage] ?? 'Recovery'
-  const daysSinceDischarge = patient.discharge_date ? daysSince(patient.discharge_date) : 3
+  // The backend does not record discharge_date for real accounts (only the
+  // demo mock has one); never invent a day counter.
+  const daysSinceDischarge = patient.discharge_date ? daysSince(patient.discharge_date) : null
   const initials = getInitials(patient.first_name, patient.last_name)
 
   const medicationsTotal = medications.length
@@ -61,9 +68,15 @@ export function DashboardHero({
     .filter((a) => a.status !== 'completed')
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
 
-  const nextApptDays = nextAppt ? daysUntil(nextAppt.start) : 7
+  const nextApptDays = nextAppt ? daysUntil(nextAppt.start) : null
   const nextApptLabel =
-    nextApptDays === 0 ? 'Today' : nextApptDays === 1 ? 'Tomorrow' : `In ${nextApptDays} days`
+    nextApptDays === null
+      ? 'None yet'
+      : nextApptDays === 0
+        ? 'Today'
+        : nextApptDays === 1
+          ? 'Tomorrow'
+          : `In ${nextApptDays} days`
 
   // AI-generated care summary based on patient state
   const aiInsights = buildAIInsights(patient, medications, appointments)
@@ -81,7 +94,7 @@ export function DashboardHero({
         </div>
 
         <div className="dh-identity">
-          <div className="dh-greeting">Good morning</div>
+          <div className="dh-greeting">{timeOfDayGreeting()}</div>
           <div className="dh-name">
             {patient.first_name} {patient.last_name}
           </div>
@@ -116,7 +129,9 @@ export function DashboardHero({
             />
           </div>
           <div className="dh-progress-sub">
-            Day {daysSinceDischarge} post-discharge · 12-week program
+            {daysSinceDischarge === null
+              ? '12-week program'
+              : `Day ${daysSinceDischarge} post-discharge · 12-week program`}
           </div>
         </div>
 
@@ -154,32 +169,41 @@ export function DashboardHero({
             <span className="dh-qs-val">{nextApptLabel}</span>
             <span className="dh-qs-lbl">Next appt</span>
           </button>
-          <div className="dh-qs-divider" />
-          <button
-            className="dh-qs-item"
-            onClick={() => onNavigate('symptom-check')}
-            aria-label={`Risk level: ${patient.risk_level ?? 'moderate'}`}
-            type="button"
-          >
-            <span className="dh-qs-icon risk">
-              {patient.risk_level === 'low' ? '🟢' : patient.risk_level === 'high' ? '🔴' : '🟡'}
-            </span>
-            <span
-              className="dh-qs-val"
-              style={{
-                color:
-                  patient.risk_level === 'low'
-                    ? 'var(--green-400)'
+          {/* The backend does not assign risk levels to real patients; only
+              demo-mode mock patients carry one. Never invent it. */}
+          {patient.risk_level && (
+            <>
+              <div className="dh-qs-divider" />
+              <button
+                className="dh-qs-item"
+                onClick={() => onNavigate('symptom-check')}
+                aria-label={`Risk level: ${patient.risk_level}`}
+                type="button"
+              >
+                <span className="dh-qs-icon risk">
+                  {patient.risk_level === 'low'
+                    ? '🟢'
                     : patient.risk_level === 'high'
-                      ? 'var(--red-400)'
-                      : 'var(--amber-400)',
-              }}
-            >
-              {(patient.risk_level ?? 'Moderate').charAt(0).toUpperCase() +
-                (patient.risk_level ?? 'moderate').slice(1)}
-            </span>
-            <span className="dh-qs-lbl">Risk level</span>
-          </button>
+                      ? '🔴'
+                      : '🟡'}
+                </span>
+                <span
+                  className="dh-qs-val"
+                  style={{
+                    color:
+                      patient.risk_level === 'low'
+                        ? 'var(--green-400)'
+                        : patient.risk_level === 'high'
+                          ? 'var(--red-400)'
+                          : 'var(--amber-400)',
+                  }}
+                >
+                  {patient.risk_level.charAt(0).toUpperCase() + patient.risk_level.slice(1)}
+                </span>
+                <span className="dh-qs-lbl">Risk level</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -34,6 +34,7 @@ from src.services.journey_service import (
     clone_journey,
     split_name,
 )
+from src.services.medication_extraction_service import extract_medications_from_text
 
 logger = logging.getLogger(__name__)
 
@@ -158,9 +159,9 @@ async def upload_discharge(
 
     The PDF is parsed locally (LiteParse, no cloud), chunked and embedded
     with the same pipeline as the seeded care plans, so Maya answers from
-    the patient's own document. No structured medications or appointments
-    are extracted in this version (those tabs start empty); medication
-    questions fall back to the plan text, and booking uses a default
+    the patient's own document. Medications are extracted via Gemini and
+    stored as structured Medication documents so the dashboard tab populates;
+    the same data backs Maya's medication tools. Booking uses a default
     two-week follow-up window.
     """
     # Idempotent like /claim: an account keeps its first profile.
@@ -219,6 +220,7 @@ async def upload_discharge(
     # Cap what one upload may index: beyond this a single request would
     # spend minutes in embedding calls; 80k chars is ~40 chunks.
     text = text[:80_000]
+
     chunks = chunk_text(text)
     try:
         embeddings = await anyio.to_thread.run_sync(partial(embed_texts, chunks))
@@ -229,10 +231,14 @@ async def upload_discharge(
             detail="We could not index that document right now. Try again shortly.",
         ) from None
 
+    # Best-effort medication extraction; failures are logged and swallowed so
+    # they never block the upload. Runs after embedding to keep the hot path
+    # (chunks + embeddings) unaffected.
+    raw_meds = await anyio.to_thread.run_sync(
+        partial(extract_medications_from_text, text)
+    )
+
     first, last = split_name(display_name.strip())
-    # No structured extraction in this version, so uploads get the standard
-    # two-week post-discharge window; without one, the booking tools refuse
-    # to offer follow-up slots at all.
     now = datetime.now(UTC)
     patient = Patient(
         patient_id=str(uuid.uuid4()),
@@ -247,6 +253,7 @@ async def upload_discharge(
         follow_up_kind="Follow-up visit",
     )
     await patient.insert()
+
     await CarePlanChunk.insert_many(
         [
             CarePlanChunk(
@@ -260,15 +267,34 @@ async def upload_discharge(
         ]
     )
 
+    med_docs: list[Medication] = []
+    for m in raw_meds or []:
+        if not isinstance(m, dict) or not m.get("name"):
+            continue
+        med_docs.append(
+            Medication(
+                patient_id=patient.patient_id,
+                name=str(m["name"]),
+                dosage=str(m["dosage"]) if m.get("dosage") else None,
+                frequency=str(m["frequency"]) if m.get("frequency") else None,
+                instructions=str(m["instructions"]) if m.get("instructions") else None,
+                reason=str(m["reason"]) if m.get("reason") else None,
+                schedule_times=[str(t) for t in m.get("schedule_times") or []],
+            )
+        )
+    if med_docs:
+        await Medication.insert_many(med_docs)
+
     # Link last, so a failed ingest never strands a dangling account link.
     current_user.patient_id = patient.patient_id
     current_user.patient_code = patient.patient_code
     await current_user.save()
 
     logger.info(
-        "uploaded plan ingested for %s (%d chunks)",
+        "uploaded plan ingested for %s (%d chunks, %d medications)",
         patient.patient_code,
         len(chunks),
+        len(med_docs),
     )
     return ClaimResponse(
         patient_id=patient.patient_id,
@@ -276,5 +302,9 @@ async def upload_discharge(
         first_name=patient.first_name,
         last_name=patient.last_name,
         journey_code=_UPLOAD_JOURNEY_CODE,
-        counts=ClaimCounts(medications=0, appointments=0, care_plan_chunks=len(chunks)),
+        counts=ClaimCounts(
+            medications=len(med_docs),
+            appointments=0,
+            care_plan_chunks=len(chunks),
+        ),
     )

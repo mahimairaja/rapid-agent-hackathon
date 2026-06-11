@@ -52,7 +52,7 @@ export function PatientLayout({
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         patientName={patient ? `${patient.first_name} ${patient.last_name}` : ''}
-        riskLevel={patient?.risk_level ?? 'moderate'}
+        riskLevel={patient?.risk_level}
         recoveryStage={patient?.recovery_stage ?? 'week-1'}
       />
 

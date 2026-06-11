@@ -15,6 +15,8 @@ import { PatientLayout } from './components/PatientLayout'
 import { DashboardHero } from './components/DashboardHero'
 import { StatCards } from './components/StatCard'
 import { RecoveryPlan } from './components/RecoveryPlan'
+import { milestonesForCondition } from './data/recoveryPlans'
+import { isUploadedPlan } from './lib/uploadedPlan'
 import { MedicationSchedule } from './components/MedicationSchedule'
 import { AppointmentTimeline } from './components/AppointmentTimeline'
 import { Assistant } from './components/Assistant'
@@ -253,7 +255,7 @@ function App() {
   const nextAppointment = appointments
     .filter((a) => a.status !== 'completed')
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0]
-  const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : 0
+  const nextAppointmentDays = nextAppointment ? daysUntil(nextAppointment.start) : null
 
   const loggedOut = !token || !role
   const goView = (view: string) => navigate(VIEW_PATHS[view] ?? '/maya')
@@ -394,7 +396,7 @@ function App() {
     <div className="card">
       <div className="card-accent-bar" />
       <div className="card-body" style={{ paddingTop: 20 }}>
-        <MedicationSchedule medications={medications} />
+        <MedicationSchedule medications={medications} uploadedPlan={isUploadedPlan(patient)} />
       </div>
     </div>
   ) : (
@@ -435,13 +437,20 @@ function App() {
   const symptomEl = (
     <div className="mx-auto max-w-3xl">
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <SymptomCheckInForm onSubmitReport={handleSymptomReport} />
+        <SymptomCheckInForm
+          onSubmitReport={handleSymptomReport}
+          dischargeReason={patient?.discharge_reason}
+        />
       </div>
     </div>
   )
 
   const careTeamEl = patient ? (
-    <CareTeamPanel careTeam={patient.care_team ?? []} clinician={patient.assigned_clinician} />
+    <CareTeamPanel
+      careTeam={patient.care_team ?? []}
+      clinician={patient.assigned_clinician}
+      dischargeReason={patient.discharge_reason}
+    />
   ) : (
     <IdentifyCallout onOpenAssistant={handleAssistantPrompt} />
   )
@@ -512,7 +521,7 @@ interface DashboardViewProps {
   medicationsDue: number
   completedToday: number
   hasMedicationAdherence: boolean
-  nextAppointmentDays: number
+  nextAppointmentDays: number | null
   onAssistantPrompt: () => void
   onNavigate: (view: string) => void
 }
@@ -566,7 +575,9 @@ function DashboardView({
                   Week-by-week milestones, goals, and restrictions
                 </div>
               </div>
-              <span className="badge badge-blue">Week 1 Active</span>
+              {milestonesForCondition(patient.discharge_reason) && (
+                <span className="badge badge-blue">Week 1 Active</span>
+              )}
             </div>
             <div className="card-body">
               <RecoveryPlan condition={patient.discharge_reason} />
@@ -591,7 +602,11 @@ function DashboardView({
               )}
             </div>
             <div className="card-body">
-              <MedicationSchedule medications={medications.slice(0, 3)} compact />
+              <MedicationSchedule
+                medications={medications.slice(0, 3)}
+                compact
+                uploadedPlan={isUploadedPlan(patient)}
+              />
             </div>
           </div>
         </div>

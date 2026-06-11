@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { milestonesForCondition } from '../data/recoveryPlans'
 
 interface RecoveryPlanProps {
-  // The patient's discharge reason selects condition-specific milestones; the
-  // demo-mode mock (hip replacement) is the fallback.
+  // The patient's discharge reason selects condition-specific milestones;
+  // unmatched reasons (uploaded plans) get a document-sourced fallback card.
   condition?: string | null
 }
 
@@ -13,6 +14,21 @@ export function RecoveryPlan({ condition }: RecoveryPlanProps) {
 
   const toggle = (id: string) => {
     setExpanded((prev) => (prev === id ? '' : id))
+  }
+
+  if (!milestones) {
+    return (
+      <div className="empty-state" role="status">
+        <p className="empty-state-title">Your plan is in your document</p>
+        <p className="empty-state-sub">
+          Goals and restrictions live in your uploaded recovery plan. Ask Maya about any of it: she
+          answers from your document.
+        </p>
+        <Link to="/maya" className="btn btn-primary" style={{ marginTop: 12 }}>
+          Ask Maya
+        </Link>
+      </div>
+    )
   }
 
   return (
