@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from google.adk.tools import ToolContext
 
 from src.agent.agent.session_state import verified_patient_id
+from src.agent.tools.recovery_tools import search_plan_context
 from src.core.config import config
 from src.models import Escalation, Medication
 
@@ -28,6 +29,21 @@ _UNVERIFIED = {
     "status": "unverified",
     "message": "No patient has been identified in this conversation yet.",
 }
+
+_FROM_PLAN_NOTE = (
+    "This patient has no structured medication list (their plan is an uploaded "
+    "document). Answer from these excerpts of their own plan, quoting names, "
+    "doses, and timing exactly as written."
+)
+
+
+async def _plan_fallback(patient_id: str, question: str) -> list[dict]:
+    """Care-plan excerpts for upload-only patients; empty list when unavailable."""
+    try:
+        return await search_plan_context(patient_id, question)
+    except Exception:
+        logger.warning("medication plan fallback failed", exc_info=True)
+        return []
 
 
 def _normalize(value: str) -> str:
@@ -101,6 +117,17 @@ async def get_medications(*, tool_context: ToolContext) -> dict:
     try:
         now = datetime.now(ZoneInfo(config.CLINIC_TIMEZONE))
         meds = await _active_medications(patient_id, now)
+        if not meds:
+            context = await _plan_fallback(
+                patient_id,
+                "medications at discharge: names, dosages, when and how to take them",
+            )
+            if context:
+                return {
+                    "status": "from_care_plan",
+                    "context": context,
+                    "note": _FROM_PLAN_NOTE,
+                }
         return {
             "status": "ok",
             "medications": [
@@ -135,6 +162,18 @@ async def get_next_dose(medication_name: str, *, tool_context: ToolContext) -> d
         meds = await _active_medications(patient_id, now)
         matches = match_medications(meds, medication_name)
         if not matches:
+            if not meds:
+                context = await _plan_fallback(
+                    patient_id,
+                    f"when and how to take {medication_name}: dose and schedule",
+                )
+                if context:
+                    return {
+                        "status": "from_care_plan",
+                        "medication": medication_name,
+                        "context": context,
+                        "note": _FROM_PLAN_NOTE,
+                    }
             return {"status": "not_found"}
         if len(matches) > 1:
             return {"status": "ambiguous", "candidates": [m.name for m in matches]}

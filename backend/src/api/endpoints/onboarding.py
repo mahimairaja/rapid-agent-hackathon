@@ -11,7 +11,7 @@ import logging
 import os
 import tempfile
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from functools import partial
 
 import anyio
@@ -158,8 +158,10 @@ async def upload_discharge(
 
     The PDF is parsed locally (LiteParse, no cloud), chunked and embedded
     with the same pipeline as the seeded care plans, so Maya answers from
-    the patient's own document. No medications or appointments are
-    extracted in this version; those tabs start empty for uploads.
+    the patient's own document. No structured medications or appointments
+    are extracted in this version (those tabs start empty); medication
+    questions fall back to the plan text, and booking uses a default
+    two-week follow-up window.
     """
     # Idempotent like /claim: an account keeps its first profile.
     if current_user.patient_id:
@@ -228,6 +230,10 @@ async def upload_discharge(
         ) from None
 
     first, last = split_name(display_name.strip())
+    # No structured extraction in this version, so uploads get the standard
+    # two-week post-discharge window; without one, the booking tools refuse
+    # to offer follow-up slots at all.
+    now = datetime.now(UTC)
     patient = Patient(
         patient_id=str(uuid.uuid4()),
         first_name=first,
@@ -235,6 +241,10 @@ async def upload_discharge(
         birth_date=date(birth_year, 1, 1) if birth_year else None,
         patient_code=await _unused_patient_code(),
         discharge_reason="Personal recovery plan (uploaded)",
+        follow_up_required=True,
+        follow_up_window_start=now + timedelta(days=1),
+        follow_up_window_end=now + timedelta(days=14),
+        follow_up_kind="Follow-up visit",
     )
     await patient.insert()
     await CarePlanChunk.insert_many(

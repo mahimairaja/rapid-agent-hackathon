@@ -86,6 +86,34 @@ def format_context(raw_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+async def search_plan_context(patient_id: str, question: str) -> list[dict[str, Any]]:
+    """Vector-search the patient's plan chunks for a question; raise on failure.
+
+    Shared seam: the recovery tool and the medication tools' uploaded-plan
+    fallback both retrieve through this one path, so scoping and pipeline shape
+    stay identical.
+    """
+    # Voyage embed_texts is synchronous; run in a thread to avoid blocking
+    # the event loop.
+    vectors = await asyncio.to_thread(embed_texts, [question], "query")
+    if not vectors or not vectors[0]:
+        raise RuntimeError("embedding returned empty for plan search")
+
+    embedding = vectors[0]
+    pipeline = build_plan_search_pipeline(embedding, patient_id)
+
+    # Beanie 2.x runs on pymongo's AsyncMongoClient (no motor); the raw
+    # collection getter is get_pymongo_collection() (the retired
+    # get_motor_collection() name raises AttributeError on every call), and
+    # pymongo's async aggregate() is a coroutine returning the cursor, so it
+    # must be awaited before async-iterating (motor returned it directly).
+    collection = CarePlanChunk.get_pymongo_collection()
+    cursor = await collection.aggregate(pipeline)
+    raw: list[dict[str, Any]] = [doc async for doc in cursor]
+
+    return format_context(raw)
+
+
 async def answer_recovery_question(question: str, *, tool_context: ToolContext) -> dict:
     """Answer a recovery question using the verified patient's discharge plan.
 
@@ -98,26 +126,7 @@ async def answer_recovery_question(question: str, *, tool_context: ToolContext) 
         return dict(_UNVERIFIED)
 
     try:
-        # Voyage embed_texts is synchronous; run in a thread to avoid blocking
-        # the event loop.
-        vectors = await asyncio.to_thread(embed_texts, [question], "query")
-        if not vectors or not vectors[0]:
-            logger.warning("embedding returned empty for recovery question")
-            return {"status": "error"}
-
-        embedding = vectors[0]
-        pipeline = build_plan_search_pipeline(embedding, patient_id)
-
-        # Beanie 2.x runs on pymongo's AsyncMongoClient (no motor); the raw
-        # collection getter is get_pymongo_collection() (the retired
-        # get_motor_collection() name raises AttributeError on every call), and
-        # pymongo's async aggregate() is a coroutine returning the cursor, so it
-        # must be awaited before async-iterating (motor returned it directly).
-        collection = CarePlanChunk.get_pymongo_collection()
-        cursor = await collection.aggregate(pipeline)
-        raw: list[dict[str, Any]] = [doc async for doc in cursor]
-
-        context = format_context(raw)
+        context = await search_plan_context(patient_id, question)
         if not context:
             return {"status": "no_context"}
 
